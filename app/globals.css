@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ─── Propify Design System ─────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Brand Colors */
+  --color-propify-50:  #eef4fb;
+  --color-propify-100: #d5e4f4;
+  --color-propify-200: #aac9e9;
+  --color-propify-300: #74a8d8;
+  --color-propify-400: #4284c4;
+  --color-propify-500: #2563ae;
+  --color-propify-600: #1e4d93;
+  --color-propify-700: #1e3a5f;
+  --color-propify-800: #162d4a;
+  --color-propify-900: #0f2035;
+  --color-propify-950: #091525;
+
+  /* Sidebar */
+  --color-sidebar:       #0f2341;
+  --color-sidebar-hover: #1e3a5f;
+  --color-sidebar-text:  #94b4d4;
+  --color-sidebar-active:#2563ae;
+
+  /* Semantic */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger:  #ef4444;
+  --color-info:    #3b82f6;
+
+  /* Backgrounds */
+  --color-background: #f8fafc;
+  --color-surface:    #ffffff;
+  --color-border:     #e2e8f0;
+
+  /* Typography */
+  --color-foreground:  #0f172a;
+  --color-muted:       #64748b;
+
+  /* Font */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ───────────────────────────────────────────── */
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans, Arial, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Scrollbar personalizado ───────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ─── Animaciones ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.animate-fade-in  { animation: fadeIn 0.3s ease-out; }
+.animate-slide-in { animation: slideIn 0.25s ease-out; }
+.animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
