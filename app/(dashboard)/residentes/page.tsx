@@ -1,13 +1,10 @@
 import type { Metadata } from 'next'
-import { mockUsers, mockUnidades } from '@/lib/mock-data'
+import { getResidentes, getUnidades } from '@/lib/db'
 import ResidentesView from './ResidentesView'
 
 export const metadata: Metadata = { title: 'Residentes' }
 
-export default function ResidentesPage() {
-  // Solo propietarios y arrendatarios
-  const residentes = mockUsers.filter(
-    u => u.rol === 'propietario' || u.rol === 'arrendatario'
-  )
-  return <ResidentesView residentes={residentes} unidades={mockUnidades} />
+export default async function ResidentesPage() {
+  const [residentes, unidades] = await Promise.all([getResidentes(), getUnidades()])
+  return <ResidentesView residentes={residentes} unidades={unidades} />
 }

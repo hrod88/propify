@@ -1,0 +1,295 @@
+-- ══════════════════════════════════════════════════════════════
+-- PROPIFY — Schema + Seed para Supabase
+-- Ejecutar en: Supabase Dashboard → SQL Editor → New query
+-- ══════════════════════════════════════════════════════════════
+
+-- ─── 1. TABLAS ────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS edificios (
+  id                TEXT PRIMARY KEY,
+  nombre            TEXT NOT NULL,
+  direccion         TEXT NOT NULL,
+  comuna            TEXT NOT NULL,
+  ciudad            TEXT NOT NULL,
+  "totalUnidades"   INTEGER DEFAULT 0,
+  pisos             INTEGER DEFAULT 1,
+  "anoconstruccion" INTEGER,
+  "administradorId" TEXT,
+  rut               TEXT,
+  activo            BOOLEAN DEFAULT true,
+  "creadoEn"        TEXT
+);
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id           TEXT PRIMARY KEY,
+  nombre       TEXT NOT NULL,
+  apellido     TEXT NOT NULL,
+  email        TEXT UNIQUE NOT NULL,
+  telefono     TEXT,
+  rol          TEXT NOT NULL,
+  "edificioId" TEXT REFERENCES edificios(id),
+  "unidadId"   TEXT,
+  activo       BOOLEAN DEFAULT true,
+  "creadoEn"   TEXT
+);
+
+CREATE TABLE IF NOT EXISTS unidades (
+  id                   TEXT PRIMARY KEY,
+  "edificioId"         TEXT REFERENCES edificios(id),
+  numero               TEXT NOT NULL,
+  piso                 INTEGER NOT NULL,
+  tipo                 TEXT NOT NULL,
+  estado               TEXT NOT NULL DEFAULT 'disponible',
+  "superficieM2"       NUMERIC,
+  habitaciones         INTEGER,
+  banos                INTEGER,
+  "propietarioId"      TEXT,
+  "arrendatarioId"     TEXT,
+  "gastosComunesMonto" NUMERIC DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS gastos_comunes (
+  id                   TEXT PRIMARY KEY,
+  "unidadId"           TEXT REFERENCES unidades(id),
+  "edificioId"         TEXT REFERENCES edificios(id),
+  mes                  INTEGER NOT NULL,
+  "año"                INTEGER NOT NULL,
+  "montoBase"          NUMERIC NOT NULL,
+  "montoAgua"          NUMERIC,
+  "montoElectricidad"  NUMERIC,
+  "montoGas"           NUMERIC,
+  "montoFondoReserva"  NUMERIC,
+  "montoTotal"         NUMERIC NOT NULL,
+  "estadoPago"         TEXT NOT NULL DEFAULT 'pendiente',
+  "fechaVencimiento"   TEXT,
+  "fechaPago"          TEXT,
+  "diasMora"           INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS pagos (
+  id                TEXT PRIMARY KEY,
+  "gastoId"         TEXT REFERENCES gastos_comunes(id),
+  "unidadId"        TEXT REFERENCES unidades(id),
+  "edificioId"      TEXT REFERENCES edificios(id),
+  monto             NUMERIC NOT NULL,
+  mes               INTEGER NOT NULL,
+  "año"             INTEGER NOT NULL,
+  metodo            TEXT NOT NULL,
+  estado            TEXT NOT NULL DEFAULT 'completado',
+  "registradoPorId" TEXT REFERENCES usuarios(id),
+  "pagadoPorId"     TEXT,
+  comprobante       TEXT,
+  nota              TEXT,
+  "creadoEn"        TEXT
+);
+
+CREATE TABLE IF NOT EXISTS solicitudes (
+  id               TEXT PRIMARY KEY,
+  "unidadId"       TEXT REFERENCES unidades(id),
+  "edificioId"     TEXT REFERENCES edificios(id),
+  titulo           TEXT NOT NULL,
+  descripcion      TEXT,
+  estado           TEXT NOT NULL DEFAULT 'pendiente',
+  prioridad        TEXT NOT NULL DEFAULT 'media',
+  categoria        TEXT NOT NULL,
+  "solicitanteId"  TEXT REFERENCES usuarios(id),
+  "asignadoA"      TEXT,
+  "creadoEn"       TEXT,
+  "actualizadoEn"  TEXT,
+  "resueltoEn"     TEXT
+);
+
+CREATE TABLE IF NOT EXISTS espacios_comunes (
+  id               TEXT PRIMARY KEY,
+  "edificioId"     TEXT REFERENCES edificios(id),
+  nombre           TEXT NOT NULL,
+  tipo             TEXT NOT NULL,
+  capacidad        INTEGER,
+  estado           TEXT NOT NULL DEFAULT 'disponible',
+  descripcion      TEXT,
+  "requiereReserva" BOOLEAN DEFAULT false,
+  "tarifaUso"      NUMERIC
+);
+
+CREATE TABLE IF NOT EXISTS reservas (
+  id           TEXT PRIMARY KEY,
+  "espacioId"  TEXT REFERENCES espacios_comunes(id),
+  "unidadId"   TEXT REFERENCES unidades(id),
+  "usuarioId"  TEXT REFERENCES usuarios(id),
+  "fechaInicio" TEXT NOT NULL,
+  "fechaFin"   TEXT NOT NULL,
+  estado       TEXT NOT NULL DEFAULT 'confirmada',
+  nota         TEXT,
+  "creadoEn"   TEXT
+);
+
+CREATE TABLE IF NOT EXISTS comunicaciones (
+  id             TEXT PRIMARY KEY,
+  "edificioId"   TEXT REFERENCES edificios(id),
+  titulo         TEXT NOT NULL,
+  contenido      TEXT NOT NULL,
+  tipo           TEXT NOT NULL,
+  "autorId"      TEXT REFERENCES usuarios(id),
+  "creadoEn"     TEXT,
+  "lecturasCount" INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS visitas (
+  id                 TEXT PRIMARY KEY,
+  "edificioId"       TEXT REFERENCES edificios(id),
+  "unidadId"         TEXT REFERENCES unidades(id),
+  "nombreVisitante"  TEXT NOT NULL,
+  "rutVisitante"     TEXT,
+  "motivoVisita"     TEXT NOT NULL,
+  "vehiculoPatente"  TEXT,
+  "entradaEn"        TEXT NOT NULL,
+  "salidaEn"         TEXT,
+  "registradoPorId"  TEXT REFERENCES usuarios(id)
+);
+
+CREATE TABLE IF NOT EXISTS paquetes (
+  id             TEXT PRIMARY KEY,
+  "edificioId"   TEXT REFERENCES edificios(id),
+  "unidadId"     TEXT REFERENCES unidades(id),
+  courier        TEXT NOT NULL,
+  descripcion    TEXT,
+  estado         TEXT NOT NULL DEFAULT 'recibido',
+  "recibidoEn"   TEXT,
+  "retiradoEn"   TEXT,
+  "codigoRetiro" TEXT
+);
+
+-- ─── 2. RLS — Acceso público (demo sin autenticación) ─────────
+
+ALTER TABLE edificios         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE unidades          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gastos_comunes    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagos             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE solicitudes       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE espacios_comunes  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reservas          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comunicaciones    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE visitas           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE paquetes          ENABLE ROW LEVEL SECURITY;
+
+-- Políticas: permitir todo al rol anon (demo)
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['edificios','usuarios','unidades','gastos_comunes','pagos',
+    'solicitudes','espacios_comunes','reservas','comunicaciones','visitas','paquetes']
+  LOOP
+    EXECUTE format('CREATE POLICY "public_all_%s" ON %I FOR ALL TO anon USING (true) WITH CHECK (true)', t, t);
+  END LOOP;
+END $$;
+
+-- ─── 3. SEED DATA ─────────────────────────────────────────────
+
+-- Edificios
+INSERT INTO edificios (id, nombre, direccion, comuna, ciudad, "totalUnidades", pisos, "anoconstruccion", "administradorId", rut, activo, "creadoEn") VALUES
+  ('e1', 'Edificio Las Palmas', 'Av. Apoquindo 4501', 'Las Condes', 'Santiago', 48, 12, 2018, 'u1', '76.123.456-7', true, '2024-01-01'),
+  ('e2', 'Condominio Los Aromos', 'Calle Los Aromos 234', 'Ñuñoa', 'Santiago', 24, 6, 2020, 'u1', '76.234.567-8', true, '2024-01-15'),
+  ('e3', 'Torre Bicentenario', 'Av. Vitacura 2939', 'Vitacura', 'Santiago', 80, 20, 2015, 'u1', '76.345.678-9', true, '2024-02-01');
+
+-- Usuarios
+INSERT INTO usuarios (id, nombre, apellido, email, telefono, rol, "edificioId", "unidadId", activo, "creadoEn") VALUES
+  ('u1',  'Rodrigo',    'Administrador', 'admin@propify.cl',          '+56 9 8765 4321', 'administrador', 'e1', null,  true, '2024-01-15'),
+  ('u2',  'María José', 'González',      'mariajose@gmail.com',       '+56 9 7654 3210', 'propietario',   'e1', 'un1', true, '2024-02-10'),
+  ('u3',  'Carlos',     'Muñoz',         'carlos.munoz@gmail.com',    '+56 9 6543 2109', 'arrendatario',  'e1', 'un5', true, '2024-03-20'),
+  ('u4',  'Juan',       'Pérez',         'juan.perez@propify.cl',     '+56 9 5432 1098', 'conserje',      'e1', null,  true, '2024-01-20'),
+  ('u5',  'Roberto',    'Silva',         'roberto.silva@gmail.com',   '+56 9 4321 0987', 'propietario',   'e1', 'un2', true, '2024-02-15'),
+  ('u6',  'Patricia',   'Herrera',       'patricia.h@gmail.com',      '+56 9 3210 9876', 'propietario',   'e1', 'un4', true, '2024-03-01'),
+  ('u7',  'Diego',      'Ramírez',       'diego.ramirez@gmail.com',   '+56 9 2109 8765', 'arrendatario',  'e1', 'un4', true, '2024-04-01'),
+  ('u8',  'Claudia',    'Torres',        'claudia.torres@gmail.com',  '+56 9 1098 7654', 'propietario',   'e1', 'un6', true, '2024-01-20'),
+  ('u9',  'Felipe',     'Morales',       'felipe.m@gmail.com',        '+56 9 0987 6543', 'propietario',   'e1', 'un7', true, '2024-02-28'),
+  ('u10', 'Valentina',  'Castro',        'valentina.c@gmail.com',     '+56 9 9876 5432', 'arrendatario',  'e1', 'un7', true, '2024-05-01');
+
+-- Unidades
+INSERT INTO unidades (id, "edificioId", numero, piso, tipo, estado, "superficieM2", habitaciones, banos, "propietarioId", "arrendatarioId", "gastosComunesMonto") VALUES
+  ('un1',  'e1', '101', 1,  'departamento',       'ocupado',    65,  2, 1, 'u2',  null,  95000),
+  ('un2',  'e1', '102', 1,  'departamento',       'ocupado',    72,  2, 2, 'u5',  null,  105000),
+  ('un3',  'e1', '201', 2,  'departamento',       'disponible', 85,  3, 2, null,  null,  125000),
+  ('un4',  'e1', '202', 2,  'departamento',       'ocupado',    90,  3, 2, 'u6',  'u7',  130000),
+  ('un5',  'e1', '301', 3,  'departamento',       'ocupado',    65,  2, 1, null,  'u3',  95000),
+  ('un6',  'e1', '501', 5,  'departamento',       'ocupado',    110, 3, 2, 'u8',  null,  155000),
+  ('un7',  'e1', '502', 5,  'departamento',       'ocupado',    95,  3, 2, 'u9',  'u10', 140000),
+  ('un8',  'e1', 'B-1', -1, 'bodega',             'ocupado',    8,   null, null, null, null, 15000),
+  ('un9',  'e1', 'E-1', -1, 'estacionamiento',    'ocupado',    15,  null, null, null, null, 25000),
+  ('un10', 'e1', 'L-1', 0,  'local_comercial',    'disponible', 45,  null, null, null, null, 65000);
+
+-- Gastos Comunes
+INSERT INTO gastos_comunes (id, "unidadId", "edificioId", mes, "año", "montoBase", "montoAgua", "montoElectricidad", "montoFondoReserva", "montoTotal", "estadoPago", "fechaVencimiento", "fechaPago", "diasMora") VALUES
+  ('gc1', 'un1', 'e1', 5, 2026, 75000,  12000, 5000, 3000, 95000,  'pagado',   '2026-05-10', '2026-05-08', null),
+  ('gc2', 'un2', 'e1', 5, 2026, 83000,  14000, 5000, 3000, 105000, 'vencido',  '2026-05-10', null,         16),
+  ('gc3', 'un3', 'e1', 5, 2026, 99000,  16000, 7000, 3000, 125000, 'pendiente','2026-05-31', null,         null),
+  ('gc4', 'un4', 'e1', 5, 2026, 103000, 17000, 7000, 3000, 130000, 'pagado',   '2026-05-10', '2026-05-07', null),
+  ('gc5', 'un5', 'e1', 5, 2026, 75000,  12000, 5000, 3000, 95000,  'vencido',  '2026-05-10', null,         16),
+  ('gc6', 'un6', 'e1', 5, 2026, 122000, 20000, 9000, 4000, 155000, 'pagado',   '2026-05-10', '2026-05-05', null),
+  ('gc7', 'un7', 'e1', 5, 2026, 110000, 18000, 8000, 4000, 140000, 'parcial',  '2026-05-10', null,         16);
+
+-- Pagos
+INSERT INTO pagos (id, "gastoId", "unidadId", "edificioId", monto, mes, "año", metodo, estado, "registradoPorId", "pagadoPorId", comprobante, nota, "creadoEn") VALUES
+  ('pag1',  'gc1', 'un1', 'e1', 95000,  5, 2026, 'transferencia', 'completado', 'u1', 'u2',  'TR-20260508-001', null, '2026-05-08T10:30:00'),
+  ('pag2',  'gc4', 'un4', 'e1', 130000, 5, 2026, 'webpay',        'completado', 'u1', 'u7',  'WP-20260507-045', null, '2026-05-07T14:15:00'),
+  ('pag3',  'gc6', 'un6', 'e1', 155000, 5, 2026, 'transferencia', 'completado', 'u1', 'u8',  'TR-20260505-089', null, '2026-05-05T09:00:00'),
+  ('pag4',  'gc7', 'un7', 'e1', 70000,  5, 2026, 'efectivo',      'completado', 'u1', 'u10', null, 'Pago parcial · saldo pendiente $70.000', '2026-05-12T16:00:00'),
+  ('pag5',  null,  'un1', 'e1', 93000,  4, 2026, 'transferencia', 'completado', 'u1', 'u2',  'TR-20260408-012', null, '2026-04-08T11:00:00'),
+  ('pag6',  null,  'un2', 'e1', 103000, 4, 2026, 'webpay',        'completado', 'u1', 'u5',  'WP-20260409-023', null, '2026-04-09T09:30:00'),
+  ('pag7',  null,  'un4', 'e1', 128000, 4, 2026, 'transferencia', 'completado', 'u1', 'u7',  'TR-20260407-008', null, '2026-04-07T14:00:00'),
+  ('pag8',  null,  'un6', 'e1', 152000, 4, 2026, 'tarjeta',       'completado', 'u1', 'u8',  'TC-20260405-034', null, '2026-04-05T10:00:00'),
+  ('pag9',  null,  'un7', 'e1', 137000, 4, 2026, 'transferencia', 'completado', 'u1', 'u10', 'TR-20260406-056', null, '2026-04-06T13:00:00'),
+  ('pag10', null,  'un1', 'e1', 92000,  3, 2026, 'webpay',        'completado', 'u1', 'u2',  'WP-20260308-078', null, '2026-03-08T09:00:00'),
+  ('pag11', null,  'un4', 'e1', 126000, 3, 2026, 'transferencia', 'completado', 'u1', 'u7',  'TR-20260307-034', null, '2026-03-07T15:00:00'),
+  ('pag12', null,  'un6', 'e1', 150000, 3, 2026, 'efectivo',      'completado', 'u1', 'u8',  null, 'Pago en efectivo en conserjería', '2026-03-05T11:00:00');
+
+-- Solicitudes
+INSERT INTO solicitudes (id, "unidadId", "edificioId", titulo, descripcion, estado, prioridad, categoria, "solicitanteId", "asignadoA", "creadoEn", "actualizadoEn", "resueltoEn") VALUES
+  ('s1', 'un2', 'e1', 'Gotera en baño principal', 'Hay una gotera en el techo del baño que moja el piso constantemente.', 'pendiente',   'alta',    'Plomería',    'u2', null, '2026-05-24T10:30:00', '2026-05-24T10:30:00', null),
+  ('s2', 'un5', 'e1', 'Puerta ascensor piso 3',   'La puerta del ascensor en el piso 3 no cierra correctamente.',        'en_progreso', 'urgente', 'Ascensor',    'u3', 'u4', '2026-05-23T08:00:00', '2026-05-25T09:00:00', null),
+  ('s3', 'un1', 'e1', 'Cambio ampolleta hall',     'La ampolleta del hall de entrada está fundida.',                      'resuelto',    'baja',    'Electricidad','u2', 'u4', '2026-05-20T14:00:00', '2026-05-21T11:00:00', '2026-05-21T11:00:00'),
+  ('s4', 'un6', 'e1', 'Ruido en cañería noche',   'Se escucha un ruido fuerte en las cañerías durante la noche.',        'pendiente',   'media',   'Plomería',    'u2', null, '2026-05-25T22:00:00', '2026-05-25T22:00:00', null),
+  ('s5', 'un4', 'e1', 'Pintura corredor piso 2',  'La pintura del corredor del piso 2 está descascarada.',               'pendiente',   'baja',    'Mantención',  'u2', null, '2026-05-22T16:00:00', '2026-05-22T16:00:00', null),
+  ('s6', 'un7', 'e1', 'Termostato calefacción',   'El termostato de la calefacción central no responde.',               'en_progreso', 'alta',    'Climatización','u3','u4', '2026-05-24T07:30:00', '2026-05-25T10:00:00', null);
+
+-- Espacios Comunes
+INSERT INTO espacios_comunes (id, "edificioId", nombre, tipo, capacidad, estado, descripcion, "requiereReserva", "tarifaUso") VALUES
+  ('esp1', 'e1', 'Quincho A',         'quincho',                 30, 'disponible',    'Quincho con parrilla y mesas para 30 personas.', true,  15000),
+  ('esp2', 'e1', 'Quincho B',         'quincho',                 20, 'reservado',     'Quincho techado con parrilla.',                  true,  12000),
+  ('esp3', 'e1', 'Sala Multiuso',     'sala_multiuso',           50, 'disponible',    null,                                             true,  10000),
+  ('esp4', 'e1', 'Lavandería Piso 1', 'lavanderia',              4,  'ocupado',       '4 lavadoras y 4 secadoras.',                     true,  2500),
+  ('esp5', 'e1', 'Lavandería Piso 6', 'lavanderia',              4,  'disponible',    null,                                             true,  2500),
+  ('esp6', 'e1', 'Gimnasio',          'gimnasio',                15, 'disponible',    null,                                             false, null),
+  ('esp7', 'e1', 'Piscina',           'piscina',                 20, 'fuera_servicio','En mantención hasta el 01/06/2026.',             false, null),
+  ('esp8', 'e1', 'Sala de Reuniones', 'sala_reuniones',          12, 'disponible',    null,                                             true,  null),
+  ('esp9', 'e1', 'Estac. Visitas',    'estacionamiento_visitas', 5,  'ocupado',       null,                                             true,  null);
+
+-- Reservas
+INSERT INTO reservas (id, "espacioId", "unidadId", "usuarioId", "fechaInicio", "fechaFin", estado, nota, "creadoEn") VALUES
+  ('r1', 'esp1', 'un1', 'u2',  '2026-06-01T13:00:00', '2026-06-01T19:00:00', 'confirmada', 'Cumpleaños',         '2026-05-20T10:00:00'),
+  ('r2', 'esp2', 'un4', 'u7',  '2026-05-27T12:00:00', '2026-05-27T17:00:00', 'confirmada', null,                 '2026-05-22T14:00:00'),
+  ('r3', 'esp3', 'un6', 'u8',  '2026-05-28T18:00:00', '2026-05-28T21:00:00', 'confirmada', 'Reunión de trabajo', '2026-05-23T09:00:00'),
+  ('r4', 'esp8', 'un2', 'u5',  '2026-05-27T09:00:00', '2026-05-27T11:00:00', 'confirmada', null,                 '2026-05-24T11:00:00'),
+  ('r5', 'esp4', 'un7', 'u10', '2026-05-27T15:00:00', '2026-05-27T16:00:00', 'confirmada', null,                 '2026-05-25T08:00:00');
+
+-- Comunicaciones
+INSERT INTO comunicaciones (id, "edificioId", titulo, contenido, tipo, "autorId", "creadoEn", "lecturasCount") VALUES
+  ('com1', 'e1', 'Corte de agua programado 28/05',    'Se informa que el día 28 de mayo de 10:00 a 14:00 hrs se realizará corte de agua para mantención de red.', 'urgente',     'u1', '2026-05-25T09:00:00', 32),
+  ('com2', 'e1', 'Asamblea Ordinaria de Copropietarios', 'Se convoca a todos los copropietarios a la Asamblea Ordinaria del día 15 de junio a las 19:00 hrs vía Zoom.', 'reunión', 'u1', '2026-05-20T11:00:00', 28),
+  ('com3', 'e1', 'Nuevas normas uso del quincho',     'Se recuerda que el horario máximo de uso del quincho es hasta las 23:00 hrs los días de semana y 00:00 hrs los fines de semana.', 'informativo', 'u1', '2026-05-15T10:00:00', 40),
+  ('com4', 'e1', 'Circular gastos comunes mayo 2026', 'Se adjunta detalle de gastos comunes correspondiente al mes de mayo 2026.', 'circular', 'u1', '2026-05-05T08:00:00', 45);
+
+-- Visitas
+INSERT INTO visitas (id, "edificioId", "unidadId", "nombreVisitante", "motivoVisita", "vehiculoPatente", "entradaEn", "salidaEn", "registradoPorId") VALUES
+  ('v1', 'e1', 'un1', 'Pedro Rojas',      'Visita familiar',      null,     '2026-05-26T09:30:00', null,                  'u4'),
+  ('v2', 'e1', 'un5', 'Ana Soto',         'Visita de negocios',   null,     '2026-05-26T10:15:00', '2026-05-26T11:00:00', 'u4'),
+  ('v3', 'e1', 'un6', 'Técnico Movistar', 'Instalación internet', 'BBCD12', '2026-05-26T11:00:00', null,                  'u4'),
+  ('v4', 'e1', 'un2', 'Laura Fernández',  'Visita familiar',      null,     '2026-05-26T14:00:00', null,                  'u4');
+
+-- Paquetes
+INSERT INTO paquetes (id, "edificioId", "unidadId", courier, descripcion, estado, "recibidoEn", "retiradoEn", "codigoRetiro") VALUES
+  ('p1', 'e1', 'un1', 'Chilexpress',   'Caja mediana',   'notificado', '2026-05-26T09:00:00', null,                  '4521'),
+  ('p2', 'e1', 'un4', 'Starken',       'Sobre pequeño',  'recibido',   '2026-05-26T10:30:00', null,                  '7823'),
+  ('p3', 'e1', 'un7', 'Correos Chile', 'Paquete grande', 'notificado', '2026-05-25T15:00:00', null,                  '1149'),
+  ('p4', 'e1', 'un6', 'Pedidos Ya',    'Comida',         'retirado',   '2026-05-26T12:00:00', '2026-05-26T12:10:00', '3392');

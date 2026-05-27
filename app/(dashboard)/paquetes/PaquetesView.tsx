@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { Package, CheckCircle, Bell, Archive, Clock, Plus, Check, Pencil, Trash2 } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
+import { supabase } from '@/lib/supabase'
 import type { Paquete, Unidad, User } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -125,6 +126,7 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
     showToast(`Paquete registrado · Código: ${nuevo.codigoRetiro}`)
     const unidadNum = getUnidad(nuevo.unidadId)?.numero ?? nuevo.unidadId
     agregarNotificacion('paquete', 'Nuevo paquete registrado', `${nuevo.courier} para Unidad ${unidadNum}`)
+    supabase.from('paquetes').insert(nuevo).then(({ error }) => { if (error) console.error('insert paquete:', error.message) })
   }
 
   function marcarRetirado(id: string) {
@@ -166,6 +168,7 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
 
   function handleEliminar() {
     setLista(prev => prev.filter(p => p.id !== eliminarId))
+    supabase.from('paquetes').delete().eq('id', eliminarId).then(({ error }) => { if (error) console.error('delete paquete:', error.message) })
     setEliminarId(null)
     showToast('Paquete eliminado')
   }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Search, Plus, Mail, Phone, Home, Check, Pencil, Trash2 } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
+import { supabase } from '@/lib/supabase'
 import type { User, Unidad } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -127,6 +128,7 @@ export default function ResidentesView({ residentes, unidades }: Props) {
     setErrores({})
     showToast('Residente registrado correctamente')
     agregarNotificacion('residente', 'Nuevo residente registrado', `${nuevo.nombre} ${nuevo.apellido} — ${nuevo.rol === 'propietario' ? 'Propietario' : 'Arrendatario'}`)
+    supabase.from('usuarios').insert(nuevo).then(({ error }) => { if (error) console.error('insert residente:', error.message) })
   }
 
   // ─── Handler editar ─────────────────────────────────────────
@@ -167,11 +169,14 @@ export default function ResidentesView({ residentes, unidades }: Props) {
     setEditando(null)
     setErroresEdit({})
     showToast('Residente actualizado correctamente')
+    const upd = { nombre: formEdit.nombre.trim(), apellido: formEdit.apellido.trim(), email: formEdit.email.trim().toLowerCase(), telefono: formEdit.telefono.trim() || null, rol: formEdit.rol, unidadId: formEdit.unidadId || null }
+    supabase.from('usuarios').update(upd).eq('id', editando.id).then(({ error }) => { if (error) console.error('update residente:', error.message) })
   }
 
   // ─── Handler eliminar ────────────────────────────────────────
   function handleEliminar() {
     setLista(prev => prev.filter(r => r.id !== eliminarId))
+    supabase.from('usuarios').delete().eq('id', eliminarId).then(({ error }) => { if (error) console.error('delete residente:', error.message) })
     setEliminarId(null)
     showToast('Residente eliminado')
   }

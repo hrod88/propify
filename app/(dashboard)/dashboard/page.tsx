@@ -18,15 +18,7 @@ import {
   PieChart,
 } from 'lucide-react'
 import type { Metadata } from 'next'
-import {
-  mockKPIs,
-  mockActividad,
-  mockSolicitudes,
-  mockGastosComunes,
-  mockPagos,
-  mockEspacios,
-  formatCLP,
-} from '@/lib/mock-data'
+import { getDashboardData, formatCLP } from '@/lib/db'
 import type { ActividadReciente } from '@/types'
 
 export const metadata: Metadata = {
@@ -334,17 +326,17 @@ function ActividadItem({ item }: { item: ActividadReciente }) {
 }
 
 // ─── Página principal ─────────────────────────────────────────
-export default function DashboardPage() {
-  const kpi       = mockKPIs
+export default async function DashboardPage() {
+  const { kpis: kpi, actividad, gastos, pagos, solicitudes: sols, espacios } = await getDashboardData()
   const ocupacion = Math.round((kpi.unidadesOcupadas / kpi.totalUnidades) * 100)
   const pagadosPct = Math.round(((kpi.totalUnidades - kpi.morosos) / kpi.totalUnidades) * 100)
 
   // Estado gastos comunes para mini-reporte (lado derecho)
   const gcPorEstado = {
-    pagado:    mockGastosComunes.filter(g => g.estadoPago === 'pagado').length,
-    pendiente: mockGastosComunes.filter(g => g.estadoPago === 'pendiente').length,
-    vencido:   mockGastosComunes.filter(g => g.estadoPago === 'vencido').length,
-    parcial:   mockGastosComunes.filter(g => g.estadoPago === 'parcial').length,
+    pagado:    gastos.filter(g => g.estadoPago === 'pagado').length,
+    pendiente: gastos.filter(g => g.estadoPago === 'pendiente').length,
+    vencido:   gastos.filter(g => g.estadoPago === 'vencido').length,
+    parcial:   gastos.filter(g => g.estadoPago === 'parcial').length,
   }
 
   // ── Analítica: datos calculados desde los arrays ──────────
@@ -353,14 +345,14 @@ export default function DashboardPage() {
   // Ingresos por mes (últimos 3 meses)
   const ingresosMensuales = [3, 4, 5].map(mes => ({
     label: MESES[mes - 1],
-    valor: mockPagos
+    valor: pagos
       .filter(p => p.mes === mes && p.año === 2026)
       .reduce((s, p) => s + p.monto, 0),
   }))
 
   // Recaudación de mayo
-  const totalEsperado    = mockGastosComunes.reduce((s, g) => s + g.montoTotal, 0)
-  const totalCobradoMes  = mockPagos
+  const totalEsperado    = gastos.reduce((s, g) => s + g.montoTotal, 0)
+  const totalCobradoMes  = pagos
     .filter(p => p.mes === 5 && p.año === 2026)
     .reduce((s, p) => s + p.monto, 0)
   const totalPendienteMes = totalEsperado - totalCobradoMes
@@ -375,14 +367,14 @@ export default function DashboardPage() {
 
   // Solicitudes por estado
   const solPorEstado = [
-    { label: 'Pendiente',   valor: mockSolicitudes.filter(s => s.estado === 'pendiente').length,   color: '#f59e0b' },
-    { label: 'En progreso', valor: mockSolicitudes.filter(s => s.estado === 'en_progreso').length, color: '#3b82f6' },
-    { label: 'Resuelto',    valor: mockSolicitudes.filter(s => s.estado === 'resuelto').length,    color: '#10b981' },
+    { label: 'Pendiente',   valor: sols.filter(s => s.estado === 'pendiente').length,   color: '#f59e0b' },
+    { label: 'En progreso', valor: sols.filter(s => s.estado === 'en_progreso').length, color: '#3b82f6' },
+    { label: 'Resuelto',    valor: sols.filter(s => s.estado === 'resuelto').length,    color: '#10b981' },
   ]
 
   // Solicitudes por categoría
   const catMap: Record<string, number> = {}
-  mockSolicitudes.forEach(s => {
+  sols.forEach(s => {
     catMap[s.categoria] = (catMap[s.categoria] ?? 0) + 1
   })
   const solPorCategoria = Object.entries(catMap)
@@ -392,10 +384,10 @@ export default function DashboardPage() {
 
   // Espacios comunes por estado
   const espaciosEstado = {
-    disponible: mockEspacios.filter(e => e.estado === 'disponible').length,
-    reservado:  mockEspacios.filter(e => e.estado === 'reservado').length,
-    ocupado:    mockEspacios.filter(e => e.estado === 'ocupado').length,
-    fuera:      mockEspacios.filter(e => e.estado === 'fuera_servicio').length,
+    disponible: espacios.filter(e => e.estado === 'disponible').length,
+    reservado:  espacios.filter(e => e.estado === 'reservado').length,
+    ocupado:    espacios.filter(e => e.estado === 'ocupado').length,
+    fuera:      espacios.filter(e => e.estado === 'fuera_servicio').length,
   }
 
   return (
@@ -634,7 +626,7 @@ export default function DashboardPage() {
                 size={96}
                 segmentos={solPorEstado}
                 centro={{
-                  linea1: String(mockSolicitudes.length),
+                  linea1: String(sols.length),
                   linea2: 'total',
                 }}
               />
@@ -678,7 +670,7 @@ export default function DashboardPage() {
               className="text-xs text-gray-400 mt-4 pt-3 border-t"
               style={{ borderColor: '#f1f5f9' }}
             >
-              {mockSolicitudes.length} solicitudes · {solPorCategoria.length} categorías
+              {sols.length} solicitudes · {solPorCategoria.length} categorías
             </p>
           </div>
 
@@ -713,7 +705,7 @@ export default function DashboardPage() {
               className="text-xs text-gray-400 mt-3 pt-3 border-t"
               style={{ borderColor: '#f1f5f9' }}
             >
-              Total: {mockEspacios.length} espacios del edificio
+              Total: {espacios.length} espacios del edificio
             </p>
           </div>
         </div>
@@ -741,7 +733,7 @@ export default function DashboardPage() {
             </button>
           </div>
           <div className="px-5 divide-y" style={{ borderColor: '#f8fafc' }}>
-            {mockActividad.map(item => (
+            {actividad.map((item: ActividadReciente) => (
               <ActividadItem key={item.id} item={item} />
             ))}
           </div>
@@ -765,7 +757,7 @@ export default function DashboardPage() {
                 ([estado, count]) => {
                   const cfg  = estadoPagoConfig[estado]
                   const Icon = cfg.icon
-                  const pct  = Math.round((count / mockGastosComunes.length) * 100)
+                  const pct  = Math.round((count / (gastos.length || 1)) * 100)
                   return (
                     <div key={estado} className="flex items-center gap-3">
                       <div
@@ -816,7 +808,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-3">
-              {mockSolicitudes
+              {sols
                 .filter(s => s.prioridad === 'urgente' || s.prioridad === 'alta')
                 .filter(s => s.estado !== 'resuelto')
                 .slice(0, 3)

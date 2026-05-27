@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { Plus, LogIn, LogOut, Car, Clock, Users, Check, Pencil, Trash2 } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
+import { supabase } from '@/lib/supabase'
 import type { Visita, Unidad, User } from '@/types'
 
 // ─── Props ────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
     showToast(`Visita registrada · ${nueva.nombreVisitante}`)
     const unidadNum = getUnidad(nueva.unidadId)?.numero ?? nueva.unidadId
     agregarNotificacion('visita', 'Visita registrada', `${nueva.nombreVisitante} → Unidad ${unidadNum}`)
+    supabase.from('visitas').insert(nueva).then(({ error }) => { if (error) console.error('insert visita:', error.message) })
   }
 
   function registrarSalida(id: string) {
@@ -146,10 +148,12 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
     setEditando(null)
     setErroresEdit({})
     showToast('Visita actualizada correctamente')
+    if (editando) supabase.from('visitas').update({ nombreVisitante: editando.nombreVisitante, motivoVisita: editando.motivoVisita, vehiculoPatente: editando.vehiculoPatente ?? null }).eq('id', editando.id).then(({ error }) => { if (error) console.error('update visita:', error.message) })
   }
 
   function handleEliminar() {
     setLista(prev => prev.filter(v => v.id !== eliminarId))
+    supabase.from('visitas').delete().eq('id', eliminarId).then(({ error }) => { if (error) console.error('delete visita:', error.message) })
     setEliminarId(null)
     showToast('Visita eliminada')
   }

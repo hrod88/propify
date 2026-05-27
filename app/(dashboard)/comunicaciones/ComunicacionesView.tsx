@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Eye, Bell, Info, Users, FileText, Check, Pencil, Trash2 } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
+import { supabase } from '@/lib/supabase'
 import type { Comunicacion, User } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -109,6 +110,7 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
     setErrores({})
     showToast('Comunicación publicada correctamente')
     agregarNotificacion('circular', `Nueva comunicación: ${tipoCfg[form.tipo].label}`, form.titulo.trim())
+    supabase.from('comunicaciones').insert(nueva).then(({ error }) => { if (error) console.error('insert comunicacion:', error.message) })
   }
 
   // ─── Handler editar ─────────────────────────────────────────
@@ -137,11 +139,13 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
     setEditando(null)
     setErroresEdit({})
     showToast('Comunicación actualizada correctamente')
+    if (editando) supabase.from('comunicaciones').update({ titulo: formEdit.titulo.trim(), contenido: formEdit.contenido.trim(), tipo: formEdit.tipo }).eq('id', editando.id).then(({ error }) => { if (error) console.error('update comunicacion:', error.message) })
   }
 
   // ─── Handler eliminar ────────────────────────────────────────
   function handleEliminar() {
     setLista(prev => prev.filter(c => c.id !== eliminarId))
+    supabase.from('comunicaciones').delete().eq('id', eliminarId).then(({ error }) => { if (error) console.error('delete comunicacion:', error.message) })
     setEliminarId(null)
     showToast('Comunicación eliminada')
   }

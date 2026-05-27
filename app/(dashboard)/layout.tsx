@@ -1,3 +1,6 @@
+// Todas las páginas del dashboard se renderizan en runtime (usan Supabase)
+export const dynamic = 'force-dynamic'
+
 import Sidebar                    from '@/components/sidebar'
 import Header                     from '@/components/header'
 import AsistenteIA                from '@/components/asistente-ia'

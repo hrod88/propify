@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
+import { supabase } from '@/lib/supabase'
 import type { SolicitudMantencion, Unidad, User as UserType } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -137,6 +138,7 @@ export default function MantencionesView({ solicitudes, unidades, users }: Props
     setErrores({})
     showToast('Solicitud creada correctamente')
     agregarNotificacion('solicitud', 'Nueva solicitud de mantención', `${form.titulo.trim()} — ${form.categoria}`)
+    supabase.from('solicitudes').insert(nueva).then(({ error }) => { if (error) console.error('insert solicitud:', error.message) })
   }
 
   function abrirEditar(s: SolicitudMantencion) {
@@ -179,10 +181,12 @@ export default function MantencionesView({ solicitudes, unidades, users }: Props
     setEditando(null)
     setErrores({})
     showToast('Solicitud actualizada correctamente')
+    if (editando) supabase.from('solicitudes').update({ titulo: editando.titulo, descripcion: editando.descripcion, estado: editando.estado, prioridad: editando.prioridad, categoria: editando.categoria }).eq('id', editando.id).then(({ error }) => { if (error) console.error('update solicitud:', error.message) })
   }
 
   function handleEliminar() {
     setLista(prev => prev.filter(s => s.id !== eliminarId))
+    supabase.from('solicitudes').delete().eq('id', eliminarId).then(({ error }) => { if (error) console.error('delete solicitud:', error.message) })
     setEliminarId(null)
     showToast('Solicitud eliminada')
   }

@@ -1,21 +1,15 @@
 import type { Metadata } from 'next'
-import {
-  mockGastosComunes,
-  mockPagos,
-  mockSolicitudes,
-  mockUnidades,
-} from '@/lib/mock-data'
+import { getGastosComunes, getPagos, getSolicitudes, getUnidades } from '@/lib/db'
 import ReportesView from './ReportesView'
 
 export const metadata: Metadata = { title: 'Reportes' }
 
-export default function ReportesPage() {
-  return (
-    <ReportesView
-      gastos={mockGastosComunes}
-      pagos={mockPagos}
-      solicitudes={mockSolicitudes}
-      unidades={mockUnidades}
-    />
-  )
+export default async function ReportesPage() {
+  const [gastos, pagos, solicitudes, unidades] = await Promise.all([
+    getGastosComunes(),
+    getPagos(),
+    getSolicitudes(),
+    getUnidades(),
+  ])
+  return <ReportesView gastos={gastos} pagos={pagos} solicitudes={solicitudes} unidades={unidades} />
 }
