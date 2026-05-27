@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Bell, Search, ChevronDown, Settings, LogOut,
   User, HelpCircle, Home, Wrench, Users, Trash2,
 } from 'lucide-react'
 import { mockUsers, mockUnidades, mockSolicitudes } from '@/lib/mock-data'
 import { useNotificaciones } from '@/context/notificaciones-context'
+import { supabaseBrowser }    from '@/lib/supabase-browser'
 
 // ─── Colores por tipo de notificación ────────────────────────
 const tipoColores = {
@@ -31,6 +33,7 @@ interface SearchResult {
 
 // ─── Componente ───────────────────────────────────────────────
 export default function Header() {
+  const router = useRouter()
   const [showNotif,   setShowNotif]   = useState(false)
   const [showUser,    setShowUser]    = useState(false)
   const [searchValue, setSearchValue] = useState('')
@@ -38,6 +41,12 @@ export default function Header() {
   const searchRef = useRef<HTMLDivElement>(null)
 
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiarTodas } = useNotificaciones()
+
+  async function handleLogout() {
+    await supabaseBrowser.auth.signOut()
+    localStorage.removeItem('propify_rol')
+    router.push('/login')
+  }
 
   // ── Búsqueda global ──
   const resultados = useMemo((): SearchResult[] => {
@@ -375,6 +384,7 @@ export default function Header() {
               </div>
               <div className="py-1 border-t" style={{ borderColor: '#f1f5f9' }}>
                 <button
+                  onClick={handleLogout}
                   className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-red-50 transition-colors"
                   style={{ color: '#ef4444' }}
                 >

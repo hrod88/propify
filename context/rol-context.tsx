@@ -2,24 +2,16 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { UserRole, User, Unidad } from '@/types'
-import { mockUsers, mockUnidades } from '@/lib/mock-data'
-
-// ─── Demo: usuario representativo por cada rol ─────────────────
-const USUARIO_ID_POR_ROL: Record<string, string> = {
-  super_admin:   'u1',
-  administrador: 'u1',   // Rodrigo Administrador
-  conserje:      'u4',   // Juan Pérez
-  propietario:   'u2',   // María José González — Depto 101
-  arrendatario:  'u3',   // Carlos Muñoz       — Depto 301
-}
+import { supabaseBrowser } from '@/lib/supabase-browser'
+import { supabase }         from '@/lib/supabase'
 
 // ─── Tipos ────────────────────────────────────────────────────
 interface RolContextValue {
-  rol:       UserRole
-  usuario:   User | null
-  unidad:    Unidad | null
-  cargado:   boolean          // true después de leer localStorage
-  setRol:    (r: UserRole) => void
+  rol:     UserRole
+  usuario: User | null
+  unidad:  Unidad | null
+  cargado: boolean          // true después de resolver la sesión
+  setRol:  (r: UserRole) => void
 }
 
 // ─── Contexto ─────────────────────────────────────────────────
@@ -34,13 +26,53 @@ const RolContext = createContext<RolContextValue>({
 // ─── Provider ─────────────────────────────────────────────────
 export function RolProvider({ children }: { children: React.ReactNode }) {
   const [rol,     setRolEstado] = useState<UserRole>('administrador')
+  const [usuario, setUsuario]   = useState<User | null>(null)
+  const [unidad,  setUnidad]    = useState<Unidad | null>(null)
   const [cargado, setCargado]   = useState(false)
 
-  // Leer localStorage solo en cliente (después del primer render)
   useEffect(() => {
-    const guardado = localStorage.getItem('propify_rol') as UserRole | null
-    if (guardado) setRolEstado(guardado)
-    setCargado(true)
+    async function cargarSesion() {
+      // 1. Verificar si hay sesión activa en Supabase Auth
+      const { data: { user } } = await supabaseBrowser.auth.getUser()
+
+      if (user?.email) {
+        // 2. Obtener datos del usuario real desde la BD
+        const { data: dbUser } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('email', user.email)
+          .single()
+
+        if (dbUser) {
+          const rolDB = dbUser.rol as UserRole
+          setRolEstado(rolDB)
+          localStorage.setItem('propify_rol', rolDB)
+          setUsuario(dbUser as User)
+
+          // 3. Cargar su unidad si tiene una asignada
+          if (dbUser.unidadId) {
+            const { data: unidadDB } = await supabase
+              .from('unidades')
+              .select('*')
+              .eq('id', dbUser.unidadId)
+              .single()
+            if (unidadDB) setUnidad(unidadDB as Unidad)
+          }
+        } else {
+          // Usuario en Supabase Auth pero sin registro en usuarios → usar localStorage
+          const guardado = localStorage.getItem('propify_rol') as UserRole | null
+          if (guardado) setRolEstado(guardado)
+        }
+      } else {
+        // Sin sesión activa → usar localStorage como fallback
+        const guardado = localStorage.getItem('propify_rol') as UserRole | null
+        if (guardado) setRolEstado(guardado)
+      }
+
+      setCargado(true)
+    }
+
+    cargarSesion()
   }, [])
 
   function setRol(r: UserRole) {
@@ -49,12 +81,6 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('propify_rol', r)
     }
   }
-
-  const userId  = USUARIO_ID_POR_ROL[rol] ?? 'u1'
-  const usuario = mockUsers.find(u => u.id === userId) ?? null
-  const unidad  = usuario?.unidadId
-    ? mockUnidades.find(u => u.id === usuario.unidadId) ?? null
-    : null
 
   return (
     <RolContext.Provider value={{ rol, usuario, unidad, cargado, setRol }}>

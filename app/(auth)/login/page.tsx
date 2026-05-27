@@ -3,40 +3,54 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react'
-import type { UserRole } from '@/types'
-
-const roles: { value: UserRole; label: string; descripcion: string }[] = [
-  { value: 'administrador', label: 'Administrador', descripcion: 'Gestión completa del edificio' },
-  { value: 'conserje',      label: 'Conserje',      descripcion: 'Accesos, visitas y paquetes' },
-  { value: 'propietario',   label: 'Propietario',   descripcion: 'Mi unidad y gastos' },
-  { value: 'arrendatario',  label: 'Arrendatario',  descripcion: 'Mi unidad y solicitudes' },
-]
+import { supabaseBrowser } from '@/lib/supabase-browser'
+import { supabase }         from '@/lib/supabase'
+import type { UserRole }    from '@/types'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail]           = useState('')
-  const [password, setPassword]     = useState('')
-  const [showPassword, setShow]     = useState(false)
-  const [rol, setRol]               = useState<UserRole>('administrador')
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShow] = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
-
-    // Simulación de login con datos mock
-    await new Promise(r => setTimeout(r, 800))
 
     if (!email || !password) {
       setError('Por favor completa todos los campos.')
+      return
+    }
+
+    setLoading(true)
+
+    // 1. Autenticar con Supabase Auth (sesión guardada en cookies automáticamente)
+    const { error: authError } = await supabaseBrowser.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    })
+
+    if (authError) {
+      setError('Email o contraseña incorrectos. Verifica tus datos.')
       setLoading(false)
       return
     }
 
-    // Guardar rol en localStorage y redirigir al portal correcto
+    // 2. Obtener rol del usuario desde la tabla usuarios
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('email', email.trim().toLowerCase())
+      .single()
+
+    const rol = (usuario?.rol ?? 'administrador') as UserRole
+
+    // 3. Guardar en localStorage para que RolProvider lo lea mientras carga
     localStorage.setItem('propify_rol', rol)
+
+    // 4. Redirigir según rol
     const destino =
       rol === 'propietario' || rol === 'arrendatario' ? '/mi-unidad' : '/dashboard'
     router.push(destino)
@@ -112,40 +126,13 @@ export default function LoginPage() {
           <span className="text-xl font-bold" style={{ color: '#1e3a5f' }}>Propify</span>
         </div>
 
-        <div className="w-full max-w-md animate-fade-in">
+        <div className="w-full max-w-md">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Iniciar sesión</h2>
             <p className="text-gray-500 mt-2">Bienvenido de vuelta 👋</p>
           </div>
 
-          {/* Selector de rol */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Acceder como
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {roles.map(r => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => setRol(r.value)}
-                  className={`
-                    flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all duration-200
-                    ${rol === r.value
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'}
-                  `}
-                >
-                  <span className={`text-sm font-semibold ${rol === r.value ? 'text-blue-700' : 'text-gray-700'}`}>
-                    {r.label}
-                  </span>
-                  <span className="text-xs text-gray-400 mt-0.5">{r.descripcion}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -231,6 +218,14 @@ export default function LoginPage() {
               Solicitar acceso al administrador
             </button>
           </p>
+
+          {/* Nota informativa */}
+          <div className="mt-6 p-3 rounded-xl border border-blue-100 bg-blue-50">
+            <p className="text-xs text-blue-600 text-center leading-relaxed">
+              🔐 Tu acceso y rol son asignados por el administrador del edificio.
+              Contacta a tu administrador si no tienes credenciales.
+            </p>
+          </div>
         </div>
 
         <p className="mt-8 text-xs text-gray-300 text-center">
