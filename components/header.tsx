@@ -1,5 +1,13 @@
 'use client'
 
+/**
+ * Fase 19 — Header actualizado
+ * - Usuario real desde useRol() (nombre, email, iniciales, rol)
+ * - Búsqueda global usa datos reales de Supabase (usuarios, unidades, solicitudes)
+ *   Se carga una sola vez cuando el contexto de rol está listo (cargado === true).
+ * - Se elimina la dependencia de mock-data.
+ */
+
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -7,9 +15,10 @@ import {
   Bell, Search, ChevronDown, Settings, LogOut,
   User, HelpCircle, Home, Wrench, Users, Trash2,
 } from 'lucide-react'
-import { mockUsers, mockUnidades, mockSolicitudes } from '@/lib/mock-data'
+import type { User as UserType, Unidad, SolicitudMantencion } from '@/types'
 import { useNotificaciones } from '@/context/notificaciones-context'
-import { supabaseBrowser }    from '@/lib/supabase-browser'
+import { supabaseBrowser }   from '@/lib/supabase-browser'
+import { useRol }            from '@/context/rol-context'
 
 // ─── Colores por tipo de notificación ────────────────────────
 const tipoColores = {
@@ -22,99 +31,161 @@ const tipoColores = {
   residente: { bg: '#f0fdf4', text: '#16a34a', emoji: '👤' },
 }
 
+// ─── Etiquetas de rol ─────────────────────────────────────────
+const ROL_LABELS: Record<string, string> = {
+  super_admin:   'Super Admin',
+  administrador: 'Administrador',
+  conserje:      'Conserje',
+  propietario:   'Propietario',
+  arrendatario:  'Arrendatario',
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
+function getInitials(nombre = '', apellido = ''): string {
+  const n = nombre.trim()[0]?.toUpperCase() ?? ''
+  const a = apellido.trim()[0]?.toUpperCase() ?? ''
+  return n + a || '??'
+}
+
 // ─── Tipos para búsqueda ──────────────────────────────────────
 interface SearchResult {
-  id: string
-  tipo: 'residente' | 'unidad' | 'solicitud'
-  titulo: string
+  id:        string
+  tipo:      'residente' | 'unidad' | 'solicitud'
+  titulo:    string
   subtitulo: string
-  href: string
+  href:      string
 }
 
 // ─── Componente ───────────────────────────────────────────────
 export default function Header() {
   const router = useRouter()
+
+  // Contextos
+  const { rol, usuario, unidad, cargado } = useRol()
+  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiarTodas } =
+    useNotificaciones()
+
+  // UI state
   const [showNotif,   setShowNotif]   = useState(false)
   const [showUser,    setShowUser]    = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [searchFocus, setSearchFocus] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
 
-  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas, limpiarTodas } = useNotificaciones()
+  // Datos para búsqueda — cargados desde Supabase una vez al montar
+  const [searchUsuarios,    setSearchUsuarios]    = useState<UserType[]>([])
+  const [searchUnidades,    setSearchUnidades]    = useState<Unidad[]>([])
+  const [searchSolicitudes, setSearchSolicitudes] = useState<SolicitudMantencion[]>([])
 
+  // ── Datos del usuario actual ──────────────────────────────────
+  const displayName     = usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Cargando...'
+  const displayEmail    = usuario?.email ?? ''
+  const displayInitials = getInitials(usuario?.nombre, usuario?.apellido)
+  const displayRol      = ROL_LABELS[rol] ?? 'Usuario'
+
+  // ── Logout ────────────────────────────────────────────────────
   async function handleLogout() {
     await supabaseBrowser.auth.signOut()
     localStorage.removeItem('propify_rol')
     router.push('/login')
   }
 
-  // ── Búsqueda global ──
+  // ── Cargar datos de búsqueda desde Supabase ──────────────────
+  useEffect(() => {
+    if (!cargado) return
+    const eid = usuario?.edificioId ?? unidad?.edificioId ?? 'e1'
+
+    Promise.all([
+      supabaseBrowser
+        .from('usuarios')
+        .select('id,nombre,apellido,email,rol,unidadId,edificioId,activo,telefono,creadoEn')
+        .eq('edificioId', eid),
+      supabaseBrowser
+        .from('unidades')
+        .select('id,numero,piso,tipo,estado,edificioId,superficieM2,habitaciones,banos,propietarioId,arrendatarioId,gastosComunesMonto')
+        .eq('edificioId', eid),
+      supabaseBrowser
+        .from('solicitudes')
+        .select('id,titulo,categoria,descripcion,prioridad,estado,unidadId,edificioId,solicitanteId,actualizadoEn,creadoEn')
+        .eq('edificioId', eid)
+        .order('creadoEn', { ascending: false })
+        .limit(50),
+    ]).then(([u, un, s]) => {
+      setSearchUsuarios((u.data    ?? []) as UserType[])
+      setSearchUnidades((un.data   ?? []) as Unidad[])
+      setSearchSolicitudes((s.data ?? []) as SolicitudMantencion[])
+    })
+  }, [cargado, usuario?.edificioId, unidad?.edificioId])
+
+  // ── Búsqueda global (filtro client-side sobre datos Supabase) ─
   const resultados = useMemo((): SearchResult[] => {
     const q = searchValue.toLowerCase().trim()
     if (q.length < 2) return []
 
     const res: SearchResult[] = []
 
-    // Residentes
-    mockUsers
+    // Residentes (propietarios y arrendatarios)
+    searchUsuarios
       .filter(u => u.rol === 'propietario' || u.rol === 'arrendatario')
       .filter(u =>
         `${u.nombre} ${u.apellido}`.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q)
+        u.email.toLowerCase().includes(q),
       )
       .slice(0, 3)
       .forEach(u => {
-        const unidad = u.unidadId ? mockUnidades.find(un => un.id === u.unidadId) : undefined
+        const unid = u.unidadId
+          ? searchUnidades.find(un => un.id === u.unidadId)
+          : undefined
         res.push({
-          id: u.id,
-          tipo: 'residente',
-          titulo: `${u.nombre} ${u.apellido}`,
-          subtitulo: `${u.rol === 'propietario' ? 'Propietario' : 'Arrendatario'}${unidad ? ` · Unidad ${unidad.numero}` : ''} · ${u.email}`,
-          href: `/residentes/${u.id}`,
+          id:        u.id,
+          tipo:      'residente',
+          titulo:    `${u.nombre} ${u.apellido}`,
+          subtitulo: `${u.rol === 'propietario' ? 'Propietario' : 'Arrendatario'}${unid ? ` · Unidad ${unid.numero}` : ''} · ${u.email}`,
+          href:      `/residentes/${u.id}`,
         })
       })
 
     // Unidades
-    mockUnidades
+    searchUnidades
       .filter(u =>
         u.numero.toLowerCase().includes(q) ||
-        u.tipo.toLowerCase().includes(q)
+        u.tipo.toLowerCase().includes(q),
       )
       .slice(0, 3)
       .forEach(u => {
         res.push({
-          id: u.id,
-          tipo: 'unidad',
-          titulo: `Unidad ${u.numero}`,
-          subtitulo: `${u.tipo.replace('_', ' ')} · Piso ${u.piso > 0 ? u.piso : 'PB'} · ${u.estado.replace('_', ' ')}`,
-          href: `/unidades/${u.id}`,
+          id:        u.id,
+          tipo:      'unidad',
+          titulo:    `Unidad ${u.numero}`,
+          subtitulo: `${u.tipo.replace(/_/g, ' ')} · Piso ${u.piso > 0 ? u.piso : 'PB'} · ${u.estado.replace(/_/g, ' ')}`,
+          href:      `/unidades/${u.id}`,
         })
       })
 
     // Solicitudes de mantención
-    mockSolicitudes
+    searchSolicitudes
       .filter(s =>
         s.titulo.toLowerCase().includes(q) ||
         s.categoria.toLowerCase().includes(q) ||
-        s.descripcion.toLowerCase().includes(q)
+        s.descripcion.toLowerCase().includes(q),
       )
       .slice(0, 3)
       .forEach(s => {
         res.push({
-          id: s.id,
-          tipo: 'solicitud',
-          titulo: s.titulo,
-          subtitulo: `${s.categoria} · ${s.prioridad} · ${s.estado.replace('_', ' ')}`,
-          href: `/mantenciones`,
+          id:        s.id,
+          tipo:      'solicitud',
+          titulo:    s.titulo,
+          subtitulo: `${s.categoria} · ${s.prioridad} · ${s.estado.replace(/_/g, ' ')}`,
+          href:      '/mantenciones',
         })
       })
 
     return res.slice(0, 8)
-  }, [searchValue])
+  }, [searchValue, searchUsuarios, searchUnidades, searchSolicitudes])
 
   const showResults = searchFocus && searchValue.length >= 2
 
-  // Cerrar al hacer click fuera
+  // Cerrar búsqueda al hacer click fuera
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -148,7 +219,8 @@ export default function Header() {
       className="flex items-center justify-between px-6 py-3 border-b bg-white"
       style={{ borderColor: '#e2e8f0', height: 64 }}
     >
-      {/* ── Búsqueda global ── */}
+
+      {/* ── Búsqueda global ─────────────────────────────────── */}
       <div className="flex-1 max-w-md relative" ref={searchRef}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -157,14 +229,16 @@ export default function Header() {
             value={searchValue}
             onChange={e => setSearchValue(e.target.value)}
             onFocus={() => setSearchFocus(true)}
-            onKeyDown={e => { if (e.key === 'Escape') { setSearchFocus(false); setSearchValue('') } }}
+            onKeyDown={e => {
+              if (e.key === 'Escape') { setSearchFocus(false); setSearchValue('') }
+            }}
             placeholder="Buscar residente, unidad, solicitud..."
             className="w-full pl-10 pr-4 py-2 rounded-xl border text-sm outline-none transition-all"
             style={{
               borderColor: searchFocus ? '#2563ae' : '#e2e8f0',
-              background: searchFocus ? 'white' : '#f8fafc',
-              color: '#0f172a',
-              boxShadow: searchFocus ? '0 0 0 3px rgba(37,99,174,0.08)' : 'none',
+              background:  searchFocus ? 'white' : '#f8fafc',
+              color:       '#0f172a',
+              boxShadow:   searchFocus ? '0 0 0 3px rgba(37,99,174,0.08)' : 'none',
             }}
             suppressHydrationWarning
           />
@@ -178,7 +252,7 @@ export default function Header() {
           )}
         </div>
 
-        {/* ── Dropdown de resultados ── */}
+        {/* Dropdown de resultados */}
         {showResults && (
           <div
             className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden"
@@ -228,7 +302,11 @@ export default function Header() {
                   })}
                 </div>
                 <div className="px-4 py-2 border-t text-center" style={{ borderColor: '#f1f5f9' }}>
-                  <p className="text-xs text-gray-400">Presiona <kbd className="px-1.5 py-0.5 rounded bg-gray-100 text-xs font-mono">ESC</kbd> para cerrar</p>
+                  <p className="text-xs text-gray-400">
+                    Presiona{' '}
+                    <kbd className="px-1.5 py-0.5 rounded bg-gray-100 text-xs font-mono">ESC</kbd>
+                    {' '}para cerrar
+                  </p>
                 </div>
               </>
             )}
@@ -236,7 +314,7 @@ export default function Header() {
         )}
       </div>
 
-      {/* ── Acciones ── */}
+      {/* ── Acciones ────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 ml-4 relative">
 
         {/* Notificaciones */}
@@ -258,10 +336,14 @@ export default function Header() {
 
           {showNotif && (
             <div
-              className="absolute right-0 top-12 w-96 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden animate-fade-in"
+              className="absolute right-0 top-12 w-96 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden"
               style={{ borderColor: '#e2e8f0' }}
             >
-              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#f1f5f9' }}>
+              {/* Header del panel */}
+              <div
+                className="flex items-center justify-between px-4 py-3 border-b"
+                style={{ borderColor: '#f1f5f9' }}
+              >
                 <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                 {noLeidas > 0 && (
                   <span
@@ -273,43 +355,56 @@ export default function Header() {
                 )}
               </div>
 
+              {/* Lista */}
               <div className="max-h-96 overflow-y-auto divide-y" style={{ borderColor: '#f8fafc' }}>
                 {notificaciones.length === 0 ? (
                   <div className="px-4 py-10 text-center">
                     <Bell className="w-8 h-8 mx-auto mb-2 text-gray-200" />
                     <p className="text-sm text-gray-400">Sin notificaciones</p>
                   </div>
-                ) : notificaciones.map(n => {
-                  const c = tipoColores[n.tipo as keyof typeof tipoColores] ?? tipoColores.solicitud
-                  return (
-                    <div
-                      key={n.id}
-                      onClick={() => marcarLeida(n.id)}
-                      className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
-                      style={{ background: n.leida ? 'white' : '#f0f7ff' }}
-                    >
-                      <span
-                        className="flex items-center justify-center w-9 h-9 rounded-xl text-lg shrink-0"
-                        style={{ background: c.bg }}
+                ) : (
+                  notificaciones.map(n => {
+                    const c = tipoColores[n.tipo as keyof typeof tipoColores]
+                      ?? tipoColores.solicitud
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => marcarLeida(n.id)}
+                        className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                        style={{ background: n.leida ? 'white' : '#f0f7ff' }}
                       >
-                        {c.emoji}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{n.titulo}</p>
-                          {!n.leida && (
-                            <div className="w-2 h-2 rounded-full shrink-0 animate-pulse" style={{ background: '#2563ae' }} />
-                          )}
+                        <span
+                          className="flex items-center justify-center w-9 h-9 rounded-xl text-lg shrink-0"
+                          style={{ background: c.bg }}
+                        >
+                          {c.emoji}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {n.titulo}
+                            </p>
+                            {!n.leida && (
+                              <div
+                                className="w-2 h-2 rounded-full shrink-0 animate-pulse"
+                                style={{ background: '#2563ae' }}
+                              />
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">{n.descripcion}</p>
+                          <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>{n.tiempo}</p>
                         </div>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{n.descripcion}</p>
-                        <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>{n.tiempo}</p>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
 
-              <div className="px-4 py-3 border-t flex items-center justify-between" style={{ borderColor: '#f1f5f9' }}>
+              {/* Footer del panel */}
+              <div
+                className="px-4 py-3 border-t flex items-center justify-between"
+                style={{ borderColor: '#f1f5f9' }}
+              >
                 <button
                   onClick={marcarTodasLeidas}
                   className="text-sm font-medium hover:opacity-70 transition-opacity"
@@ -343,33 +438,41 @@ export default function Header() {
             onClick={() => { setShowUser(!showUser); setShowNotif(false); setSearchFocus(false) }}
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
           >
+            {/* Avatar con iniciales */}
             <div
               className="flex items-center justify-center rounded-full text-white text-sm font-bold shrink-0"
               style={{ width: 32, height: 32, background: '#1e3a5f' }}
             >
-              RA
+              {displayInitials}
             </div>
             <div className="text-left hidden sm:block">
-              <p className="text-sm font-semibold text-gray-900 leading-none">Rodrigo Admin</p>
-              <p className="text-xs text-gray-400 mt-0.5">Administrador</p>
+              <p className="text-sm font-semibold text-gray-900 leading-none">{displayName}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{displayRol}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
           </button>
 
           {showUser && (
             <div
-              className="absolute right-0 top-12 w-56 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden animate-fade-in"
+              className="absolute right-0 top-12 w-56 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden"
               style={{ borderColor: '#e2e8f0' }}
             >
+              {/* Info del usuario */}
               <div className="px-4 py-3 border-b" style={{ borderColor: '#f1f5f9' }}>
-                <p className="font-semibold text-gray-900">Rodrigo Admin</p>
-                <p className="text-xs text-gray-400 mt-0.5">admin@propify.cl</p>
+                <p className="font-semibold text-gray-900 truncate">{displayName}</p>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">{displayEmail}</p>
               </div>
+
+              {/* Menú */}
               <div className="py-1">
                 {[
-                  { icon: User,       label: 'Mi perfil',          href: '/residentes/u1' },
-                  { icon: Settings,   label: 'Configuración',       href: '/configuracion' },
-                  { icon: HelpCircle, label: 'Ayuda y soporte',     href: '#' },
+                  {
+                    icon:  User,
+                    label: 'Mi perfil',
+                    href:  usuario ? `/residentes/${usuario.id}` : '/residentes',
+                  },
+                  { icon: Settings,   label: 'Configuración',   href: '/configuracion' },
+                  { icon: HelpCircle, label: 'Ayuda y soporte', href: '#' },
                 ].map(item => (
                   <Link
                     key={item.label}
@@ -382,6 +485,8 @@ export default function Header() {
                   </Link>
                 ))}
               </div>
+
+              {/* Logout */}
               <div className="py-1 border-t" style={{ borderColor: '#f1f5f9' }}>
                 <button
                   onClick={handleLogout}

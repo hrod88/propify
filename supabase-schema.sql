@@ -159,6 +159,16 @@ CREATE TABLE IF NOT EXISTS paquetes (
   "codigoRetiro" TEXT
 );
 
+CREATE TABLE IF NOT EXISTS notificaciones (
+  id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+  "edificioId" TEXT NOT NULL,
+  tipo         TEXT NOT NULL,
+  titulo       TEXT NOT NULL,
+  descripcion  TEXT DEFAULT '',
+  leida        BOOLEAN DEFAULT false,
+  "creadoEn"   TIMESTAMPTZ DEFAULT now()
+);
+
 -- ─── 2. RLS — Acceso público (demo sin autenticación) ─────────
 
 ALTER TABLE edificios         ENABLE ROW LEVEL SECURITY;
@@ -172,6 +182,7 @@ ALTER TABLE reservas          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comunicaciones    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visitas           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paquetes          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificaciones    ENABLE ROW LEVEL SECURITY;
 
 -- Políticas: permitir todo al rol anon (demo)
 DO $$
@@ -179,11 +190,16 @@ DECLARE
   t TEXT;
 BEGIN
   FOREACH t IN ARRAY ARRAY['edificios','usuarios','unidades','gastos_comunes','pagos',
-    'solicitudes','espacios_comunes','reservas','comunicaciones','visitas','paquetes']
+    'solicitudes','espacios_comunes','reservas','comunicaciones','visitas','paquetes',
+    'notificaciones']
   LOOP
     EXECUTE format('CREATE POLICY "public_all_%s" ON %I FOR ALL TO anon USING (true) WITH CHECK (true)', t, t);
   END LOOP;
 END $$;
+
+-- Realtime para notificaciones (eventos en tiempo real)
+ALTER TABLE notificaciones REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE notificaciones;
 
 -- ─── 3. SEED DATA ─────────────────────────────────────────────
 
@@ -293,3 +309,11 @@ INSERT INTO paquetes (id, "edificioId", "unidadId", courier, descripcion, estado
   ('p2', 'e1', 'un4', 'Starken',       'Sobre pequeño',  'recibido',   '2026-05-26T10:30:00', null,                  '7823'),
   ('p3', 'e1', 'un7', 'Correos Chile', 'Paquete grande', 'notificado', '2026-05-25T15:00:00', null,                  '1149'),
   ('p4', 'e1', 'un6', 'Pedidos Ya',    'Comida',         'retirado',   '2026-05-26T12:00:00', '2026-05-26T12:10:00', '3392');
+
+-- Notificaciones
+INSERT INTO notificaciones ("edificioId", tipo, titulo, descripcion, leida, "creadoEn") VALUES
+  ('e1', 'pago',      'Pago recibido',      'Depto 501 pagó gastos comunes de mayo',  true,  NOW() - INTERVAL '1 hour'),
+  ('e1', 'solicitud', 'Solicitud urgente',  'Puerta ascensor piso 3 no cierra bien',  false, NOW() - INTERVAL '35 minutes'),
+  ('e1', 'paquete',   'Nuevo paquete',      'Chilexpress para Depto 101',             false, NOW() - INTERVAL '20 minutes'),
+  ('e1', 'mora',      'Alerta morosidad',   'Depto 102 — 16 días de mora',            true,  NOW() - INTERVAL '5 hours'),
+  ('e1', 'circular',  'Circular enviada',   'Corte de agua programado para el 28/05', true,  NOW() - INTERVAL '2 hours');
