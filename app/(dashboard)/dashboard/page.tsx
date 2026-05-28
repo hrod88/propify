@@ -444,10 +444,10 @@ export default async function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {saludo}, {nombreUsuario} {emojiSaludo}
+            {saludo}, {nombreEdificio} {emojiSaludo}
           </h1>
           <p className="text-gray-500 mt-1">
-            {fechaLarga} · {nombreEdificio}
+            {fechaLarga}
           </p>
         </div>
         <div className="flex items-center gap-2">
