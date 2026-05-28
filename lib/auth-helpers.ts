@@ -27,3 +27,34 @@ export async function getEdificioActual(): Promise<string> {
     return 'e1'
   }
 }
+
+/**
+ * Retorna edificioId + nombre del usuario autenticado.
+ * Fallback a 'e1' / 'Admin' si no hay sesión.
+ */
+export async function getUsuarioActual(): Promise<{
+  edificioId: string
+  nombre: string
+  apellido: string
+}> {
+  try {
+    const client = await createSupabaseServerClient()
+    const { data: { user } } = await client.auth.getUser()
+    if (!user?.email) return { edificioId: 'e1', nombre: 'Admin', apellido: '' }
+
+    const { data } = await supabase
+      .from('usuarios')
+      .select('edificioId, nombre, apellido')
+      .eq('email', user.email)
+      .single()
+
+    const u = data as { edificioId?: string; nombre?: string; apellido?: string } | null
+    return {
+      edificioId: u?.edificioId ?? 'e1',
+      nombre:     u?.nombre    ?? 'Admin',
+      apellido:   u?.apellido  ?? '',
+    }
+  } catch {
+    return { edificioId: 'e1', nombre: 'Admin', apellido: '' }
+  }
+}

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getDashboardData, formatCLP } from '@/lib/db'
-import { getEdificioActual } from '@/lib/auth-helpers'
+import { getUsuarioActual } from '@/lib/auth-helpers'
 import type { ActividadReciente } from '@/types'
 
 export const metadata: Metadata = {
@@ -326,12 +326,37 @@ function ActividadItem({ item }: { item: ActividadReciente }) {
   )
 }
 
+// ─── Helpers de fecha ──────────────────────────────────────────
+const DIAS_SEMANA  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+const MESES_LARGO  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+const MESES_CORTO  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
 // ─── Página principal ─────────────────────────────────────────
 export default async function DashboardPage() {
-  const edificioId = await getEdificioActual()
-  const { kpis: kpi, actividad, gastos, pagos, solicitudes: sols, espacios } = await getDashboardData(edificioId)
-  const ocupacion = Math.round((kpi.unidadesOcupadas / kpi.totalUnidades) * 100)
-  const pagadosPct = Math.round(((kpi.totalUnidades - kpi.morosos) / kpi.totalUnidades) * 100)
+  const { edificioId, nombre: nombreUsuario } = await getUsuarioActual()
+  const { kpis: kpi, actividad, gastos, pagos, solicitudes: sols, espacios, edificio } =
+    await getDashboardData(edificioId)
+
+  // ── Fecha y hora dinámica (Chile ≈ UTC-4 en invierno) ──────
+  const ahora        = new Date()
+  const horaChile    = (ahora.getUTCHours() - 4 + 24) % 24
+  const saludo       = horaChile < 12 ? 'Buenos días' : horaChile < 19 ? 'Buenas tardes' : 'Buenas noches'
+  const emojiSaludo  = horaChile < 12 ? '👋' : horaChile < 19 ? '☀️' : '🌙'
+  const diaNum       = ahora.getUTCDate()
+  const mesActual    = ahora.getUTCMonth() + 1   // 1-12
+  const añoActual    = ahora.getUTCFullYear()
+  const diaSemana    = DIAS_SEMANA[ahora.getUTCDay()]
+  const mesNombre    = MESES_LARGO[mesActual - 1]
+  const mesCapital   = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1)
+  const fechaLarga   = `${diaSemana}, ${diaNum} de ${mesNombre} de ${añoActual}`
+  const fechaCorta   = `${diaNum.toString().padStart(2,'0')}/${mesActual.toString().padStart(2,'0')}`
+
+  // Nombre del edificio desde Supabase
+  const nombreEdificio = edificio?.nombre ?? 'Edificio'
+
+  // ── KPIs básicos ────────────────────────────────────────────
+  const ocupacion  = kpi.totalUnidades > 0 ? Math.round((kpi.unidadesOcupadas / kpi.totalUnidades) * 100) : 0
+  const pagadosPct = kpi.totalUnidades > 0 ? Math.round(((kpi.totalUnidades - kpi.morosos) / kpi.totalUnidades) * 100) : 0
 
   // Estado gastos comunes para mini-reporte (lado derecho)
   const gcPorEstado = {
@@ -341,31 +366,51 @@ export default async function DashboardPage() {
     parcial:   gastos.filter(g => g.estadoPago === 'parcial').length,
   }
 
-  // ── Analítica: datos calculados desde los arrays ──────────
-  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  // Solicitudes urgentes activas (real)
+  const solsUrgentes = sols.filter(
+    s => (s.prioridad === 'urgente' || s.prioridad === 'alta') && s.estado !== 'resuelto',
+  )
+
+  // ── Analítica: últimos 3 meses dinámicos ──────────────────
+  // Soporta cruce de año (p. ej. nov/dic/ene)
+  const ultimosMeses = [-2, -1, 0].map(offset => {
+    let mes = mesActual + offset
+    let año = añoActual
+    if (mes <= 0) { mes += 12; año -= 1 }
+    return { mes, año, label: MESES_CORTO[mes - 1] }
+  })
 
   // Ingresos por mes (últimos 3 meses)
-  const ingresosMensuales = [3, 4, 5].map(mes => ({
-    label: MESES[mes - 1],
+  const ingresosMensuales = ultimosMeses.map(({ mes, año, label }) => ({
+    label,
     valor: pagos
-      .filter(p => p.mes === mes && p.año === 2026)
+      .filter(p => p.mes === mes && p.año === año)
       .reduce((s, p) => s + p.monto, 0),
   }))
 
-  // Recaudación de mayo
-  const totalEsperado    = gastos.reduce((s, g) => s + g.montoTotal, 0)
-  const totalCobradoMes  = pagos
-    .filter(p => p.mes === 5 && p.año === 2026)
+  // Recaudación del mes actual
+  const totalEsperado     = gastos.reduce((s, g) => s + g.montoTotal, 0)
+  const totalCobradoMes   = pagos
+    .filter(p => p.mes === mesActual && p.año === añoActual)
     .reduce((s, p) => s + p.monto, 0)
-  const totalPendienteMes = totalEsperado - totalCobradoMes
-  const pctCobrado        = Math.round((totalCobradoMes / totalEsperado) * 100)
+  const totalPendienteMes = Math.max(0, totalEsperado - totalCobradoMes)
+  const pctCobrado        = totalEsperado > 0
+    ? Math.round((totalCobradoMes / totalEsperado) * 100)
+    : 0
 
-  // Total acumulado Q2 (Mar–May)
-  const totalQ2 = ingresosMensuales.reduce((s, m) => s + m.valor, 0)
+  // Acumulado últimos 3 meses
+  const totalUltimos3 = ingresosMensuales.reduce((s, m) => s + m.valor, 0)
 
-  // Variación mes a mes
-  const varMes = ingresosMensuales[2].valor - ingresosMensuales[1].valor
-  const varMesPct = Math.round((varMes / ingresosMensuales[1].valor) * 100)
+  // Variación mes a mes (mes actual vs mes anterior)
+  const ingMesAnt = ingresosMensuales[1].valor
+  const ingMesAct = ingresosMensuales[2].valor
+  const varMes    = ingMesAct - ingMesAnt
+  const varMesPct = ingMesAnt > 0
+    ? Math.round((varMes / ingMesAnt) * 100)
+    : 0
+
+  // Label del periodo
+  const labelPeriodo = `${ultimosMeses[0].label}–${ultimosMeses[2].label}`
 
   // Solicitudes por estado
   const solPorEstado = [
@@ -399,10 +444,10 @@ export default async function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Buenos días, Rodrigo 👋
+            {saludo}, {nombreUsuario} {emojiSaludo}
           </h1>
           <p className="text-gray-500 mt-1">
-            Jueves, 27 de mayo de 2026 · Edificio Las Palmas
+            {fechaLarga} · {nombreEdificio}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -425,8 +470,6 @@ export default async function DashboardPage() {
           icon={Building2}
           color="#2563ae"
           bg="#dbeafe"
-          tendencia="up"
-          tendenciaValor="+2 este mes"
         />
         <KPICard
           titulo="Ingresos del Mes"
@@ -435,8 +478,8 @@ export default async function DashboardPage() {
           icon={DollarSign}
           color="#16a34a"
           bg="#dcfce7"
-          tendencia="up"
-          tendenciaValor="+8.3%"
+          tendencia={varMes >= 0 ? 'up' : 'down'}
+          tendenciaValor={`${varMes >= 0 ? '+' : ''}${varMesPct}% vs mes ant.`}
         />
         <KPICard
           titulo="Morosos"
@@ -445,13 +488,11 @@ export default async function DashboardPage() {
           icon={AlertTriangle}
           color="#dc2626"
           bg="#fee2e2"
-          tendencia="down"
-          tendenciaValor="-2 vs mes ant."
         />
         <KPICard
           titulo="Mantenciones Pendientes"
           valor={String(kpi.solicitudesPendientes)}
-          subtitulo="2 urgentes"
+          subtitulo={`${solsUrgentes.length} urgente${solsUrgentes.length !== 1 ? 's' : ''}`}
           icon={Wrench}
           color="#d97706"
           bg="#fef3c7"
@@ -463,7 +504,7 @@ export default async function DashboardPage() {
         <KPICard
           titulo="Fondo de Reserva"
           valor={formatCLP(kpi.fondoReserva)}
-          subtitulo="Actualizado al 27/05"
+          subtitulo={`Actualizado al ${fechaCorta}`}
           icon={TrendingUp}
           color="#059669"
           bg="#ecfdf5"
@@ -471,7 +512,7 @@ export default async function DashboardPage() {
         <KPICard
           titulo="Visitas Hoy"
           valor={String(kpi.visitasHoy)}
-          subtitulo="2 aún en el edificio"
+          subtitulo={kpi.visitasHoy > 0 ? `${kpi.visitasHoy} registro${kpi.visitasHoy !== 1 ? 's' : ''} de entrada` : 'Sin visitas registradas'}
           icon={Users}
           color="#7c3aed"
           bg="#f3e8ff"
@@ -487,7 +528,7 @@ export default async function DashboardPage() {
         <KPICard
           titulo="Reservas Hoy"
           valor={String(kpi.reservasHoy)}
-          subtitulo="Quincho A · Lavandería ×2"
+          subtitulo={kpi.reservasHoy > 0 ? `${kpi.reservasHoy} espacio${kpi.reservasHoy !== 1 ? 's' : ''} reservado${kpi.reservasHoy !== 1 ? 's' : ''}` : 'Sin reservas hoy'}
           icon={Calendar}
           color="#0891b2"
           bg="#cffafe"
@@ -512,7 +553,7 @@ export default async function DashboardPage() {
             className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
             style={{ background: '#dbeafe', color: '#2563ae' }}
           >
-            Mayo 2026
+            {mesCapital} {añoActual}
           </span>
         </div>
 
@@ -544,7 +585,7 @@ export default async function DashboardPage() {
                   : <TrendingDown className="w-3.5 h-3.5 text-red-500" />
                 }
                 <span>
-                  May vs Abr:{' '}
+                  {ultimosMeses[2].label} vs {ultimosMeses[1].label}:{' '}
                   <span
                     className="font-semibold"
                     style={{ color: varMes >= 0 ? '#16a34a' : '#dc2626' }}
@@ -554,8 +595,8 @@ export default async function DashboardPage() {
                 </span>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-400">Total Q2 (Mar–May)</p>
-                <p className="text-sm font-bold text-gray-900">{formatCLP(totalQ2)}</p>
+                <p className="text-xs text-gray-400">Total {labelPeriodo}</p>
+                <p className="text-sm font-bold text-gray-900">{formatCLP(totalUltimos3)}</p>
               </div>
             </div>
           </div>
@@ -568,7 +609,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-gray-900">Recaudación</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Gastos comunes mayo</p>
+                <p className="text-xs text-gray-400 mt-0.5">Gastos comunes {mesNombre}</p>
               </div>
               <PieChart className="w-4 h-4" style={{ color: '#cbd5e1' }} />
             </div>
@@ -805,14 +846,12 @@ export default async function DashboardPage() {
                 className="text-xs px-2 py-0.5 rounded-full font-semibold"
                 style={{ background: '#fee2e2', color: '#dc2626' }}
               >
-                2 activas
+                {solsUrgentes.length} activa{solsUrgentes.length !== 1 ? 's' : ''}
               </span>
             </div>
 
             <div className="space-y-3">
-              {sols
-                .filter(s => s.prioridad === 'urgente' || s.prioridad === 'alta')
-                .filter(s => s.estado !== 'resuelto')
+              {solsUrgentes
                 .slice(0, 3)
                 .map(s => (
                   <div

@@ -220,7 +220,7 @@ export async function getSuscripcionActual(edificioId: string): Promise<Suscripc
 // ─── KPIs calculados ──────────────────────────────────────────
 
 export async function getDashboardData(edificioId = 'e1') {
-  const [gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades] =
+  const [gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades, edificio] =
     await Promise.all([
       getGastosComunes(edificioId),
       getPagos(edificioId),
@@ -230,6 +230,7 @@ export async function getDashboardData(edificioId = 'e1') {
       getPaquetes(edificioId),
       getReservas(edificioId),
       getUnidades(edificioId),
+      getEdificioById(edificioId),
     ])
 
   const hoy = new Date().toISOString().slice(0, 10)
@@ -275,5 +276,5 @@ export async function getDashboardData(edificioId = 'e1') {
     })),
   ].slice(0, 7)
 
-  return { kpis, actividad, gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades }
+  return { kpis, actividad, gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades, edificio }
 }
