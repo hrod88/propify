@@ -1,6 +1,7 @@
 /**
  * GET /api/suscripcion?edificioId=xxx
- * Retorna la suscripción activa del edificio con el plan joinado.
+ * Retorna la suscripción activa del edificio con el plan incluido.
+ * Usa dos queries separadas (sin JOIN FK) para máxima compatibilidad con PostgREST.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
@@ -13,24 +14,33 @@ export async function GET(req: NextRequest) {
     }
 
     const db = getSupabaseAdmin()
-    const { data, error } = await db
+
+    // 1. Obtener suscripción activa
+    const { data: sub, error: subError } = await db
       .from('suscripciones')
-      .select('*, plan:planes(*)')
+      .select('*')
       .eq('edificioId', edificioId)
       .eq('estado', 'activa')
       .order('creadoEn', { ascending: false })
       .limit(1)
       .single()
 
-    if (error) {
-      // Sin suscripción → devuelve plan gratuito virtual
-      if (error.code === 'PGRST116') {
+    if (subError) {
+      // Sin suscripción activa → devuelve null (el componente usará plan_free)
+      if (subError.code === 'PGRST116') {
         return NextResponse.json({ suscripcion: null })
       }
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: subError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ suscripcion: data })
+    // 2. Obtener el plan asociado (query separada, sin FK join)
+    const { data: plan } = await db
+      .from('planes')
+      .select('*')
+      .eq('id', sub.planId)
+      .single()
+
+    return NextResponse.json({ suscripcion: { ...sub, plan: plan ?? null } })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
