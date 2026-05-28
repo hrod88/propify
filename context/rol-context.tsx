@@ -62,11 +62,27 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
           // Usuario en Supabase Auth pero sin registro en usuarios → usar localStorage
           const guardado = localStorage.getItem('propify_rol') as UserRole | null
           if (guardado) setRolEstado(guardado)
+
+          // Si hay unidad de preview, cargarla
+          const previewUnidadId = localStorage.getItem('propify_preview_unidad')
+          if (previewUnidadId) {
+            const { data: unidadPreview } = await supabase
+              .from('unidades').select('*').eq('id', previewUnidadId).single()
+            if (unidadPreview) setUnidad(unidadPreview as Unidad)
+          }
         }
       } else {
         // Sin sesión activa → usar localStorage como fallback
         const guardado = localStorage.getItem('propify_rol') as UserRole | null
         if (guardado) setRolEstado(guardado)
+
+        // Si hay unidad de preview, cargarla
+        const previewUnidadId = localStorage.getItem('propify_preview_unidad')
+        if (previewUnidadId) {
+          const { data: unidadPreview } = await supabase
+            .from('unidades').select('*').eq('id', previewUnidadId).single()
+          if (unidadPreview) setUnidad(unidadPreview as Unidad)
+        }
       }
 
       setCargado(true)

@@ -78,28 +78,24 @@ export default function Header() {
     setIsPreview(localStorage.getItem('propify_preview') === 'true')
   }, [])
 
-  // Simular rol (admin → propietario / arrendatario / conserje)
-  async function simularRol(nuevoRol: string) {
-    if (!usuario) return
+  // Simular rol (solo localStorage — no requiere usuario en contexto)
+  function simularRol(nuevoRol: string) {
     const esResidente = nuevoRol === 'propietario' || nuevoRol === 'arrendatario'
-    const { error } = await supabaseBrowser
-      .from('usuarios')
-      .update({ rol: nuevoRol, unidadId: esResidente ? 'un-0804' : null })
-      .eq('id', usuario.id)
-    if (!error) {
-      localStorage.setItem('propify_preview', 'true')
-      window.location.reload()
+    localStorage.setItem('propify_preview',       'true')
+    localStorage.setItem('propify_rol',            nuevoRol)
+    if (esResidente) {
+      localStorage.setItem('propify_preview_unidad', 'un-0804')
+    } else {
+      localStorage.removeItem('propify_preview_unidad')
     }
+    window.location.reload()
   }
 
   // Volver al rol de administrador
-  async function volverAlAdmin() {
-    if (!usuario) return
-    await supabaseBrowser
-      .from('usuarios')
-      .update({ rol: 'administrador', unidadId: null })
-      .eq('id', usuario.id)
+  function volverAlAdmin() {
+    localStorage.setItem('propify_rol', 'administrador')
     localStorage.removeItem('propify_preview')
+    localStorage.removeItem('propify_preview_unidad')
     window.location.reload()
   }
 
@@ -552,8 +548,8 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Banner flotante — visible cuando se está en modo vista previa */}
-      {isPreview && (
+      {/* Banner flotante — visible solo cuando se simula un rol no-admin */}
+      {isPreview && rol !== 'administrador' && rol !== 'super_admin' && (
         <div
           className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl"
           style={{ background: '#1e3a5f', color: 'white', border: '1px solid rgba(255,255,255,0.12)' }}
