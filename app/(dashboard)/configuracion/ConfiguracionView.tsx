@@ -1,15 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Building2, Users, Bell, User, Save, Shield,
   Mail, Phone, MapPin, Hash, ChevronRight, LogOut,
-  X, UserPlus, Send,
+  X, UserPlus, Send, CreditCard, Zap, Crown, Check,
 } from 'lucide-react'
-import type { Edificio, Unidad, User as UserType } from '@/types'
+import Link from 'next/link'
+import { formatCLP } from '@/lib/db'
+import type { Edificio, Unidad, User as UserType, Suscripcion } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Tab = 'edificio' | 'usuarios' | 'notificaciones' | 'cuenta'
+type Tab = 'edificio' | 'usuarios' | 'notificaciones' | 'cuenta' | 'plan'
+
+// ─── Planes (espejo del seed SQL) ─────────────────────────────
+const PLANES_INFO = [
+  {
+    id: 'plan_free', nombre: 'Gratuito', precio: 0,
+    maxUnidades: 10, maxUsuarios: 15, popular: false,
+    icon: Shield, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0',
+    features: ['Hasta 10 unidades','Hasta 15 usuarios','Gastos comunes básicos','Registro de visitas','Control de paquetes','Soporte por email'],
+  },
+  {
+    id: 'plan_basico', nombre: 'Básico', precio: 29990,
+    maxUnidades: 50, maxUsuarios: 100, popular: true,
+    icon: Zap, color: '#2563ae', bg: '#eff6ff', border: '#93c5fd',
+    features: ['Hasta 50 unidades','Hasta 100 usuarios','Todo del plan Gratuito','Invitación de residentes','Comunicaciones ilimitadas','Reservas de espacios','Exportar CSV','Soporte prioritario'],
+  },
+  {
+    id: 'plan_pro', nombre: 'Pro', precio: 59990,
+    maxUnidades: 999, maxUsuarios: 9999, popular: false,
+    icon: Crown, color: '#7c3aed', bg: '#faf5ff', border: '#c4b5fd',
+    features: ['Unidades ilimitadas','Usuarios ilimitados','Todo del plan Básico','Múltiples edificios','Asistente IA 24/7','API acceso completo','Reportes avanzados','Soporte dedicado'],
+  },
+]
 
 // ─── Configs ──────────────────────────────────────────────────
 const rolCfg = {
@@ -31,6 +55,48 @@ interface Props {
 export default function ConfiguracionView({ edificio, users, unidades }: Props) {
   const [tab, setTab]   = useState<Tab>('edificio')
   const [saved, setSaved] = useState(false)
+
+  // ─── Plan & suscripción ────────────────────────────────────
+  const [suscripcion,     setSuscripcion]     = useState<Suscripcion | null>(null)
+  const [planLoading,     setPlanLoading]     = useState(false)
+  const [upgradeLoading,  setUpgradeLoading]  = useState<string | null>(null) // planId en proceso
+  const [upgradeOk,       setUpgradeOk]       = useState('')
+
+  useEffect(() => {
+    if (!edificio?.id) return
+    fetch(`/api/suscripcion?edificioId=${edificio.id}`)
+      .then(r => r.json())
+      .then(({ suscripcion: sub }) => setSuscripcion(sub ?? null))
+      .catch(() => null)
+  }, [edificio?.id])
+
+  const handleUpgrade = async (planId: string) => {
+    if (!edificio?.id) return
+    setUpgradeOk('')
+    setUpgradeLoading(planId)
+    setPlanLoading(true)
+    try {
+      const res = await fetch('/api/suscripcion/upgrade', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ edificioId: edificio.id, planId }),
+      })
+      const data = await res.json() as { ok?: boolean; planNombre?: string; error?: string }
+      if (res.ok && data.ok) {
+        setUpgradeOk(data.planNombre ?? planId)
+        // Refrescar suscripción
+        const r2 = await fetch(`/api/suscripcion?edificioId=${edificio.id}`)
+        const { suscripcion: sub } = await r2.json() as { suscripcion: Suscripcion }
+        setSuscripcion(sub ?? null)
+      }
+    } catch { /* silencioso */ }
+    finally {
+      setUpgradeLoading(null)
+      setPlanLoading(false)
+    }
+  }
+
+  const planActualId = suscripcion?.planId ?? 'plan_free'
 
   // ─── Invite modal state ────────────────────────────────────
   const [showInvite,    setShowInvite]    = useState(false)
@@ -107,10 +173,11 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
   }
 
   const tabs: { value: Tab; label: string; Icon: React.ElementType }[] = [
-    { value: 'edificio',       label: 'Edificio',       Icon: Building2 },
-    { value: 'usuarios',       label: 'Usuarios',       Icon: Users },
-    { value: 'notificaciones', label: 'Notificaciones', Icon: Bell },
-    { value: 'cuenta',         label: 'Mi cuenta',      Icon: User },
+    { value: 'edificio',       label: 'Edificio',       Icon: Building2   },
+    { value: 'usuarios',       label: 'Usuarios',       Icon: Users       },
+    { value: 'notificaciones', label: 'Notificaciones', Icon: Bell        },
+    { value: 'cuenta',         label: 'Mi cuenta',      Icon: User        },
+    { value: 'plan',           label: 'Plan',           Icon: CreditCard  },
   ]
 
   return (
@@ -537,6 +604,169 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
             <p className="text-xs text-gray-400">
               Propify v1.0.0 · Ley de Copropiedad 2022 · © 2026 Propify
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════ PLAN ════════════ */}
+      {tab === 'plan' && (
+        <div className="space-y-5">
+
+          {/* Banner plan actual */}
+          {(() => {
+            const actual = PLANES_INFO.find(p => p.id === planActualId) ?? PLANES_INFO[0]
+            const Icon   = actual.icon
+            const usadas = unidades.length
+            const pct    = Math.min(100, Math.round((usadas / actual.maxUnidades) * 100))
+            return (
+              <div
+                className="rounded-2xl border-2 p-5"
+                style={{ background: actual.bg, borderColor: actual.border }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${actual.color}18` }}>
+                      <Icon className="w-5 h-5" style={{ color: actual.color }} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Plan actual</p>
+                      <p className="font-bold text-gray-900 text-lg">{actual.nombre}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {actual.precio === 0
+                      ? <p className="font-bold text-gray-900">Gratis</p>
+                      : <p className="font-bold text-gray-900">{formatCLP(actual.precio)}<span className="text-xs font-normal text-gray-400">/mes</span></p>
+                    }
+                  </div>
+                </div>
+
+                {/* Uso unidades */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 font-medium">Unidades usadas</span>
+                    <span className="font-bold" style={{ color: pct >= 90 ? '#dc2626' : actual.color }}>
+                      {usadas} / {actual.maxUnidades >= 999 ? '∞' : actual.maxUnidades}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${actual.maxUnidades >= 999 ? 30 : pct}%`,
+                        background: pct >= 90 ? '#dc2626' : actual.color,
+                      }}
+                    />
+                  </div>
+                  {pct >= 80 && actual.maxUnidades < 999 && (
+                    <p className="text-xs font-semibold" style={{ color: pct >= 90 ? '#dc2626' : '#d97706' }}>
+                      {pct >= 90 ? '⚠️ Casi al límite. Actualiza tu plan para seguir creciendo.' : '⚡ Cerca del límite — considera actualizar.'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Éxito upgrade */}
+                {upgradeOk && (
+                  <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#dcfce7', color: '#16a34a' }}>
+                    <Check className="w-4 h-4" />
+                    Plan <strong>{upgradeOk}</strong> activado correctamente.
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Cards de planes */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {PLANES_INFO.map(plan => {
+              const Icon      = plan.icon
+              const esActual  = plan.id === planActualId
+              return (
+                <div
+                  key={plan.id}
+                  className="relative rounded-2xl border-2 p-5 flex flex-col transition-shadow hover:shadow-md"
+                  style={{
+                    background:  plan.bg,
+                    borderColor: esActual ? plan.color : plan.border,
+                  }}
+                >
+                  {plan.popular && !esActual && (
+                    <div
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
+                      style={{ background: plan.color }}
+                    >
+                      ✨ Popular
+                    </div>
+                  )}
+                  {esActual && (
+                    <div
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
+                      style={{ background: plan.color }}
+                    >
+                      ✓ Plan actual
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${plan.color}18` }}>
+                      <Icon className="w-4 h-4" style={{ color: plan.color }} />
+                    </div>
+                    <span className="font-bold text-gray-900">{plan.nombre}</span>
+                  </div>
+
+                  <div className="mb-4">
+                    {plan.precio === 0
+                      ? <p className="text-2xl font-bold text-gray-900">Gratis</p>
+                      : <p className="text-2xl font-bold text-gray-900">{formatCLP(plan.precio)}<span className="text-xs font-normal text-gray-400">/mes</span></p>
+                    }
+                  </div>
+
+                  <ul className="space-y-1.5 flex-1 mb-4">
+                    {plan.features.slice(0, 4).map(f => (
+                      <li key={f} className="flex items-start gap-1.5 text-xs text-gray-600">
+                        <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: plan.color }} />
+                        {f}
+                      </li>
+                    ))}
+                    {plan.features.length > 4 && (
+                      <li className="text-xs" style={{ color: plan.color }}>
+                        +{plan.features.length - 4} más…
+                      </li>
+                    )}
+                  </ul>
+
+                  {esActual ? (
+                    <div
+                      className="w-full py-2 rounded-xl text-xs font-bold text-center"
+                      style={{ background: `${plan.color}18`, color: plan.color }}
+                    >
+                      Plan activo
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleUpgrade(plan.id)}
+                      disabled={!!upgradeLoading || planLoading}
+                      className="w-full py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      style={{ background: plan.color }}
+                    >
+                      {upgradeLoading === plan.id ? (
+                        <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                      ) : null}
+                      {upgradeLoading === plan.id ? 'Activando…' : plan.precio === 0 ? 'Cambiar a Gratuito' : `Activar ${plan.nombre}`}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Nota */}
+          <div className="rounded-xl p-4 text-center text-xs text-gray-400" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+            🔒 Los cambios de plan son inmediatos. Próximamente se habilitará el pago en línea.{' '}
+            <Link href="/precios" className="text-blue-500 hover:underline">Ver comparativa completa →</Link>
           </div>
         </div>
       )}

@@ -18,6 +18,8 @@ import type {
   Paquete,
   DashboardKPIs,
   ActividadReciente,
+  Plan,
+  Suscripcion,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -188,6 +190,31 @@ export async function getPaquetes(edificioId = 'e1'): Promise<Paquete[]> {
     .order('recibidoEn', { ascending: false })
   if (error) { console.error('getPaquetes:', error.message); return [] }
   return (data ?? []) as Paquete[]
+}
+
+// ─── Planes & Suscripciones ──────────────────────────────────
+
+export async function getPlanes(): Promise<Plan[]> {
+  const { data, error } = await supabase
+    .from('planes')
+    .select('*')
+    .eq('activo', true)
+    .order('precio')
+  if (error) { console.error('getPlanes:', error.message); return [] }
+  return (data ?? []) as Plan[]
+}
+
+export async function getSuscripcionActual(edificioId: string): Promise<Suscripcion | null> {
+  const { data, error } = await supabase
+    .from('suscripciones')
+    .select('*, plan:planes(*)')
+    .eq('edificioId', edificioId)
+    .eq('estado', 'activa')
+    .order('creadoEn', { ascending: false })
+    .limit(1)
+    .single()
+  if (error) { console.error('getSuscripcionActual:', error.message); return null }
+  return data as Suscripcion
 }
 
 // ─── KPIs calculados ──────────────────────────────────────────

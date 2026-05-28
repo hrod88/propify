@@ -227,6 +227,32 @@ export interface Pago {
   creadoEn: string
 }
 
+// ─── Planes & Suscripciones ───────────────────────────────────
+
+export interface Plan {
+  id: string
+  nombre: string
+  precio: number          // CLP mensual, 0 = gratuito
+  maxUnidades: number
+  maxUsuarios: number
+  features: string[]
+  popular: boolean
+  activo: boolean
+}
+
+export type EstadoSuscripcion = 'activa' | 'vencida' | 'cancelada'
+
+export interface Suscripcion {
+  id: string
+  edificioId: string
+  planId: string
+  estado: EstadoSuscripcion
+  fechaInicio: string
+  fechaVencimiento?: string
+  creadoEn: string
+  plan?: Plan             // join opcional
+}
+
 // ─── Actividad Reciente ───────────────────────────────────────
 export type TipoActividad =
   | 'pago'
