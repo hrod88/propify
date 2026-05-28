@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Building2, Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { supabase }         from '@/lib/supabase'
@@ -213,10 +214,10 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-400">
-            ¿Primera vez?{' '}
-            <button className="text-blue-600 hover:text-blue-700 font-medium">
-              Solicitar acceso al administrador
-            </button>
+            ¿Eres administrador de un edificio?{' '}
+            <Link href="/registro" className="text-blue-600 hover:text-blue-700 font-medium">
+              Registra tu edificio →
+            </Link>
           </p>
 
           {/* Nota informativa */}
