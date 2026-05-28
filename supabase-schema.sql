@@ -205,7 +205,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE notificaciones;
 
 -- Edificios
 INSERT INTO edificios (id, nombre, direccion, comuna, ciudad, "totalUnidades", pisos, "anoconstruccion", "administradorId", rut, activo, "creadoEn") VALUES
-  ('e1', 'Edificio Las Palmas', 'Av. Apoquindo 4501', 'Las Condes', 'Santiago', 48, 12, 2018, 'u1', '76.123.456-7', true, '2024-01-01'),
+  ('e1', 'Edificio Mirador Sacramentinos', 'Carmen 297', 'Santiago Centro', 'Santiago', 179, 20, 2015, 'u1', '65.018.713-K', true, '2024-01-01'),
   ('e2', 'Condominio Los Aromos', 'Calle Los Aromos 234', 'Ñuñoa', 'Santiago', 24, 6, 2020, 'u1', '76.234.567-8', true, '2024-01-15'),
   ('e3', 'Torre Bicentenario', 'Av. Vitacura 2939', 'Vitacura', 'Santiago', 80, 20, 2015, 'u1', '76.345.678-9', true, '2024-02-01');
 
@@ -223,42 +223,52 @@ INSERT INTO usuarios (id, nombre, apellido, email, telefono, rol, "edificioId", 
   ('u10', 'Valentina',  'Castro',        'valentina.c@gmail.com',     '+56 9 9876 5432', 'arrendatario',  'e1', 'un7', true, '2024-05-01');
 
 -- Unidades
+-- gastosComunesMonto refleja montoTotal real (base + agua + fondo reserva) según datos reales Edif. Mirador Sacramentinos
 INSERT INTO unidades (id, "edificioId", numero, piso, tipo, estado, "superficieM2", habitaciones, banos, "propietarioId", "arrendatarioId", "gastosComunesMonto") VALUES
-  ('un1',  'e1', '101', 1,  'departamento',       'ocupado',    65,  2, 1, 'u2',  null,  95000),
-  ('un2',  'e1', '102', 1,  'departamento',       'ocupado',    72,  2, 2, 'u5',  null,  105000),
-  ('un3',  'e1', '201', 2,  'departamento',       'disponible', 85,  3, 2, null,  null,  125000),
-  ('un4',  'e1', '202', 2,  'departamento',       'ocupado',    90,  3, 2, 'u6',  'u7',  130000),
-  ('un5',  'e1', '301', 3,  'departamento',       'ocupado',    65,  2, 1, null,  'u3',  95000),
-  ('un6',  'e1', '501', 5,  'departamento',       'ocupado',    110, 3, 2, 'u8',  null,  155000),
-  ('un7',  'e1', '502', 5,  'departamento',       'ocupado',    95,  3, 2, 'u9',  'u10', 140000),
-  ('un8',  'e1', 'B-1', -1, 'bodega',             'ocupado',    8,   null, null, null, null, 15000),
-  ('un9',  'e1', 'E-1', -1, 'estacionamiento',    'ocupado',    15,  null, null, null, null, 25000),
-  ('un10', 'e1', 'L-1', 0,  'local_comercial',    'disponible', 45,  null, null, null, null, 65000);
+  ('un1',  'e1', '101', 1,  'departamento',       'ocupado',    65,  2, 1, 'u2',  null,  144350),
+  ('un2',  'e1', '102', 1,  'departamento',       'ocupado',    72,  2, 2, 'u5',  null,  160800),
+  ('un3',  'e1', '201', 2,  'departamento',       'disponible', 85,  3, 2, null,  null,  186650),
+  ('un4',  'e1', '202', 2,  'departamento',       'ocupado',    90,  3, 2, 'u6',  'u7',  198000),
+  ('un5',  'e1', '301', 3,  'departamento',       'ocupado',    65,  2, 1, null,  'u3',  144350),
+  ('un6',  'e1', '501', 5,  'departamento',       'ocupado',    110, 3, 2, 'u8',  null,  240300),
+  ('un7',  'e1', '502', 5,  'departamento',       'ocupado',    95,  3, 2, 'u9',  'u10', 207300),
+  ('un8',  'e1', 'B-1', -1, 'bodega',             'ocupado',    8,   null, null, null, null, 20000),
+  ('un9',  'e1', 'E-1', -1, 'estacionamiento',    'ocupado',    15,  null, null, null, null, 35000),
+  ('un10', 'e1', 'L-1', 0,  'local_comercial',    'disponible', 45,  null, null, null, null, 95000);
 
 -- Gastos Comunes
+-- Montos reales basados en liquidaciones Edificio Mirador Sacramentinos (Ene–Abr 2026)
+-- Fórmula: montoBase = Egresos totales × prorrateo%; Agua Caliente por m3 medido; Fondo Reserva = 5% montoBase
+-- Vencimiento real: día 10 del mes 2 meses después del período cobrado (ej: mayo 2026 → 10 jul 2026)
 INSERT INTO gastos_comunes (id, "unidadId", "edificioId", mes, "año", "montoBase", "montoAgua", "montoElectricidad", "montoFondoReserva", "montoTotal", "estadoPago", "fechaVencimiento", "fechaPago", "diasMora") VALUES
-  ('gc1', 'un1', 'e1', 5, 2026, 75000,  12000, 5000, 3000, 95000,  'pagado',   '2026-05-10', '2026-05-08', null),
-  ('gc2', 'un2', 'e1', 5, 2026, 83000,  14000, 5000, 3000, 105000, 'vencido',  '2026-05-10', null,         16),
-  ('gc3', 'un3', 'e1', 5, 2026, 99000,  16000, 7000, 3000, 125000, 'pendiente','2026-05-31', null,         null),
-  ('gc4', 'un4', 'e1', 5, 2026, 103000, 17000, 7000, 3000, 130000, 'pagado',   '2026-05-10', '2026-05-07', null),
-  ('gc5', 'un5', 'e1', 5, 2026, 75000,  12000, 5000, 3000, 95000,  'vencido',  '2026-05-10', null,         16),
-  ('gc6', 'un6', 'e1', 5, 2026, 122000, 20000, 9000, 4000, 155000, 'pagado',   '2026-05-10', '2026-05-05', null),
-  ('gc7', 'un7', 'e1', 5, 2026, 110000, 18000, 8000, 4000, 140000, 'parcial',  '2026-05-10', null,         16);
+  -- Mayo 2026 — cobros actuales (vencen 10 julio 2026)
+  ('gc1', 'un1', 'e1', 5, 2026,  87000, 53000, 0, 4350, 144350, 'pagado',    '2026-07-10', '2026-05-08', null),
+  ('gc3', 'un3', 'e1', 5, 2026, 113000, 68000, 0, 5650, 186650, 'pendiente', '2026-07-10', null,         null),
+  ('gc4', 'un4', 'e1', 5, 2026, 120000, 72000, 0, 6000, 198000, 'pagado',    '2026-07-10', '2026-05-07', null),
+  ('gc6', 'un6', 'e1', 5, 2026, 146000, 87000, 0, 7300, 240300, 'pagado',    '2026-07-10', '2026-05-05', null),
+  ('gc7', 'un7', 'e1', 5, 2026, 126000, 75000, 0, 6300, 207300, 'parcial',   '2026-07-10', null,         null),
+  -- Marzo 2026 — cobros vencidos (venció 10 mayo 2026; hoy 28 mayo → 18 días mora)
+  ('gc2', 'un2', 'e1', 3, 2026,  94000, 58000, 0, 4700, 156700, 'vencido',   '2026-05-10', null,         18),
+  ('gc5', 'un5', 'e1', 3, 2026,  87000, 52000, 0, 4350, 143350, 'vencido',   '2026-05-10', null,         18);
 
 -- Pagos
+-- Montos actualizados para reflejar gastos reales (base + agua + fondo reserva)
 INSERT INTO pagos (id, "gastoId", "unidadId", "edificioId", monto, mes, "año", metodo, estado, "registradoPorId", "pagadoPorId", comprobante, nota, "creadoEn") VALUES
-  ('pag1',  'gc1', 'un1', 'e1', 95000,  5, 2026, 'transferencia', 'completado', 'u1', 'u2',  'TR-20260508-001', null, '2026-05-08T10:30:00'),
-  ('pag2',  'gc4', 'un4', 'e1', 130000, 5, 2026, 'webpay',        'completado', 'u1', 'u7',  'WP-20260507-045', null, '2026-05-07T14:15:00'),
-  ('pag3',  'gc6', 'un6', 'e1', 155000, 5, 2026, 'transferencia', 'completado', 'u1', 'u8',  'TR-20260505-089', null, '2026-05-05T09:00:00'),
-  ('pag4',  'gc7', 'un7', 'e1', 70000,  5, 2026, 'efectivo',      'completado', 'u1', 'u10', null, 'Pago parcial · saldo pendiente $70.000', '2026-05-12T16:00:00'),
-  ('pag5',  null,  'un1', 'e1', 93000,  4, 2026, 'transferencia', 'completado', 'u1', 'u2',  'TR-20260408-012', null, '2026-04-08T11:00:00'),
-  ('pag6',  null,  'un2', 'e1', 103000, 4, 2026, 'webpay',        'completado', 'u1', 'u5',  'WP-20260409-023', null, '2026-04-09T09:30:00'),
-  ('pag7',  null,  'un4', 'e1', 128000, 4, 2026, 'transferencia', 'completado', 'u1', 'u7',  'TR-20260407-008', null, '2026-04-07T14:00:00'),
-  ('pag8',  null,  'un6', 'e1', 152000, 4, 2026, 'tarjeta',       'completado', 'u1', 'u8',  'TC-20260405-034', null, '2026-04-05T10:00:00'),
-  ('pag9',  null,  'un7', 'e1', 137000, 4, 2026, 'transferencia', 'completado', 'u1', 'u10', 'TR-20260406-056', null, '2026-04-06T13:00:00'),
-  ('pag10', null,  'un1', 'e1', 92000,  3, 2026, 'webpay',        'completado', 'u1', 'u2',  'WP-20260308-078', null, '2026-03-08T09:00:00'),
-  ('pag11', null,  'un4', 'e1', 126000, 3, 2026, 'transferencia', 'completado', 'u1', 'u7',  'TR-20260307-034', null, '2026-03-07T15:00:00'),
-  ('pag12', null,  'un6', 'e1', 150000, 3, 2026, 'efectivo',      'completado', 'u1', 'u8',  null, 'Pago en efectivo en conserjería', '2026-03-05T11:00:00');
+  -- Mayo 2026 — pagos del mes actual
+  ('pag1',  'gc1', 'un1', 'e1', 144350, 5, 2026, 'transferencia', 'completado', 'u1', 'u2',  'TR-20260508-001', null, '2026-05-08T10:30:00'),
+  ('pag2',  'gc4', 'un4', 'e1', 198000, 5, 2026, 'webpay',        'completado', 'u1', 'u7',  'WP-20260507-045', null, '2026-05-07T14:15:00'),
+  ('pag3',  'gc6', 'un6', 'e1', 240300, 5, 2026, 'transferencia', 'completado', 'u1', 'u8',  'TR-20260505-089', null, '2026-05-05T09:00:00'),
+  ('pag4',  'gc7', 'un7', 'e1', 103600, 5, 2026, 'efectivo',      'completado', 'u1', 'u10', null, 'Pago parcial · saldo pendiente $103.700', '2026-05-12T16:00:00'),
+  -- Abril 2026 — mes anterior (pagos históricos sin gasto vinculado)
+  ('pag5',  null,  'un1', 'e1', 143000, 4, 2026, 'transferencia', 'completado', 'u1', 'u2',  'TR-20260408-012', null, '2026-04-08T11:00:00'),
+  ('pag6',  null,  'un2', 'e1', 159000, 4, 2026, 'webpay',        'completado', 'u1', 'u5',  'WP-20260409-023', null, '2026-04-09T09:30:00'),
+  ('pag7',  null,  'un4', 'e1', 196000, 4, 2026, 'transferencia', 'completado', 'u1', 'u7',  'TR-20260407-008', null, '2026-04-07T14:00:00'),
+  ('pag8',  null,  'un6', 'e1', 238000, 4, 2026, 'tarjeta',       'completado', 'u1', 'u8',  'TC-20260405-034', null, '2026-04-05T10:00:00'),
+  ('pag9',  null,  'un7', 'e1', 205000, 4, 2026, 'transferencia', 'completado', 'u1', 'u10', 'TR-20260406-056', null, '2026-04-06T13:00:00'),
+  -- Febrero 2026 — dos meses atrás
+  ('pag10', null,  'un1', 'e1', 141500, 2, 2026, 'webpay',        'completado', 'u1', 'u2',  'WP-20260308-078', null, '2026-03-08T09:00:00'),
+  ('pag11', null,  'un4', 'e1', 194500, 2, 2026, 'transferencia', 'completado', 'u1', 'u7',  'TR-20260307-034', null, '2026-03-07T15:00:00'),
+  ('pag12', null,  'un6', 'e1', 236000, 2, 2026, 'efectivo',      'completado', 'u1', 'u8',  null, 'Pago en efectivo en conserjería', '2026-03-05T11:00:00');
 
 -- Solicitudes
 INSERT INTO solicitudes (id, "unidadId", "edificioId", titulo, descripcion, estado, prioridad, categoria, "solicitanteId", "asignadoA", "creadoEn", "actualizadoEn", "resueltoEn") VALUES

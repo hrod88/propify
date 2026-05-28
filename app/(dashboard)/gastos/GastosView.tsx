@@ -34,11 +34,12 @@ function formatFecha(iso: string) {
   catch { return iso }
 }
 
-/** Vencimiento: día 5 del mes siguiente al período */
+/** Vencimiento: día 10 del mes 2 meses después del período (ej: mayo → 10 julio) */
 function calcFechaVenc(mes: number, año: number): string {
-  const m = mes === 12 ? 1   : mes + 1
-  const y = mes === 12 ? año + 1 : año
-  return `${y}-${String(m).padStart(2,'0')}-05`
+  const m2 = mes + 2
+  const m  = m2 > 12 ? m2 - 12 : m2
+  const y  = m2 > 12 ? año + 1  : año
+  return `${y}-${String(m).padStart(2,'0')}-10`
 }
 
 // ─── Props ────────────────────────────────────────────────────
