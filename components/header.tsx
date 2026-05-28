@@ -1,11 +1,10 @@
-'use client'
+﻿'use client'
 
 /**
  * Fase 19 — Header actualizado
  * - Usuario real desde useRol() (nombre, email, iniciales, rol)
  * - Búsqueda global usa datos reales de Supabase (usuarios, unidades, solicitudes)
  *   Se carga una sola vez cuando el contexto de rol está listo (cargado === true).
- * - Se elimina la dependencia de mock-data.
  */
 
 import { useState, useRef, useEffect, useMemo } from 'react'
@@ -512,3 +511,4 @@ export default function Header() {
     </header>
   )
 }
+

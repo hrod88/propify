@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -6,7 +6,7 @@ import {
   AlertTriangle, XCircle, AlertCircle,
   Mail, Phone, Clock, Send, Home,
 } from 'lucide-react'
-import { formatCLP } from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
 import type { GastoComun, Unidad, User } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -272,3 +272,4 @@ export default function MorosView({ morosos, unidades, users }: Props) {
     </div>
   )
 }
+

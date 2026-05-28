@@ -6,16 +6,16 @@ import {
   DollarSign, Phone, Mail, CheckCircle, Clock, XCircle, AlertCircle,
 } from 'lucide-react'
 import {
-  mockUnidades, mockUsers, mockGastosComunes,
-  mockSolicitudes, formatCLP,
-} from '@/lib/mock-data'
+  getUnidadById, getUsuarioById, getGastosComunes,
+  getSolicitudes, formatCLP,
+} from '@/lib/db'
 
 type PageProps = { params: Promise<{ id: string }> }
 
 // ─── Metadata ─────────────────────────────────────────────────
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
-  const u = mockUnidades.find(u => u.id === id)
+  const u = await getUnidadById(id)
   return { title: u ? `Unidad ${u.numero}` : 'Unidad' }
 }
 
@@ -71,14 +71,27 @@ function formatFecha(iso: string) {
 // ─── Página ───────────────────────────────────────────────────
 export default async function UnidadDetailPage({ params }: PageProps) {
   const { id } = await params
-  const unidad = mockUnidades.find(u => u.id === id)
+  const unidad = await getUnidadById(id)
   if (!unidad) return notFound()
 
-  const propietario   = unidad.propietarioId   ? mockUsers.find(u => u.id === unidad.propietarioId)   : undefined
-  const arrendatario  = unidad.arrendatarioId  ? mockUsers.find(u => u.id === unidad.arrendatarioId)  : undefined
-  const gasto         = mockGastosComunes.find(g => g.unidadId === id)
-  const solicitudes   = mockSolicitudes.filter(s => s.unidadId === id && s.estado !== 'resuelto')
-  const est           = estadoCfg[unidad.estado as keyof typeof estadoCfg]
+  const [propietario, arrendatario, todosGastos, todasSolicitudes] = await Promise.all([
+    unidad.propietarioId  ? getUsuarioById(unidad.propietarioId)  : Promise.resolve(undefined),
+    unidad.arrendatarioId ? getUsuarioById(unidad.arrendatarioId) : Promise.resolve(undefined),
+    getGastosComunes(unidad.edificioId),
+    getSolicitudes(unidad.edificioId),
+  ])
+
+  const mesActual = new Date().getMonth() + 1
+  const añoActual = new Date().getFullYear()
+  const gasto = todosGastos.find(
+    g => g.unidadId === id && g.mes === mesActual && g.año === añoActual
+  ) ?? todosGastos.find(g => g.unidadId === id)
+
+  const solicitudes = todasSolicitudes.filter(
+    s => s.unidadId === id && s.estado !== 'resuelto' && s.estado !== 'cancelado'
+  )
+
+  const est = estadoCfg[unidad.estado as keyof typeof estadoCfg]
     ?? { label: unidad.estado, bg: '#f1f5f9', color: '#64748b' }
 
   return (
@@ -264,11 +277,14 @@ export default async function UnidadDetailPage({ params }: PageProps) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4" style={{ color: '#16a34a' }} />
-                <h2 className="font-bold text-gray-900">Gastos Comunes — Mayo 2026</h2>
+                <h2 className="font-bold text-gray-900">
+                  Gastos Comunes — {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+                </h2>
               </div>
               {gasto && (
                 (() => {
-                  const cfg = pagoCfg[gasto.estadoPago]
+                  const cfg = pagoCfg[gasto.estadoPago as keyof typeof pagoCfg]
+                    ?? { Icon: Clock, color: '#64748b', bg: '#f1f5f9', label: gasto.estadoPago }
                   const { Icon } = cfg
                   return (
                     <span
@@ -307,7 +323,7 @@ export default async function UnidadDetailPage({ params }: PageProps) {
                     {formatCLP(gasto.montoTotal)}
                   </span>
                 </div>
-                {gasto.diasMora !== undefined && gasto.diasMora > 0 && (
+                {gasto.diasMora !== undefined && gasto.diasMora > 0 && gasto.fechaVencimiento && (
                   <p className="text-xs mt-2 font-medium" style={{ color: '#dc2626' }}>
                     ⚠️ {gasto.diasMora} días de mora · Vencimiento: {formatFecha(gasto.fechaVencimiento)}
                   </p>

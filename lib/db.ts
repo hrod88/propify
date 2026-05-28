@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/db.ts — Capa de datos Supabase
  * Todas las queries aceptan edificioId para soporte multi-tenant.
  * El parámetro tiene default 'e1' para compatibilidad con código existente.
@@ -53,7 +53,7 @@ export async function getEdificioById(id: string): Promise<Edificio | null> {
 
 // ─── Usuarios ─────────────────────────────────────────────────
 
-export async function getUsuarios(edificioId = 'e1'): Promise<User[]> {
+export async function getUsuarios(edificioId = 'mirador-sacramentinos'): Promise<User[]> {
   const { data, error } = await supabase
     .from('usuarios')
     .select('*')
@@ -63,7 +63,7 @@ export async function getUsuarios(edificioId = 'e1'): Promise<User[]> {
   return (data ?? []) as User[]
 }
 
-export async function getResidentes(edificioId = 'e1'): Promise<User[]> {
+export async function getResidentes(edificioId = 'mirador-sacramentinos'): Promise<User[]> {
   const { data, error } = await supabase
     .from('usuarios')
     .select('*')
@@ -82,7 +82,7 @@ export async function getUsuarioById(id: string): Promise<User | null> {
 
 // ─── Unidades ─────────────────────────────────────────────────
 
-export async function getUnidades(edificioId = 'e1'): Promise<Unidad[]> {
+export async function getUnidades(edificioId = 'mirador-sacramentinos'): Promise<Unidad[]> {
   const { data, error } = await supabase
     .from('unidades')
     .select('*')
@@ -100,7 +100,7 @@ export async function getUnidadById(id: string): Promise<Unidad | null> {
 
 // ─── Gastos Comunes ───────────────────────────────────────────
 
-export async function getGastosComunes(edificioId = 'e1'): Promise<GastoComun[]> {
+export async function getGastosComunes(edificioId = 'mirador-sacramentinos'): Promise<GastoComun[]> {
   const { data, error } = await supabase
     .from('gastos_comunes')
     .select('*')
@@ -118,7 +118,7 @@ export async function getGastoComunById(id: string): Promise<GastoComun | null> 
 
 // ─── Pagos ────────────────────────────────────────────────────
 
-export async function getPagos(edificioId = 'e1'): Promise<Pago[]> {
+export async function getPagos(edificioId = 'mirador-sacramentinos'): Promise<Pago[]> {
   const { data, error } = await supabase
     .from('pagos')
     .select('*')
@@ -130,7 +130,7 @@ export async function getPagos(edificioId = 'e1'): Promise<Pago[]> {
 
 // ─── Solicitudes de Mantención ────────────────────────────────
 
-export async function getSolicitudes(edificioId = 'e1'): Promise<SolicitudMantencion[]> {
+export async function getSolicitudes(edificioId = 'mirador-sacramentinos'): Promise<SolicitudMantencion[]> {
   const { data, error } = await supabase
     .from('solicitudes')
     .select('*')
@@ -142,7 +142,7 @@ export async function getSolicitudes(edificioId = 'e1'): Promise<SolicitudManten
 
 // ─── Espacios Comunes ─────────────────────────────────────────
 
-export async function getEspaciosComunes(edificioId = 'e1'): Promise<EspacioComun[]> {
+export async function getEspaciosComunes(edificioId = 'mirador-sacramentinos'): Promise<EspacioComun[]> {
   const { data, error } = await supabase
     .from('espacios_comunes')
     .select('*')
@@ -154,7 +154,7 @@ export async function getEspaciosComunes(edificioId = 'e1'): Promise<EspacioComu
 
 // ─── Reservas ─────────────────────────────────────────────────
 
-export async function getReservas(edificioId = 'e1'): Promise<Reserva[]> {
+export async function getReservas(edificioId = 'mirador-sacramentinos'): Promise<Reserva[]> {
   const { data, error } = await supabase
     .from('reservas')
     .select('*')
@@ -166,7 +166,7 @@ export async function getReservas(edificioId = 'e1'): Promise<Reserva[]> {
 
 // ─── Comunicaciones ───────────────────────────────────────────
 
-export async function getComunicaciones(edificioId = 'e1'): Promise<Comunicacion[]> {
+export async function getComunicaciones(edificioId = 'mirador-sacramentinos'): Promise<Comunicacion[]> {
   const { data, error } = await supabase
     .from('comunicaciones')
     .select('*')
@@ -178,7 +178,7 @@ export async function getComunicaciones(edificioId = 'e1'): Promise<Comunicacion
 
 // ─── Visitas ──────────────────────────────────────────────────
 
-export async function getVisitas(edificioId = 'e1'): Promise<Visita[]> {
+export async function getVisitas(edificioId = 'mirador-sacramentinos'): Promise<Visita[]> {
   const { data, error } = await supabase
     .from('visitas')
     .select('*')
@@ -190,7 +190,7 @@ export async function getVisitas(edificioId = 'e1'): Promise<Visita[]> {
 
 // ─── Paquetes ─────────────────────────────────────────────────
 
-export async function getPaquetes(edificioId = 'e1'): Promise<Paquete[]> {
+export async function getPaquetes(edificioId = 'mirador-sacramentinos'): Promise<Paquete[]> {
   const { data, error } = await supabase
     .from('paquetes')
     .select('*')
@@ -227,7 +227,7 @@ export async function getSuscripcionActual(edificioId: string): Promise<Suscripc
 
 // ─── KPIs calculados ──────────────────────────────────────────
 
-export async function getDashboardData(edificioId = 'e1') {
+export async function getDashboardData(edificioId = 'mirador-sacramentinos') {
   const [gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades, edificio] =
     await Promise.all([
       getGastosComunes(edificioId),
@@ -289,7 +289,7 @@ export async function getDashboardData(edificioId = 'e1') {
 
 // ─── Egresos Comunitarios ─────────────────────────────────────
 
-export async function getEgresos(edificioId = 'e1'): Promise<EgresoComunidad[]> {
+export async function getEgresos(edificioId = 'mirador-sacramentinos'): Promise<EgresoComunidad[]> {
   const { data, error } = await supabase
     .from('egresos_comunidad')
     .select('*')
@@ -305,7 +305,7 @@ export async function getEgresos(edificioId = 'e1'): Promise<EgresoComunidad[]> 
 
 // ─── Proveedores ──────────────────────────────────────────────
 
-export async function getProveedores(edificioId = 'e1'): Promise<Proveedor[]> {
+export async function getProveedores(edificioId = 'mirador-sacramentinos'): Promise<Proveedor[]> {
   const { data, error } = await supabase
     .from('proveedores')
     .select('*')
@@ -315,7 +315,7 @@ export async function getProveedores(edificioId = 'e1'): Promise<Proveedor[]> {
   return (data ?? []) as Proveedor[]
 }
 
-export async function getPresupuestos(edificioId = 'e1', anio?: number): Promise<Presupuesto[]> {
+export async function getPresupuestos(edificioId = 'mirador-sacramentinos', anio?: number): Promise<Presupuesto[]> {
   let q = supabase
     .from('presupuestos')
     .select('*')
@@ -329,7 +329,7 @@ export async function getPresupuestos(edificioId = 'e1', anio?: number): Promise
 
 // ─── Facturación automática ───────────────────────────────────
 
-export async function getConfigFacturacion(edificioId = 'e1'): Promise<ConfigFacturacion | null> {
+export async function getConfigFacturacion(edificioId = 'mirador-sacramentinos'): Promise<ConfigFacturacion | null> {
   const { data, error } = await supabase
     .from('config_facturacion')
     .select('*')
@@ -339,7 +339,7 @@ export async function getConfigFacturacion(edificioId = 'e1'): Promise<ConfigFac
   return data as ConfigFacturacion
 }
 
-export async function getGeneraciones(edificioId = 'e1'): Promise<GeneracionFacturacion[]> {
+export async function getGeneraciones(edificioId = 'mirador-sacramentinos'): Promise<GeneracionFacturacion[]> {
   const { data, error } = await supabase
     .from('generaciones_facturacion')
     .select('*')
@@ -353,7 +353,7 @@ export async function getGeneraciones(edificioId = 'e1'): Promise<GeneracionFact
 
 // ─── Contratos ────────────────────────────────────────────────
 
-export async function getContratos(edificioId = 'e1'): Promise<Contrato[]> {
+export async function getContratos(edificioId = 'mirador-sacramentinos'): Promise<Contrato[]> {
   const { data, error } = await supabase
     .from('contratos')
     .select('*')
@@ -365,7 +365,7 @@ export async function getContratos(edificioId = 'e1'): Promise<Contrato[]> {
 
 // ─── Actas de Reunión ────────────────────────────────────────
 
-export async function getActas(edificioId = 'e1'): Promise<Acta[]> {
+export async function getActas(edificioId = 'mirador-sacramentinos'): Promise<Acta[]> {
   const { data, error } = await supabase
     .from('actas')
     .select('*')
@@ -377,7 +377,7 @@ export async function getActas(edificioId = 'e1'): Promise<Acta[]> {
 
 // ─── Libro de Novedades ──────────────────────────────────────
 
-export async function getNovedades(edificioId = 'e1'): Promise<Novedad[]> {
+export async function getNovedades(edificioId = 'mirador-sacramentinos'): Promise<Novedad[]> {
   const { data, error } = await supabase
     .from('novedades')
     .select('*')
@@ -386,3 +386,4 @@ export async function getNovedades(edificioId = 'e1'): Promise<Novedad[]> {
   if (error) { console.error('getNovedades:', error.message); return [] }
   return (data ?? []) as Novedad[]
 }
+

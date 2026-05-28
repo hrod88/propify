@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo, useCallback } from 'react'
 import {
   Plus, Pencil, Trash2, TrendingDown, BarChart3,
   ChevronLeft, ChevronRight, FileDown,
 } from 'lucide-react'
-import { formatCLP } from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import Modal from '@/components/modal'
 import type { EgresoComunidad, CategoriaEgreso } from '@/types'
@@ -703,3 +703,4 @@ export default function EgresosView({ egresos: initial, edificioNombre }: Props)
     </div>
   )
 }
+

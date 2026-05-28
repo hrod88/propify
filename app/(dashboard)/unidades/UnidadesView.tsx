@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Search, Plus, SlidersHorizontal } from 'lucide-react'
-import { formatCLP } from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
 import type { Unidad, User } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────
@@ -305,3 +305,4 @@ export default function UnidadesView({ unidades, users }: Props) {
     </div>
   )
 }
+

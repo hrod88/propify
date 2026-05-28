@@ -1,12 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect } from 'react'
 import { Bot, X, Send, Minus, Sparkles } from 'lucide-react'
-import {
-  mockGastosComunes, mockSolicitudes, mockPaquetes, mockVisitas,
-  mockReservas, mockUnidades, mockUsers, mockComunicaciones,
-  mockKPIs, mockEspacios, formatCLP,
-} from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
+import { supabaseBrowser } from '@/lib/supabase-browser'
+import { useEdificio } from '@/context/edificio-context'
+import type { GastoComun, SolicitudMantencion, Paquete, Visita, Unidad, Comunicacion, EspacioComun, Reserva, Edificio } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────
 interface Mensaje {
@@ -14,6 +13,18 @@ interface Mensaje {
   rol: 'usuario' | 'asistente'
   contenido: string
   hora: string
+}
+
+interface DatosEdificio {
+  gastos:        GastoComun[]
+  solicitudes:   SolicitudMantencion[]
+  paquetes:      Paquete[]
+  visitas:       Visita[]
+  unidades:      Unidad[]
+  comunicaciones: Comunicacion[]
+  espacios:      EspacioComun[]
+  reservas:      Reserva[]
+  edificio:      Edificio | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -37,12 +48,14 @@ function RenderText({ text }: { text: string }) {
 }
 
 // ─── AI Engine ────────────────────────────────────────────────
-function processQuery(query: string): string {
-  const q = query.toLowerCase().trim()
+function processQuery(query: string, datos: DatosEdificio): string {
+  const q    = query.toLowerCase().trim()
+  const { gastos, solicitudes, paquetes, visitas, unidades, comunicaciones, espacios, reservas, edificio } = datos
+  const nomEdificio = edificio?.nombre ?? 'el edificio'
 
   // ── Saludos ──
   if (/^(hola|buenas?|hey|hi|qué tal|que tal|buenos días|buenas tardes|buenas noches)/.test(q)) {
-    return '¡Hola! Soy el **Asistente Propify** 🤖\n\nEstoy aquí para ayudarte con el **Edificio Las Palmas**. Pregúntame sobre morosos, gastos, solicitudes, paquetes, visitas, reservas y más.\n\n¿En qué puedo ayudarte?'
+    return `¡Hola! Soy el **Asistente Propify** 🤖\n\nEstoy conectado al **${nomEdificio}**. Pregúntame sobre morosos, gastos, solicitudes, paquetes, visitas, reservas y más.\n\n¿En qué puedo ayudarte?`
   }
 
   // ── Ayuda / capacidades ──
@@ -52,59 +65,74 @@ function processQuery(query: string): string {
 
   // ── Morosos / deuda ──
   if (q.includes('moroso') || q.includes('mora') || q.includes('deuda') || q.includes('vencido') || q.includes('atrasado') || q.includes('impago')) {
-    const vencidos = mockGastosComunes.filter(g => g.estadoPago === 'vencido')
-    const parciales = mockGastosComunes.filter(g => g.estadoPago === 'parcial')
-    const total = vencidos.length + parciales.length
-    const montoTotal = [...vencidos, ...parciales].reduce((acc, g) => acc + g.montoTotal, 0)
+    if (gastos.length === 0) {
+      return 'Aún no hay gastos comunes registrados en el sistema. Ve a **Gastos Comunes** para comenzar a registrar cobros.'
+    }
+    const vencidos  = gastos.filter(g => g.estadoPago === 'vencido')
+    const parciales = gastos.filter(g => g.estadoPago === 'parcial')
+    const total     = vencidos.length + parciales.length
+    if (total === 0) return '✅ ¡Sin morosos! Todos los cobros están al día. Excelente gestión de pagos.'
+    const montoTotal      = [...vencidos, ...parciales].reduce((acc, g) => acc + g.montoTotal, 0)
     const unidadesVencidas = vencidos.map(g => {
-      const u = mockUnidades.find(un => un.id === g.unidadId)
+      const u = unidades.find(un => un.id === g.unidadId)
       const dias = g.diasMora ? ` (${g.diasMora} días)` : ''
       return `• Unidad ${u?.numero ?? g.unidadId}${dias}`
     })
     const unidadesParciales = parciales.map(g => {
-      const u = mockUnidades.find(un => un.id === g.unidadId)
+      const u = unidades.find(un => un.id === g.unidadId)
       return `• Unidad ${u?.numero ?? g.unidadId} (pago parcial)`
     })
-    return `Hay **${total} unidades con cobros sin regularizar** por **${formatCLP(montoTotal)}** en total.\n\n**Pagos vencidos (${vencidos.length}):**\n${unidadesVencidas.join('\n')}\n\n**Pagos parciales (${parciales.length}):**\n${unidadesParciales.join('\n')}\n\nIr a **Morosos** para enviar recordatorios.`
+    let resp = `Hay **${total} unidades con cobros sin regularizar** por **${formatCLP(montoTotal)}** en total.\n\n`
+    if (vencidos.length > 0) resp += `**Pagos vencidos (${vencidos.length}):**\n${unidadesVencidas.join('\n')}\n\n`
+    if (parciales.length > 0) resp += `**Pagos parciales (${parciales.length}):**\n${unidadesParciales.join('\n')}\n\n`
+    resp += 'Ir a **Morosos** para enviar recordatorios.'
+    return resp
   }
 
   // ── Gastos / pagos / recaudación / ingresos ──
   if (q.includes('gasto') || q.includes('cobro') || q.includes('recaudaci') || q.includes('ingreso') || q.includes('factura') || q.includes('cuota')) {
-    const pagados   = mockGastosComunes.filter(g => g.estadoPago === 'pagado')
-    const pendientes = mockGastosComunes.filter(g => g.estadoPago === 'pendiente')
-    const vencidos  = mockGastosComunes.filter(g => g.estadoPago === 'vencido')
-    const parciales  = mockGastosComunes.filter(g => g.estadoPago === 'parcial')
+    if (gastos.length === 0) {
+      return 'Aún no hay gastos comunes registrados. Ve a **Gastos Comunes** para comenzar a emitir cobros.'
+    }
+    const mesActual  = new Date().getMonth() + 1
+    const añoActual  = new Date().getFullYear()
+    const gastosMes  = gastos.filter(g => g.mes === mesActual && g.año === añoActual)
+    const pagados    = gastosMes.filter(g => g.estadoPago === 'pagado')
+    const pendientes = gastosMes.filter(g => g.estadoPago === 'pendiente')
+    const vencidos   = gastosMes.filter(g => g.estadoPago === 'vencido')
+    const parciales  = gastosMes.filter(g => g.estadoPago === 'parcial')
     const montoPagado = pagados.reduce((acc, g) => acc + g.montoTotal, 0)
-    const montoTotal  = mockGastosComunes.reduce((acc, g) => acc + g.montoTotal, 0)
-    const pct = Math.round((montoPagado / montoTotal) * 100)
-    return `**Gastos Comunes — Mayo 2026:**\n\n✅ **Pagados:** ${pagados.length} · ${formatCLP(montoPagado)}\n⏳ **Pendientes:** ${pendientes.length}\n❌ **Vencidos:** ${vencidos.length}\n🔶 **Parciales:** ${parciales.length}\n\nRecaudación del mes: **${pct}%** (${formatCLP(montoPagado)} de ${formatCLP(montoTotal)}).\n\nVe a **Reportes** para un análisis completo.`
+    const montoTotal  = gastosMes.reduce((acc, g) => acc + g.montoTotal, 0)
+    const pct = montoTotal > 0 ? Math.round((montoPagado / montoTotal) * 100) : 0
+    const mes = new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
+    return `**Gastos Comunes — ${mes}:**\n\n✅ **Pagados:** ${pagados.length} · ${formatCLP(montoPagado)}\n⏳ **Pendientes:** ${pendientes.length}\n❌ **Vencidos:** ${vencidos.length}\n🔶 **Parciales:** ${parciales.length}\n\nRecaudación del mes: **${pct}%** (${formatCLP(montoPagado)} de ${formatCLP(montoTotal)}).\n\nVe a **Reportes** para un análisis completo.`
   }
 
   // ── Solicitudes / mantenciones ──
   if (q.includes('solicitud') || q.includes('mantenci') || q.includes('reparaci') || q.includes('urgente') || q.includes('avería') || q.includes('averia') || q.includes('daño') || q.includes('ascensor') || q.includes('gotera') || q.includes('ruido')) {
-    const activas    = mockSolicitudes.filter(s => s.estado !== 'resuelto' && s.estado !== 'cancelado')
+    if (solicitudes.length === 0) {
+      return '✅ No hay solicitudes de mantención activas. El edificio está sin pendientes técnicos.'
+    }
+    const activas    = solicitudes.filter(s => s.estado !== 'resuelto' && s.estado !== 'cancelado')
+    if (activas.length === 0) return '✅ Todas las solicitudes están resueltas. ¡Excelente trabajo!'
     const urgentes   = activas.filter(s => s.prioridad === 'urgente')
     const altas      = activas.filter(s => s.prioridad === 'alta')
     const enProgreso = activas.filter(s => s.estado === 'en_progreso')
     let resp = `Hay **${activas.length} solicitudes activas** en el edificio:\n\n`
-    if (urgentes.length > 0) {
-      resp += `🚨 **Urgentes (${urgentes.length}):**\n${urgentes.map(s => `• ${s.titulo} — ${s.categoria}`).join('\n')}\n\n`
-    }
-    if (altas.length > 0) {
-      resp += `🔴 **Alta prioridad (${altas.length}):**\n${altas.map(s => `• ${s.titulo}`).join('\n')}\n\n`
-    }
+    if (urgentes.length > 0) resp += `🚨 **Urgentes (${urgentes.length}):**\n${urgentes.map(s => `• ${s.titulo} — ${s.categoria}`).join('\n')}\n\n`
+    if (altas.length > 0)    resp += `🔴 **Alta prioridad (${altas.length}):**\n${altas.map(s => `• ${s.titulo}`).join('\n')}\n\n`
     resp += `🔄 **En progreso:** ${enProgreso.length} · ⏳ **Pendientes:** ${activas.filter(s => s.estado === 'pendiente').length}`
     return resp
   }
 
   // ── Paquetes / encomiendas ──
   if (q.includes('paquete') || q.includes('encomienda') || q.includes('courier') || q.includes('retiro') || q.includes('chilexpress') || q.includes('starken') || q.includes('despacho')) {
-    const pendientes = mockPaquetes.filter(p => p.estado !== 'retirado')
+    const pendientes = paquetes.filter(p => p.estado !== 'retirado')
     if (pendientes.length === 0) {
       return 'No hay paquetes pendientes de retiro. ¡Todo al día en conserjería! 📦✅'
     }
     const lista = pendientes.map(p => {
-      const u = mockUnidades.find(un => un.id === p.unidadId)
+      const u = unidades.find(un => un.id === p.unidadId)
       return `• **${p.courier}** para Unidad ${u?.numero ?? p.unidadId} — ${p.descripcion} (cód. ${p.codigoRetiro})`
     })
     return `Hay **${pendientes.length} paquetes** esperando retiro en conserjería:\n\n${lista.join('\n')}`
@@ -112,30 +140,33 @@ function processQuery(query: string): string {
 
   // ── Visitas / accesos ──
   if (q.includes('visita') || q.includes('acceso') || q.includes('ingreso') || q.includes('visitante') || q.includes('guest')) {
-    const activas = mockVisitas.filter(v => !v.salidaEn)
-    const total   = mockVisitas.length
+    const hoy     = new Date().toISOString().slice(0, 10)
+    const hoyVisitas = visitas.filter(v => v.entradaEn.startsWith(hoy))
+    const activas = hoyVisitas.filter(v => !v.salidaEn)
+    if (hoyVisitas.length === 0) return 'No se han registrado visitas hoy en el edificio.'
     const listaActivas = activas.map(v => {
-      const u = mockUnidades.find(un => un.id === v.unidadId)
+      const u = unidades.find(un => un.id === v.unidadId)
       return `• ${v.nombreVisitante} → Unidad ${u?.numero ?? ''} (${v.motivoVisita})`
     })
-    return `Hoy se registraron **${total} visitas** al edificio.\n\n**Actualmente en el edificio (${activas.length}):**\n${activas.length > 0 ? listaActivas.join('\n') : '• Ninguna en este momento.'}`
+    return `Hoy se registraron **${hoyVisitas.length} visitas** al edificio.\n\n**Actualmente en el edificio (${activas.length}):**\n${activas.length > 0 ? listaActivas.join('\n') : '• Ninguna en este momento.'}`
   }
 
   // ── Reservas / espacios ──
   if (q.includes('reserva') || q.includes('quincho') || q.includes('lavandería') || q.includes('lavanderia') || q.includes('espacio') || q.includes('piscina') || q.includes('gimnasio') || q.includes('sala')) {
-    const hoy             = '2026-05-27'
-    const reservasHoy     = mockReservas.filter(r => r.fechaInicio.startsWith(hoy))
-    const disponibles     = mockEspacios.filter(e => e.estado === 'disponible')
-    const fueraServicio   = mockEspacios.filter(e => e.estado === 'fuera_servicio')
-    let resp = `**Espacios Comunes — Edificio Las Palmas:**\n\n`
-    resp += `✅ **Disponibles:** ${disponibles.length} espacios\n`
-    if (fueraServicio.length > 0) {
-      resp += `🔧 **Fuera de servicio:** ${fueraServicio.map(e => e.nombre).join(', ')}\n`
+    if (espacios.length === 0) {
+      return 'No hay espacios comunes registrados aún. Puedes agregarlos desde **Espacios Comunes**.'
     }
+    const hoy           = new Date().toISOString().slice(0, 10)
+    const reservasHoy   = reservas.filter(r => r.fechaInicio.startsWith(hoy))
+    const disponibles   = espacios.filter(e => e.estado === 'disponible')
+    const fueraServicio = espacios.filter(e => e.estado === 'fuera_servicio')
+    let resp = `**Espacios Comunes — ${nomEdificio}:**\n\n`
+    resp += `✅ **Disponibles:** ${disponibles.length} espacios\n`
+    if (fueraServicio.length > 0) resp += `🔧 **Fuera de servicio:** ${fueraServicio.map(e => e.nombre).join(', ')}\n`
     resp += `\n📅 **Reservas para hoy (${reservasHoy.length}):**\n`
     if (reservasHoy.length > 0) {
       reservasHoy.forEach(r => {
-        const esp  = mockEspacios.find(e => e.id === r.espacioId)
+        const esp  = espacios.find(e => e.id === r.espacioId)
         const hora = new Date(r.fechaInicio).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
         resp += `• ${esp?.nombre ?? 'Espacio'} — ${hora} hrs\n`
       })
@@ -147,38 +178,59 @@ function processQuery(query: string): string {
 
   // ── Unidades / ocupación ──
   if (q.includes('ocupaci') || q.includes('unidad') || q.includes('disponible') || q.includes('departamento') || q.includes('dpto')) {
-    const total       = mockKPIs.totalUnidades
-    const ocupadas    = mockKPIs.unidadesOcupadas
-    const disponibles = mockUnidades.filter(u => u.estado === 'disponible').length
-    const pct         = Math.round((ocupadas / total) * 100)
-    return `**Ocupación — Edificio Las Palmas:**\n\n🏠 **Ocupadas:** ${ocupadas} de ${total} unidades (${pct}%)\n🟢 **Disponibles:** ${disponibles} unidades\n\nEl edificio mantiene una excelente tasa de ocupación. Ve a **Unidades** para ver el detalle.`
+    if (unidades.length === 0) {
+      return `El **${nomEdificio}** tiene **${edificio?.pisos ?? 19} pisos** y más de 100 departamentos, pero aún no se han registrado las unidades individualmente. Ve a **Unidades** para comenzar a agregar los departamentos.`
+    }
+    const ocupadas    = unidades.filter(u => u.estado === 'ocupado').length
+    const disponibles = unidades.filter(u => u.estado === 'disponible').length
+    const pct         = unidades.length > 0 ? Math.round((ocupadas / unidades.length) * 100) : 0
+    return `**Ocupación — ${nomEdificio}:**\n\n🏠 **Ocupadas:** ${ocupadas} de ${unidades.length} unidades (${pct}%)\n🟢 **Disponibles:** ${disponibles} unidades\n\nVe a **Unidades** para ver el detalle completo.`
   }
 
   // ── Fondo de reserva / finanzas ──
   if (q.includes('fondo') || q.includes('finanza') || q.includes('presupuesto') || q.includes('plata') || q.includes('caja') || q.includes('reserva financ')) {
-    return `**Situación Financiera — Mayo 2026:**\n\n💰 **Ingresos del mes:** ${formatCLP(mockKPIs.ingresosMes)}\n🏦 **Fondo de reserva:** ${formatCLP(mockKPIs.fondoReserva)}\n⚠️ **Monto en mora:** ${formatCLP(mockKPIs.montoMoroso)}\n\nEl fondo de reserva está saludable. Para análisis detallado ve a **Reportes**.`
+    const mesActual   = new Date().getMonth() + 1
+    const añoActual   = new Date().getFullYear()
+    const ingresosMes = gastos
+      .filter(g => g.estadoPago === 'pagado' && g.mes === mesActual && g.año === añoActual)
+      .reduce((s, g) => s + g.montoTotal, 0)
+    const montoMoroso = gastos
+      .filter(g => g.estadoPago === 'vencido' || g.estadoPago === 'parcial')
+      .reduce((s, g) => s + g.montoTotal, 0)
+    const fondoReserva = gastos.reduce((s, g) => s + (g.montoFondoReserva ?? 0), 0)
+    const mes = new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
+    return `**Situación Financiera — ${mes}:**\n\n💰 **Ingresos del mes:** ${formatCLP(ingresosMes)}\n🏦 **Fondo de reserva acumulado:** ${formatCLP(fondoReserva)}\n⚠️ **Monto en mora:** ${formatCLP(montoMoroso)}\n\nPara análisis detallado ve a **Reportes**.`
   }
 
   // ── Comunicaciones / circulares ──
   if (q.includes('circular') || q.includes('comunicaci') || q.includes('aviso') || q.includes('anuncio') || q.includes('notif')) {
-    const recientes = mockComunicaciones.slice(0, 3)
+    if (comunicaciones.length === 0) {
+      return 'No hay comunicaciones enviadas aún. Ve a **Comunicaciones** para redactar y enviar circulares a los residentes.'
+    }
+    const recientes = comunicaciones.slice(0, 3)
     const lista = recientes.map(c => {
       const fecha = new Date(c.creadoEn).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })
-      return `• **${c.titulo}** (${fecha}) — ${c.lecturasCount} lecturas`
+      return `• **${c.titulo}** (${fecha})${c.lecturasCount ? ` — ${c.lecturasCount} lecturas` : ''}`
     })
     return `**Comunicaciones Recientes:**\n\n${lista.join('\n')}\n\nPuedes ver y enviar circulares desde la sección **Comunicaciones**.`
   }
 
   // ── Residentes / vecinos ──
   if (q.includes('residente') || q.includes('vecino') || q.includes('propietario') || q.includes('arrendatario') || q.includes('inquilino')) {
-    const propietarios  = mockUsers.filter(u => u.rol === 'propietario').length
-    const arrendatarios = mockUsers.filter(u => u.rol === 'arrendatario').length
-    return `**Residentes Registrados:**\n\n🏡 **Propietarios:** ${propietarios}\n🔑 **Arrendatarios:** ${arrendatarios}\n👥 **Total activos:** ${propietarios + arrendatarios}\n\nGestiona los residentes desde la sección **Residentes**.`
+    const propietarios   = unidades.filter(u => u.propietarioId).length
+    const arrendatarios  = unidades.filter(u => u.arrendatarioId).length
+    return `**Unidades con residentes — ${nomEdificio}:**\n\n🏡 **Con propietario asignado:** ${propietarios}\n🔑 **Con arrendatario:** ${arrendatarios}\n\nGestiona los residentes desde la sección **Residentes**.`
   }
 
   // ── Gracias ──
   if (q.includes('gracias') || q.includes('thank') || q.includes('perfecto') || q.includes('listo') || q.includes('ok') || q === 'genial') {
     return '¡Con gusto! 😊 Si necesitas cualquier otra cosa sobre el edificio, aquí estaré. ¿Algo más en lo que pueda ayudarte?'
+  }
+
+  // ── Datos del edificio ──
+  if (q.includes('edificio') || q.includes('rut') || q.includes('dirección') || q.includes('direccion') || q.includes('pisos')) {
+    if (!edificio) return 'No encuentro información del edificio registrado.'
+    return `**${edificio.nombre}:**\n\n📍 **Dirección:** ${edificio.direccion}, ${edificio.comuna}\n🏢 **Pisos:** ${edificio.pisos}\n🆔 **RUT:** ${edificio.rut ?? 'No registrado'}\n🏠 **Unidades:** ${unidades.length > 0 ? unidades.length : `${edificio.totalUnidades ?? 'por registrar'}`}`
   }
 
   // ── Default ──
@@ -195,20 +247,74 @@ const SUGERENCIAS = [
   '¿Hay reservas para hoy?',
 ]
 
-const BIENVENIDA = '¡Hola! Soy el **Asistente Propify** 🤖\n\nEstoy conectado al **Edificio Las Palmas** y puedo ayudarte con gastos, morosos, solicitudes, paquetes, visitas, reservas y más.\n\n¿En qué puedo ayudarte hoy?'
-
 // ─── Componente principal ─────────────────────────────────────
 export default function AsistenteIA() {
-  const [abierto,    setAbierto]    = useState(false)
-  const [minimizado, setMinimizado] = useState(false)
-  const [input,      setInput]      = useState('')
-  const [escribiendo, setEscribiendo] = useState(false)
-  const [mensajes,   setMensajes]   = useState<Mensaje[]>([
-    { id: 'm0', rol: 'asistente', contenido: BIENVENIDA, hora: getHora() },
-  ])
+  const { edificioActivo: edificioId } = useEdificio()
 
+  const [abierto,     setAbierto]     = useState(false)
+  const [minimizado,  setMinimizado]  = useState(false)
+  const [input,       setInput]       = useState('')
+  const [escribiendo, setEscribiendo] = useState(false)
+  const [datos,       setDatos]       = useState<DatosEdificio>({
+    gastos: [], solicitudes: [], paquetes: [], visitas: [],
+    unidades: [], comunicaciones: [], espacios: [], reservas: [], edificio: null,
+  })
+  const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLInputElement>(null)
+
+  // Cargar datos reales desde Supabase
+  useEffect(() => {
+    if (!edificioId) return
+    const sb = supabaseBrowser
+
+    async function cargar() {
+      const [
+        { data: gastos },
+        { data: solicitudes },
+        { data: paquetes },
+        { data: visitas },
+        { data: unidades },
+        { data: comunicaciones },
+        { data: espacios },
+        { data: reservas },
+        { data: edificioArr },
+      ] = await Promise.all([
+        sb.from('gastos_comunes').select('*').eq('edificioId', edificioId),
+        sb.from('solicitudes').select('*').eq('edificioId', edificioId),
+        sb.from('paquetes').select('*').eq('edificioId', edificioId),
+        sb.from('visitas').select('*').eq('edificioId', edificioId),
+        sb.from('unidades').select('*').eq('edificioId', edificioId),
+        sb.from('comunicaciones').select('*').eq('edificioId', edificioId).order('creadoEn', { ascending: false }),
+        sb.from('espacios_comunes').select('*').eq('edificioId', edificioId),
+        sb.from('reservas').select('*').eq('edificioId', edificioId),
+        sb.from('edificios').select('*').eq('id', edificioId),
+      ])
+
+      const edif = edificioArr?.[0] ?? null
+      setDatos({
+        gastos:         (gastos         ?? []) as GastoComun[],
+        solicitudes:    (solicitudes    ?? []) as SolicitudMantencion[],
+        paquetes:       (paquetes       ?? []) as Paquete[],
+        visitas:        (visitas        ?? []) as Visita[],
+        unidades:       (unidades       ?? []) as Unidad[],
+        comunicaciones: (comunicaciones ?? []) as Comunicacion[],
+        espacios:       (espacios       ?? []) as EspacioComun[],
+        reservas:       (reservas       ?? []) as Reserva[],
+        edificio:       edif,
+      })
+
+      const nom = edif?.nombre ?? 'el edificio'
+      setMensajes([{
+        id: 'm0',
+        rol: 'asistente',
+        contenido: `¡Hola! Soy el **Asistente Propify** 🤖\n\nEstoy conectado al **${nom}** y puedo ayudarte con gastos, morosos, solicitudes, paquetes, visitas, reservas y más.\n\n¿En qué puedo ayudarte hoy?`,
+        hora: getHora(),
+      }])
+    }
+
+    cargar()
+  }, [edificioId])
 
   // Auto-scroll al último mensaje
   useEffect(() => {
@@ -232,10 +338,9 @@ export default function AsistenteIA() {
     setInput('')
     setEscribiendo(true)
 
-    // Delay realista
     await new Promise(r => setTimeout(r, 700 + Math.random() * 700))
 
-    const respuesta = processQuery(trimmed)
+    const respuesta = processQuery(trimmed, datos)
     setEscribiendo(false)
     setMensajes(prev => [...prev, { id: `m${Date.now() + 1}`, rol: 'asistente', contenido: respuesta, hora: getHora() }])
   }
@@ -249,7 +354,7 @@ export default function AsistenteIA() {
     else          { setAbierto(false) }
   }
 
-  const panelVisible = abierto && !minimizado
+  const nomEdificio = datos.edificio?.nombre ?? 'Edificio'
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
@@ -285,7 +390,9 @@ export default function AsistenteIA() {
                 </div>
                 <div className="flex items-center gap-1 mt-0.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <p className="text-xs" style={{ color: '#94b4d4' }}>Activo · Edificio Las Palmas</p>
+                  <p className="text-xs" style={{ color: '#94b4d4' }}>
+                    Activo · {nomEdificio}
+                  </p>
                 </div>
               </div>
             </div>
@@ -454,7 +561,6 @@ export default function AsistenteIA() {
             <>
               <Bot className="w-5 h-5 text-white" />
               <span className="text-sm font-semibold text-white">Asistente IA</span>
-              {/* Dot notificación */}
               <div
                 className="w-2 h-2 rounded-full animate-pulse"
                 style={{ background: '#4ade80' }}
@@ -478,3 +584,4 @@ export default function AsistenteIA() {
     </div>
   )
 }
+

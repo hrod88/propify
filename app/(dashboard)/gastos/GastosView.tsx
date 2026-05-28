@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * GastosView — Fase 21: CRUD admin de gastos comunes
@@ -11,7 +11,7 @@ import {
   DollarSign, TrendingUp, Clock, AlertTriangle,
   CheckCircle, XCircle, AlertCircle, Plus, Edit2, Trash2, X, Check,
 } from 'lucide-react'
-import { formatCLP } from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import type { GastoComun, Unidad, User, EstadoPago } from '@/types'
@@ -760,3 +760,4 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     </div>
   )
 }
+

@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { Download, TrendingUp, DollarSign, AlertTriangle, Wrench, Home, ChevronDown, Printer, FileDown } from 'lucide-react'
-import { formatCLP } from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
 import type { GastoComun, Pago, SolicitudMantencion, Unidad } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────
@@ -698,3 +698,4 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades, edi
     </div>
   )
 }
+

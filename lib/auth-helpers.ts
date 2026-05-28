@@ -1,4 +1,4 @@
-/**
+﻿/**
  * lib/auth-helpers.ts
  * Helpers para obtener datos del usuario autenticado en Server Components.
  * Usados por page.tsx para scoping multi-tenant de todas las queries.
@@ -13,7 +13,7 @@ import { supabase }                   from './supabase'
 /**
  * Retorna el edificioId del usuario autenticado actualmente.
  * Para admin/super_admin: respeta la cookie de override si está presente.
- * Fallback a 'e1' si no hay sesión o el usuario no tiene edificio asignado.
+ * Fallback a 'mirador-sacramentinos' si no hay sesión o el usuario no tiene edificio asignado.
  */
 export async function getEdificioActual(): Promise<string> {
   try {
@@ -22,8 +22,8 @@ export async function getEdificioActual(): Promise<string> {
     const client = await createSupabaseServerClient()
     const { data: { user } } = await client.auth.getUser()
     if (!user?.email) {
-      // Sin sesión: usar cookie si existe, si no 'e1'
-      return cookieStore.get('propify_edificio_activo')?.value ?? 'e1'
+      // Sin sesión: usar cookie si existe, si no 'mirador-sacramentinos'
+      return cookieStore.get('propify_edificio_activo')?.value ?? 'mirador-sacramentinos'
     }
 
     const { data } = await supabase
@@ -33,7 +33,7 @@ export async function getEdificioActual(): Promise<string> {
       .single()
 
     const u           = data as { edificioId?: string; rol?: string } | null
-    const userEdifId  = u?.edificioId ?? 'e1'
+    const userEdifId  = u?.edificioId ?? 'mirador-sacramentinos'
     const userRol     = u?.rol ?? ''
 
     // Admins pueden cambiar de edificio vía cookie
@@ -44,13 +44,13 @@ export async function getEdificioActual(): Promise<string> {
 
     return userEdifId
   } catch {
-    return 'e1'
+    return 'mirador-sacramentinos'
   }
 }
 
 /**
  * Retorna edificioId + nombre del usuario autenticado.
- * Fallback a 'e1' / 'Admin' si no hay sesión.
+ * Fallback a 'mirador-sacramentinos' / 'Admin' si no hay sesión.
  */
 export async function getUsuarioActual(): Promise<{
   edificioId: string
@@ -60,7 +60,7 @@ export async function getUsuarioActual(): Promise<{
   try {
     const client = await createSupabaseServerClient()
     const { data: { user } } = await client.auth.getUser()
-    if (!user?.email) return { edificioId: 'e1', nombre: 'Admin', apellido: '' }
+    if (!user?.email) return { edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
 
     const { data } = await supabase
       .from('usuarios')
@@ -70,11 +70,12 @@ export async function getUsuarioActual(): Promise<{
 
     const u = data as { edificioId?: string; nombre?: string; apellido?: string } | null
     return {
-      edificioId: u?.edificioId ?? 'e1',
+      edificioId: u?.edificioId ?? 'mirador-sacramentinos',
       nombre:     u?.nombre    ?? 'Admin',
       apellido:   u?.apellido  ?? '',
     }
   } catch {
-    return { edificioId: 'e1', nombre: 'Admin', apellido: '' }
+    return { edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
   }
 }
+

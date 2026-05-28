@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Plus, Calendar, Clock, Users, DollarSign } from 'lucide-react'
-import { formatCLP } from '@/lib/mock-data'
+import { formatCLP } from '@/lib/db'
 import type { EspacioComun, Reserva, Unidad, User } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -244,3 +244,4 @@ export default function ReservasView({ espacios, reservas, unidades, users }: Pr
     </div>
   )
 }
+
