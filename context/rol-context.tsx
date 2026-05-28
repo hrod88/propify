@@ -32,6 +32,23 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function cargarSesion() {
+      // 0. Modo preview activo → no consultar la BD, usar localStorage directamente
+      const isPreview = localStorage.getItem('propify_preview') === 'true'
+      if (isPreview) {
+        const previewRol = localStorage.getItem('propify_rol') as UserRole | null
+        if (previewRol) setRolEstado(previewRol)
+
+        const previewUnidadId = localStorage.getItem('propify_preview_unidad')
+        if (previewUnidadId) {
+          const { data: unidadPreview } = await supabase
+            .from('unidades').select('*').eq('id', previewUnidadId).single()
+          if (unidadPreview) setUnidad(unidadPreview as Unidad)
+        }
+
+        setCargado(true)
+        return  // Salir sin tocar la BD — el preview tiene prioridad máxima
+      }
+
       // 1. Verificar si hay sesión activa en Supabase Auth
       const { data: { user } } = await supabaseBrowser.auth.getUser()
 
@@ -62,27 +79,11 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
           // Usuario en Supabase Auth pero sin registro en usuarios → usar localStorage
           const guardado = localStorage.getItem('propify_rol') as UserRole | null
           if (guardado) setRolEstado(guardado)
-
-          // Si hay unidad de preview, cargarla
-          const previewUnidadId = localStorage.getItem('propify_preview_unidad')
-          if (previewUnidadId) {
-            const { data: unidadPreview } = await supabase
-              .from('unidades').select('*').eq('id', previewUnidadId).single()
-            if (unidadPreview) setUnidad(unidadPreview as Unidad)
-          }
         }
       } else {
         // Sin sesión activa → usar localStorage como fallback
         const guardado = localStorage.getItem('propify_rol') as UserRole | null
         if (guardado) setRolEstado(guardado)
-
-        // Si hay unidad de preview, cargarla
-        const previewUnidadId = localStorage.getItem('propify_preview_unidad')
-        if (previewUnidadId) {
-          const { data: unidadPreview } = await supabase
-            .from('unidades').select('*').eq('id', previewUnidadId).single()
-          if (unidadPreview) setUnidad(unidadPreview as Unidad)
-        }
       }
 
       setCargado(true)
