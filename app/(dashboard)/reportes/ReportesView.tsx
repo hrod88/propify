@@ -30,12 +30,7 @@ function descargarCSV(nombreArchivo: string, encabezados: string[], filas: strin
 }
 
 const MESES_ABREV = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-
-const CSV_SUBTITLE: Record<Tab, string> = {
-  resumen:      'Gastos comunes Mayo 2026',
-  finanzas:     'Historial de pagos 2026',
-  mantenciones: 'Solicitudes de mantención',
-}
+const MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
 
 // ─── Props ────────────────────────────────────────────────────
 interface Props {
@@ -43,20 +38,35 @@ interface Props {
   pagos: Pago[]
   solicitudes: SolicitudMantencion[]
   unidades: Unidad[]
+  edificioNombre: string
 }
 
 // ─── Componente ───────────────────────────────────────────────
-export default function ReportesView({ gastos, pagos, solicitudes, unidades }: Props) {
+export default function ReportesView({ gastos, pagos, solicitudes, unidades, edificioNombre }: Props) {
   const [tab, setTab]               = useState<Tab>('resumen')
   const [showExportMenu, setShowExportMenu] = useState(false)
 
-  // ── Métricas financieras (gastos mayo) ──
-  const totalMes   = gastos.reduce((s, g) => s + g.montoTotal, 0)
-  const recaudado  = gastos.filter(g => g.estadoPago === 'pagado').reduce((s, g) => s + g.montoTotal, 0)
+  // ── Período actual: mes más reciente en gastos ──
+  const periodoActual = useMemo(() => {
+    if (gastos.length === 0) {
+      const d = new Date()
+      return { mes: d.getUTCMonth() + 1, año: d.getUTCFullYear() }
+    }
+    const maxAño = Math.max(...gastos.map(g => g.año))
+    const maxMes = Math.max(...gastos.filter(g => g.año === maxAño).map(g => g.mes))
+    return { mes: maxMes, año: maxAño }
+  }, [gastos])
+  const periodoLabel = `${MESES_ABREV[periodoActual.mes - 1]} ${periodoActual.año}`
+  const periodoLargo = `${MESES_LARGO[periodoActual.mes - 1]} ${periodoActual.año}`
+
+  // ── Métricas financieras (gastos del período actual) ──
+  const gastosActuales = gastos.filter(g => g.mes === periodoActual.mes && g.año === periodoActual.año)
+  const totalMes   = gastosActuales.reduce((s, g) => s + g.montoTotal, 0)
+  const recaudado  = gastosActuales.filter(g => g.estadoPago === 'pagado').reduce((s, g) => s + g.montoTotal, 0)
   const moroso     = gastos.filter(g => g.estadoPago === 'vencido').reduce((s, g) => s + g.montoTotal, 0)
-  const pendiente  = gastos.filter(g => g.estadoPago === 'pendiente').reduce((s, g) => s + g.montoTotal, 0)
-  const parcial    = gastos.filter(g => g.estadoPago === 'parcial').reduce((s, g) => s + g.montoTotal, 0)
-  const recaudacionPct = Math.round((recaudado / totalMes) * 100)
+  const pendiente  = gastosActuales.filter(g => g.estadoPago === 'pendiente').reduce((s, g) => s + g.montoTotal, 0)
+  const parcial    = gastosActuales.filter(g => g.estadoPago === 'parcial').reduce((s, g) => s + g.montoTotal, 0)
+  const recaudacionPct = totalMes > 0 ? Math.round((recaudado / totalMes) * 100) : 0
 
   // ── Pagos por mes ──
   const pagosPorMes = useMemo(() => {
@@ -68,14 +78,39 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
     return map
   }, [pagos])
 
-  const mesesData = [
-    { label: 'Ene', value: pagosPorMes['2026-01'] ?? 0 },
-    { label: 'Feb', value: pagosPorMes['2026-02'] ?? 0 },
-    { label: 'Mar', value: pagosPorMes['2026-03'] ?? 0 },
-    { label: 'Abr', value: pagosPorMes['2026-04'] ?? 0 },
-    { label: 'May', value: pagosPorMes['2026-05'] ?? 0 },
-  ]
+  // ── Gráfico barras: últimos 6 meses dinámicos ──
+  const mesesData = useMemo(() => {
+    const mesRef  = periodoActual.mes
+    const añoRef  = periodoActual.año
+    return Array.from({ length: 6 }, (_, i) => {
+      let m = mesRef - (5 - i)
+      let a = añoRef
+      if (m <= 0) { m += 12; a -= 1 }
+      const key = `${a}-${String(m).padStart(2, '0')}`
+      return {
+        label:     MESES_ABREV[m - 1],
+        value:     pagosPorMes[key] ?? 0,
+        isCurrent: m === mesRef && a === añoRef,
+      }
+    })
+  }, [periodoActual, pagosPorMes])
   const maxMes = Math.max(...mesesData.map(m => m.value), 1)
+
+  // ── Historial mensual: períodos únicos de pagos ──
+  const historialMeses = useMemo(() => {
+    const combos = [...new Set(pagos.map(p => `${p.año}-${String(p.mes).padStart(2, '0')}`))]
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, 6)
+    return combos.map(key => {
+      const mes = parseInt(key.split('-')[1])
+      const año = parseInt(key.split('-')[0])
+      return { label: `${MESES_ABREV[mes - 1]} ${año}`, mes, año }
+    })
+  }, [pagos])
+
+  // ── Footer: fecha real ──
+  const hoy = new Date()
+  const fechaActualizacion = `${hoy.getUTCDate()} de ${MESES_LARGO[hoy.getUTCMonth()]} de ${hoy.getUTCFullYear()}`
 
   // ── Mantenciones ──
   const solPendiente  = solicitudes.filter(s => s.estado === 'pendiente').length
@@ -158,7 +193,7 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-          <p className="text-gray-500 mt-1">Edificio Las Palmas · Mayo 2026</p>
+          <p className="text-gray-500 mt-1">{edificioNombre} · {periodoLabel}</p>
         </div>
         {/* ── Dropdown exportar ── */}
         <div className="relative">
@@ -197,7 +232,11 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-800">Exportar CSV</p>
-                    <p className="text-xs text-gray-400">{CSV_SUBTITLE[tab]}</p>
+                    <p className="text-xs text-gray-400">
+                      {tab === 'resumen'      ? `Gastos comunes ${periodoLargo}` :
+                       tab === 'finanzas'     ? 'Historial de pagos'              :
+                                               'Solicitudes de mantención'}
+                    </p>
                   </div>
                 </button>
 
@@ -308,7 +347,7 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
             className="bg-white rounded-2xl border shadow-sm p-5"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <h2 className="font-bold text-gray-900 mb-5">Gastos comunes mayo 2026</h2>
+            <h2 className="font-bold text-gray-900 mb-5">Gastos comunes {periodoLargo}</h2>
             <div className="space-y-4">
               {[
                 { label: 'Pagado',    value: recaudado, color: '#16a34a' },
@@ -399,16 +438,17 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="font-bold text-gray-900">Pagos recibidos por mes</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Enero – Mayo 2026</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {mesesData[0].label} – {mesesData[mesesData.length - 1].label} {periodoActual.año}
+                </p>
               </div>
               <TrendingUp className="w-5 h-5 text-blue-400" />
             </div>
 
             {/* Barras */}
             <div className="flex items-end gap-3" style={{ height: 140 }}>
-              {mesesData.map(({ label, value }, i) => {
+              {mesesData.map(({ label, value, isCurrent }) => {
                 const pct = value > 0 ? (value / maxMes) * 100 : 0
-                const isCurrent = label === 'May'
                 return (
                   <div
                     key={label}
@@ -470,11 +510,7 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { label: 'Mayo 2026',  mes: 5, año: 2026 },
-                  { label: 'Abril 2026', mes: 4, año: 2026 },
-                  { label: 'Marzo 2026', mes: 3, año: 2026 },
-                ].map(({ label, mes, año }, idx) => {
+                {historialMeses.map(({ label, mes, año }, idx) => {
                   const mp     = pagos.filter(p => p.mes === mes && p.año === año)
                   const total  = mp.reduce((s, p) => s + p.monto, 0)
                   const mets   = [...new Set(mp.map(p => p.metodo))]
@@ -657,7 +693,7 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades }: P
 
       {/* Footer */}
       <p className="text-xs text-gray-300 text-center pb-2">
-        Datos actualizados al 27 de mayo de 2026 · Propify v1.0
+        Datos actualizados al {fechaActualizacion} · Propify v1.0
       </p>
     </div>
   )
