@@ -288,6 +288,17 @@ export interface EgresoComunidad {
   creadoEn:          string
 }
 
+// ─── Presupuesto Anual ────────────────────────────────────────
+export interface Presupuesto {
+  id:          string
+  edificioId:  string
+  anio:        number
+  categoria:   string
+  monto:       number
+  nota?:       string | null
+  created_at:  string
+}
+
 // ─── Actividad Reciente ───────────────────────────────────────
 export type TipoActividad =
   | 'pago'

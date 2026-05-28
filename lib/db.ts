@@ -21,6 +21,7 @@ import type {
   Plan,
   Suscripcion,
   EgresoComunidad,
+  Presupuesto,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -292,4 +293,18 @@ export async function getEgresos(edificioId = 'e1'): Promise<EgresoComunidad[]> 
     .order('categoria')
   if (error) { console.error('getEgresos:', error.message); return [] }
   return (data ?? []) as EgresoComunidad[]
+}
+
+// ─── Presupuestos ─────────────────────────────────────────────
+
+export async function getPresupuestos(edificioId = 'e1', anio?: number): Promise<Presupuesto[]> {
+  let q = supabase
+    .from('presupuestos')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('categoria')
+  if (anio !== undefined) q = q.eq('anio', anio)
+  const { data, error } = await q
+  if (error) { console.error('getPresupuestos:', error.message); return [] }
+  return (data ?? []) as Presupuesto[]
 }
