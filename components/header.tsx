@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import {
   Bell, Search, ChevronDown, Settings, LogOut,
   User, HelpCircle, Home, Wrench, Users, Trash2,
+  Eye, RotateCcw,
 } from 'lucide-react'
 import type { User as UserType, Unidad, SolicitudMantencion } from '@/types'
 import { useNotificaciones } from '@/context/notificaciones-context'
@@ -65,11 +66,42 @@ export default function Header() {
     useNotificaciones()
 
   // UI state
-  const [showNotif,   setShowNotif]   = useState(false)
-  const [showUser,    setShowUser]    = useState(false)
-  const [searchValue, setSearchValue] = useState('')
-  const [searchFocus, setSearchFocus] = useState(false)
+  const [showNotif,    setShowNotif]    = useState(false)
+  const [showUser,     setShowUser]     = useState(false)
+  const [searchValue,  setSearchValue]  = useState('')
+  const [searchFocus,  setSearchFocus]  = useState(false)
+  const [isPreview,    setIsPreview]    = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // Detectar modo preview desde localStorage
+  useEffect(() => {
+    setIsPreview(localStorage.getItem('propify_preview') === 'true')
+  }, [])
+
+  // Simular rol (admin → propietario / arrendatario / conserje)
+  async function simularRol(nuevoRol: string) {
+    if (!usuario) return
+    const esResidente = nuevoRol === 'propietario' || nuevoRol === 'arrendatario'
+    const { error } = await supabaseBrowser
+      .from('usuarios')
+      .update({ rol: nuevoRol, unidadId: esResidente ? 'un-0804' : null })
+      .eq('id', usuario.id)
+    if (!error) {
+      localStorage.setItem('propify_preview', 'true')
+      window.location.reload()
+    }
+  }
+
+  // Volver al rol de administrador
+  async function volverAlAdmin() {
+    if (!usuario) return
+    await supabaseBrowser
+      .from('usuarios')
+      .update({ rol: 'administrador', unidadId: null })
+      .eq('id', usuario.id)
+    localStorage.removeItem('propify_preview')
+    window.location.reload()
+  }
 
   // Datos para búsqueda — cargados desde Supabase una vez al montar
   const [searchUsuarios,    setSearchUsuarios]    = useState<UserType[]>([])
@@ -485,6 +517,25 @@ export default function Header() {
                 ))}
               </div>
 
+              {/* Simular rol — solo visible para admin */}
+              {(rol === 'administrador' || rol === 'super_admin') && (
+                <div className="py-1 border-t" style={{ borderColor: '#f1f5f9' }}>
+                  <p className="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                    Vista previa como…
+                  </p>
+                  {(['propietario', 'arrendatario', 'conserje'] as const).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => { simularRol(r); setShowUser(false) }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 transition-colors"
+                    >
+                      <Eye className="w-4 h-4" style={{ color: '#6366f1' }} />
+                      {ROL_LABELS[r]}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Logout */}
               <div className="py-1 border-t" style={{ borderColor: '#f1f5f9' }}>
                 <button
@@ -500,6 +551,27 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* Banner flotante — visible cuando se está en modo vista previa */}
+      {isPreview && (
+        <div
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl"
+          style={{ background: '#1e3a5f', color: 'white', border: '1px solid rgba(255,255,255,0.12)' }}
+        >
+          <Eye className="w-4 h-4 shrink-0" style={{ color: '#93c5fd' }} />
+          <span className="text-sm font-medium">
+            Vista previa: <span style={{ color: '#93c5fd' }}>{ROL_LABELS[rol] ?? rol}</span>
+          </span>
+          <button
+            onClick={volverAlAdmin}
+            className="flex items-center gap-1.5 ml-2 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90"
+            style={{ background: '#2563ae' }}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Volver al Admin
+          </button>
+        </div>
+      )}
 
       {/* Overlay para cerrar paneles */}
       {(showNotif || showUser) && (
