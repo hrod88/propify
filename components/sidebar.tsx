@@ -19,6 +19,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Package,
   LogOut,
   Home,
@@ -206,8 +207,22 @@ function getInitials(nombre: string, apellido: string) {
 // ─── Componente ───────────────────────────────────────────────
 export default function Sidebar() {
   const pathname            = usePathname()
-  const [collapsed, setCollapsed]       = useState(false)
+  const [collapsed, setCollapsed]           = useState(false)
   const [showEdifSwitch, setShowEdifSwitch] = useState(false)
+  const [openGroups, setOpenGroups]         = useState<Set<string>>(new Set())
+
+  function toggleGroup(title: string) {
+    setOpenGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(title)) next.delete(title)
+      else next.add(title)
+      return next
+    })
+  }
+
+  function closeAllGroups() {
+    setOpenGroups(new Set())
+  }
   const { rol, usuario, unidad }        = useRol()
   const { edificios, edificioActivo, nombreActivo, cambiarEdificio } = useEdificio()
 
@@ -232,6 +247,7 @@ export default function Sidebar() {
         background: '#0f2341',
         borderRight: '1px solid rgba(255,255,255,0.06)',
       }}
+      onMouseLeave={closeAllGroups}
     >
       {/* ── Logo ── */}
       <div
@@ -335,69 +351,87 @@ export default function Sidebar() {
 
       {/* ── Navegación ── */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-1 px-2">
-        {navGroups.map(group => (
-          <div key={group.title} className="mb-2">
-            {!collapsed && (
-              <p
-                className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider"
-                style={{ color: 'rgba(148,180,212,0.5)' }}
-              >
-                {group.title}
-              </p>
-            )}
+        {navGroups.map(group => {
+          const isOpen = openGroups.has(group.title)
 
-            {group.items.map(item => {
-              const active = isActive(item.href)
-              const Icon   = item.icon
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={collapsed ? item.label : undefined}
-                  className={`
-                    relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5
-                    transition-all duration-150 group
-                    ${active ? 'text-white' : 'hover:bg-white/5'}
-                  `}
-                  style={active ? { background: '#2563ae' } : {}}
+          return (
+            <div key={group.title} className="mb-1">
+              {/* Título de categoría — colapsable cuando sidebar está expandido */}
+              {!collapsed && (
+                <button
+                  onClick={() => toggleGroup(group.title)}
+                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors hover:bg-white/5"
                 >
-                  <Icon
-                    className="shrink-0"
-                    style={{ width: 18, height: 18, color: active ? 'white' : '#94b4d4' }}
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: 'rgba(148,180,212,0.5)' }}
+                  >
+                    {group.title}
+                  </p>
+                  <ChevronDown
+                    className="w-3 h-3 transition-transform duration-200"
+                    style={{
+                      color: 'rgba(148,180,212,0.5)',
+                      transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    }}
                   />
-                  {!collapsed && (
-                    <span
-                      className="text-sm font-medium flex-1 truncate"
-                      style={{ color: active ? 'white' : '#94b4d4' }}
-                    >
-                      {item.label}
-                    </span>
-                  )}
-                  {!collapsed && item.badge !== undefined && item.badge > 0 && (
-                    <span
-                      className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                      style={{
-                        background: active ? 'rgba(255,255,255,0.25)' : '#ef4444',
-                        color: 'white',
-                        minWidth: 20,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                  {collapsed && item.badge !== undefined && item.badge > 0 && (
-                    <span
-                      className="absolute top-1 right-1 w-2 h-2 rounded-full"
-                      style={{ background: '#ef4444' }}
+                </button>
+              )}
+
+              {/* Items — visibles si abierto (o sidebar colapsado: solo iconos) */}
+              {(collapsed || isOpen) && group.items.map(item => {
+                const active = isActive(item.href)
+                const Icon   = item.icon
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={collapsed ? item.label : undefined}
+                    className={`
+                      relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5
+                      transition-all duration-150 group
+                      ${active ? 'text-white' : 'hover:bg-white/5'}
+                    `}
+                    style={active ? { background: '#2563ae' } : {}}
+                  >
+                    <Icon
+                      className="shrink-0"
+                      style={{ width: 18, height: 18, color: active ? 'white' : '#94b4d4' }}
                     />
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-        ))}
+                    {!collapsed && (
+                      <span
+                        className="text-sm font-medium flex-1 truncate"
+                        style={{ color: active ? 'white' : '#94b4d4' }}
+                      >
+                        {item.label}
+                      </span>
+                    )}
+                    {!collapsed && item.badge !== undefined && item.badge > 0 && (
+                      <span
+                        className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: active ? 'rgba(255,255,255,0.25)' : '#ef4444',
+                          color: 'white',
+                          minWidth: 20,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                    {collapsed && item.badge !== undefined && item.badge > 0 && (
+                      <span
+                        className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                        style={{ background: '#ef4444' }}
+                      />
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          )
+        })}
       </nav>
 
       {/* ── Usuario ── */}
