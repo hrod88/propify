@@ -360,6 +360,43 @@ export interface Contrato {
   actualizadoEn:   string
 }
 
+// ─── Actas de Reunión ─────────────────────────────────────────
+export type TipoActa   = 'ordinaria' | 'extraordinaria' | 'directiva'
+export type EstadoActa = 'borrador' | 'aprobada' | 'publicada'
+
+export interface Acta {
+  id:           string
+  edificioId:   string
+  titulo:       string
+  fecha:        string
+  tipo:         TipoActa
+  quorum:       number
+  acuerdos:     string
+  asistentes:   string
+  estado:       EstadoActa
+  creadoPorId?: string | null
+  creadoEn:     string
+  actualizadoEn: string
+}
+
+// ─── Libro de Novedades ───────────────────────────────────────
+export type CategoriaNovedad = 'incidencia' | 'mantenimiento' | 'visitante' | 'entrega' | 'otro'
+export type PrioridadNovedad = 'alta' | 'media' | 'baja'
+export type EstadoNovedad    = 'abierto' | 'en_proceso' | 'cerrado'
+
+export interface Novedad {
+  id:              string
+  edificioId:      string
+  titulo:          string
+  descripcion:     string
+  categoria:       CategoriaNovedad
+  prioridad:       PrioridadNovedad
+  estado:          EstadoNovedad
+  reportadoPorId?: string | null
+  creadoEn:        string
+  cerradoEn?:      string | null
+}
+
 // ─── Actividad Reciente ───────────────────────────────────────
 export type TipoActividad =
   | 'pago'

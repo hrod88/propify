@@ -26,6 +26,8 @@ import type {
   ConfigFacturacion,
   GeneracionFacturacion,
   Contrato,
+  Acta,
+  Novedad,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -359,4 +361,28 @@ export async function getContratos(edificioId = 'e1'): Promise<Contrato[]> {
     .order('creadoEn', { ascending: false })
   if (error) { console.error('getContratos:', error.message); return [] }
   return (data ?? []) as Contrato[]
+}
+
+// ─── Actas de Reunión ────────────────────────────────────────
+
+export async function getActas(edificioId = 'e1'): Promise<Acta[]> {
+  const { data, error } = await supabase
+    .from('actas')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('fecha', { ascending: false })
+  if (error) { console.error('getActas:', error.message); return [] }
+  return (data ?? []) as Acta[]
+}
+
+// ─── Libro de Novedades ──────────────────────────────────────
+
+export async function getNovedades(edificioId = 'e1'): Promise<Novedad[]> {
+  const { data, error } = await supabase
+    .from('novedades')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('creadoEn', { ascending: false })
+  if (error) { console.error('getNovedades:', error.message); return [] }
+  return (data ?? []) as Novedad[]
 }

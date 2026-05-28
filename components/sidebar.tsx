@@ -28,6 +28,8 @@ import {
   Truck,
   Zap,
   FileText,
+  BookMarked,
+  NotebookPen,
 } from 'lucide-react'
 import { useRol }      from '@/context/rol-context'
 import { useEdificio }  from '@/context/edificio-context'
@@ -80,6 +82,8 @@ const NAV_ADMIN: NavGroup[] = [
       { href: '/visitas',        label: 'Visitas',          icon: ClipboardList },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
       { href: '/paquetes',       label: 'Paquetes',         icon: Package,       badge: 3 },
+      { href: '/actas',          label: 'Actas',            icon: BookMarked },
+      { href: '/novedades',      label: 'Novedades',        icon: NotebookPen },
     ],
   },
   {
@@ -106,6 +110,7 @@ const NAV_CONSERJE: NavGroup[] = [
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
       { href: '/mantenciones',   label: 'Mantenciones',     icon: Wrench,        badge: 4 },
+      { href: '/novedades',      label: 'Novedades',        icon: NotebookPen },
     ],
   },
 ]
