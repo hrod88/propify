@@ -22,6 +22,7 @@ import {
   Package,
   LogOut,
   Home,
+  TrendingDown,
 } from 'lucide-react'
 import { useRol } from '@/context/rol-context'
 import type { UserRole } from '@/types'
@@ -55,6 +56,7 @@ const NAV_ADMIN: NavGroup[] = [
     title: 'Finanzas',
     items: [
       { href: '/gastos',         label: 'Gastos Comunes',   icon: Receipt },
+      { href: '/egresos',        label: 'Egresos',          icon: TrendingDown },
       { href: '/pagos',          label: 'Pagos',            icon: CreditCard },
       { href: '/morosos',        label: 'Morosos',          icon: AlertTriangle, badge: 12 },
     ],

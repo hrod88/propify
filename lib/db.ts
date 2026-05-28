@@ -20,6 +20,7 @@ import type {
   ActividadReciente,
   Plan,
   Suscripcion,
+  EgresoComunidad,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -277,4 +278,18 @@ export async function getDashboardData(edificioId = 'e1') {
   ].slice(0, 7)
 
   return { kpis, actividad, gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades, edificio }
+}
+
+// ─── Egresos Comunitarios ─────────────────────────────────────
+
+export async function getEgresos(edificioId = 'e1'): Promise<EgresoComunidad[]> {
+  const { data, error } = await supabase
+    .from('egresos_comunidad')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('año',      { ascending: false })
+    .order('mes',      { ascending: false })
+    .order('categoria')
+  if (error) { console.error('getEgresos:', error.message); return [] }
+  return (data ?? []) as EgresoComunidad[]
 }

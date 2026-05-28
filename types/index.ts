@@ -253,6 +253,41 @@ export interface Suscripcion {
   plan?: Plan             // join opcional
 }
 
+// ─── Egresos Comunitarios ─────────────────────────────────────
+export type CategoriaEgreso =
+  | 'Administración'
+  | 'Electricidad'
+  | 'Gas / Calefacción'
+  | 'Agua Fría'
+  | 'Limpieza'
+  | 'Portería'
+  | 'Ascensores'
+  | 'Mantenimiento'
+  | 'Seguros'
+  | 'Extintores'
+  | 'Reparaciones'
+  | 'Jardín'
+  | 'Contabilidad'
+  | 'Comunicaciones'
+  | 'Aseo Exterior'
+  | 'Control de Plagas'
+  | 'Fondo Reserva'
+  | 'Otros'
+
+export interface EgresoComunidad {
+  id:                string
+  edificioId:        string
+  mes:               number
+  año:               number
+  categoria:         CategoriaEgreso | string
+  descripcion?:      string | null
+  monto:             number
+  comprobante?:      string | null
+  proveedor?:        string | null
+  registradoPorId?:  string | null
+  creadoEn:          string
+}
+
 // ─── Actividad Reciente ───────────────────────────────────────
 export type TipoActividad =
   | 'pago'

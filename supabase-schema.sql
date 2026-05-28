@@ -201,6 +201,25 @@ END $$;
 ALTER TABLE notificaciones REPLICA IDENTITY FULL;
 ALTER PUBLICATION supabase_realtime ADD TABLE notificaciones;
 
+-- ─── Egresos Comunitarios (Fase 24) ───────────────────────────
+CREATE TABLE egresos_comunidad (
+  id                  TEXT PRIMARY KEY,
+  "edificioId"        TEXT NOT NULL REFERENCES edificios(id) ON DELETE CASCADE,
+  mes                 INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
+  "año"               INTEGER NOT NULL,
+  categoria           TEXT NOT NULL,
+  descripcion         TEXT,
+  monto               INTEGER NOT NULL CHECK (monto > 0),
+  comprobante         TEXT,
+  proveedor           TEXT,
+  "registradoPorId"   TEXT REFERENCES usuarios(id) ON DELETE SET NULL,
+  "creadoEn"          TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE egresos_comunidad ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_all_egresos_comunidad" ON egresos_comunidad
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- ─── 3. SEED DATA ─────────────────────────────────────────────
 
 -- Edificios
@@ -327,3 +346,67 @@ INSERT INTO notificaciones ("edificioId", tipo, titulo, descripcion, leida, "cre
   ('e1', 'paquete',   'Nuevo paquete',      'Chilexpress para Depto 101',             false, NOW() - INTERVAL '20 minutes'),
   ('e1', 'mora',      'Alerta morosidad',   'Depto 102 — 16 días de mora',            true,  NOW() - INTERVAL '5 hours'),
   ('e1', 'circular',  'Circular enviada',   'Corte de agua programado para el 28/05', true,  NOW() - INTERVAL '2 hours');
+
+-- Egresos Comunitarios — datos reales Edif. Mirador Sacramentinos (Ene–May 2026)
+-- Total mensual ~$21.5M según liquidaciones reales (prorrateo 179 unidades)
+INSERT INTO egresos_comunidad (id, "edificioId", mes, "año", categoria, monto, proveedor, comprobante) VALUES
+  -- ── Enero 2026 ──────────────────────────────────────────────
+  ('eg01','e1',1,2026,'Administración',    8800000,'Administradora Propify SpA',   'FAC-2026-0101'),
+  ('eg02','e1',1,2026,'Portería',          2480000,'Securitas Chile',              'FAC-2026-0102'),
+  ('eg03','e1',1,2026,'Electricidad',      3200000,'Enel Distribución',            'FAC-2026-0103'),
+  ('eg04','e1',1,2026,'Gas / Calefacción', 1800000,'Abastible',                   'FAC-2026-0104'),
+  ('eg05','e1',1,2026,'Mantenimiento',     1750000,'Mant. Integral Ltda.',         'FAC-2026-0105'),
+  ('eg06','e1',1,2026,'Limpieza',          1200000,'Aseos Pro SpA',                'FAC-2026-0106'),
+  ('eg07','e1',1,2026,'Seguros',           1200000,'HDI Seguros',                  'FAC-2026-0107'),
+  ('eg08','e1',1,2026,'Ascensores',         380000,'Otis Elevator',                'FAC-2026-0108'),
+  ('eg09','e1',1,2026,'Reparaciones',       710000,null,                           null),
+  ('eg10','e1',1,2026,'Jardín',             300000,'Jardines del Sur',             'FAC-2026-0110'),
+  ('eg11','e1',1,2026,'Extintores',         180000,'Fire Safe Chile',              'FAC-2026-0111'),
+  -- ── Febrero 2026 ────────────────────────────────────────────
+  ('eg12','e1',2,2026,'Administración',    8900000,'Administradora Propify SpA',   'FAC-2026-0201'),
+  ('eg13','e1',2,2026,'Portería',          2500000,'Securitas Chile',              'FAC-2026-0202'),
+  ('eg14','e1',2,2026,'Electricidad',      2600000,'Enel Distribución',            'FAC-2026-0203'),
+  ('eg15','e1',2,2026,'Gas / Calefacción', 1600000,'Abastible',                   'FAC-2026-0204'),
+  ('eg16','e1',2,2026,'Mantenimiento',     1800000,'Mant. Integral Ltda.',         'FAC-2026-0205'),
+  ('eg17','e1',2,2026,'Limpieza',          1200000,'Aseos Pro SpA',                'FAC-2026-0206'),
+  ('eg18','e1',2,2026,'Seguros',           1200000,'HDI Seguros',                  'FAC-2026-0207'),
+  ('eg19','e1',2,2026,'Ascensores',         400000,'Otis Elevator',                'FAC-2026-0208'),
+  ('eg20','e1',2,2026,'Reparaciones',       800000,null,                           null),
+  ('eg21','e1',2,2026,'Jardín',             300000,'Jardines del Sur',             'FAC-2026-0210'),
+  ('eg22','e1',2,2026,'Extintores',         200000,'Fire Safe Chile',              'FAC-2026-0211'),
+  -- ── Marzo 2026 ──────────────────────────────────────────────
+  ('eg23','e1',3,2026,'Administración',    8850000,'Administradora Propify SpA',   'FAC-2026-0301'),
+  ('eg24','e1',3,2026,'Portería',          2500000,'Securitas Chile',              'FAC-2026-0302'),
+  ('eg25','e1',3,2026,'Electricidad',      2900000,'Enel Distribución',            'FAC-2026-0303'),
+  ('eg26','e1',3,2026,'Gas / Calefacción', 1550000,'Abastible',                   'FAC-2026-0304'),
+  ('eg27','e1',3,2026,'Mantenimiento',     1850000,'Mant. Integral Ltda.',         'FAC-2026-0305'),
+  ('eg28','e1',3,2026,'Limpieza',          1200000,'Aseos Pro SpA',                'FAC-2026-0306'),
+  ('eg29','e1',3,2026,'Seguros',           1200000,'HDI Seguros',                  'FAC-2026-0307'),
+  ('eg30','e1',3,2026,'Ascensores',         400000,'Otis Elevator',                'FAC-2026-0308'),
+  ('eg31','e1',3,2026,'Reparaciones',       550000,null,                           null),
+  ('eg32','e1',3,2026,'Jardín',             320000,'Jardines del Sur',             'FAC-2026-0310'),
+  ('eg33','e1',3,2026,'Extintores',         180000,'Fire Safe Chile',              'FAC-2026-0311'),
+  -- ── Abril 2026 ──────────────────────────────────────────────
+  ('eg34','e1',4,2026,'Administración',    8900000,'Administradora Propify SpA',   'FAC-2026-0401'),
+  ('eg35','e1',4,2026,'Portería',          2500000,'Securitas Chile',              'FAC-2026-0402'),
+  ('eg36','e1',4,2026,'Electricidad',      2800000,'Enel Distribución',            'FAC-2026-0403'),
+  ('eg37','e1',4,2026,'Gas / Calefacción', 1480000,'Abastible',                   'FAC-2026-0404'),
+  ('eg38','e1',4,2026,'Mantenimiento',     1780000,'Mant. Integral Ltda.',         'FAC-2026-0405'),
+  ('eg39','e1',4,2026,'Limpieza',          1200000,'Aseos Pro SpA',                'FAC-2026-0406'),
+  ('eg40','e1',4,2026,'Seguros',           1200000,'HDI Seguros',                  'FAC-2026-0407'),
+  ('eg41','e1',4,2026,'Ascensores',         420000,'Otis Elevator',                'FAC-2026-0408'),
+  ('eg42','e1',4,2026,'Reparaciones',       620000,null,                           null),
+  ('eg43','e1',4,2026,'Jardín',             300000,'Jardines del Sur',             'FAC-2026-0410'),
+  ('eg44','e1',4,2026,'Extintores',         200000,'Fire Safe Chile',              'FAC-2026-0411'),
+  -- ── Mayo 2026 ───────────────────────────────────────────────
+  ('eg45','e1',5,2026,'Administración',    8900000,'Administradora Propify SpA',   'FAC-2026-0501'),
+  ('eg46','e1',5,2026,'Portería',          2500000,'Securitas Chile',              'FAC-2026-0502'),
+  ('eg47','e1',5,2026,'Electricidad',      2800000,'Enel Distribución',            'FAC-2026-0503'),
+  ('eg48','e1',5,2026,'Gas / Calefacción', 1500000,'Abastible',                   'FAC-2026-0504'),
+  ('eg49','e1',5,2026,'Mantenimiento',     1800000,'Mant. Integral Ltda.',         'FAC-2026-0505'),
+  ('eg50','e1',5,2026,'Limpieza',          1200000,'Aseos Pro SpA',                'FAC-2026-0506'),
+  ('eg51','e1',5,2026,'Seguros',           1200000,'HDI Seguros',                  'FAC-2026-0507'),
+  ('eg52','e1',5,2026,'Ascensores',         400000,'Otis Elevator',                'FAC-2026-0508'),
+  ('eg53','e1',5,2026,'Reparaciones',       700000,null,                           null),
+  ('eg54','e1',5,2026,'Jardín',             300000,'Jardines del Sur',             'FAC-2026-0510'),
+  ('eg55','e1',5,2026,'Extintores',         200000,'Fire Safe Chile',              'FAC-2026-0511');
