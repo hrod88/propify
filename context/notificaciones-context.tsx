@@ -16,8 +16,9 @@ import {
   createContext, useContext, useState, useCallback,
   useEffect, useRef,
 } from 'react'
-import { supabaseBrowser } from '@/lib/supabase-browser'
-import { useRol }          from '@/context/rol-context'
+import { supabaseBrowser }            from '@/lib/supabase-browser'
+import { useRol }                     from '@/context/rol-context'
+import { showBrowserNotification }    from '@/lib/push-notifications'
 
 // ─── Types ────────────────────────────────────────────────────
 export type TipoNotif =
@@ -194,6 +195,9 @@ export function NotificacionesProvider({ children }: { children: React.ReactNode
       tiempo: 'justo ahora', leida: false, creadoEn: now,
     }
     setNotificaciones(prev => [nueva, ...prev])
+
+    // Browser push notification (Fase 28)
+    showBrowserNotification(titulo, descripcion).catch(() => {})
 
     // Persistir en Supabase (fire-and-forget)
     supabaseBrowser

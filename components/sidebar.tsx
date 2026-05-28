@@ -26,8 +26,11 @@ import {
   Scale,
   Target,
   Truck,
+  Zap,
+  FileText,
 } from 'lucide-react'
-import { useRol } from '@/context/rol-context'
+import { useRol }      from '@/context/rol-context'
+import { useEdificio }  from '@/context/edificio-context'
 import type { UserRole } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────
@@ -63,6 +66,8 @@ const NAV_ADMIN: NavGroup[] = [
       { href: '/proveedores',    label: 'Proveedores',      icon: Truck },
       { href: '/balance',        label: 'Balance',          icon: Scale },
       { href: '/presupuesto',    label: 'Presupuesto',      icon: Target },
+      { href: '/facturacion',    label: 'Facturación',      icon: Zap },
+      { href: '/contratos',      label: 'Contratos',        icon: FileText },
       { href: '/pagos',          label: 'Pagos',            icon: CreditCard },
       { href: '/morosos',        label: 'Morosos',          icon: AlertTriangle, badge: 12 },
     ],
@@ -196,11 +201,14 @@ function getInitials(nombre: string, apellido: string) {
 // ─── Componente ───────────────────────────────────────────────
 export default function Sidebar() {
   const pathname            = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
-  const { rol, usuario, unidad }  = useRol()
+  const [collapsed, setCollapsed]       = useState(false)
+  const [showEdifSwitch, setShowEdifSwitch] = useState(false)
+  const { rol, usuario, unidad }        = useRol()
+  const { edificios, edificioActivo, nombreActivo, cambiarEdificio } = useEdificio()
 
-  const navGroups  = getNavGroups(rol)
+  const navGroups   = getNavGroups(rol)
   const esResidente = rol === 'propietario' || rol === 'arrendatario'
+  const esAdmin     = rol === 'super_admin' || rol === 'administrador'
 
   const isActive = (href: string) =>
     href === '/dashboard' || href === '/mi-unidad'
@@ -243,12 +251,13 @@ export default function Sidebar() {
 
       {/* ── Info de edificio / unidad ── */}
       {!collapsed && (
-        <div
-          className="mx-3 my-3 px-3 py-2.5 rounded-xl cursor-default animate-fade-in"
-          style={{ background: 'rgba(37,99,174,0.25)', border: '1px solid rgba(37,99,174,0.4)' }}
-        >
+        <div className="mx-3 my-3 animate-fade-in relative">
           {esResidente && unidad ? (
-            <>
+            /* Residentes: solo info de su unidad */
+            <div
+              className="px-3 py-2.5 rounded-xl cursor-default"
+              style={{ background: 'rgba(37,99,174,0.25)', border: '1px solid rgba(37,99,174,0.4)' }}
+            >
               <p className="text-xs font-medium mb-0.5" style={{ color: '#94b4d4' }}>Mi unidad</p>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-white">
@@ -258,15 +267,63 @@ export default function Sidebar() {
                   Piso {unidad.piso}
                 </span>
               </div>
+            </div>
+          ) : esAdmin && edificios.length > 1 ? (
+            /* Admins con múltiples edificios: selector dropdown */
+            <>
+              <button
+                onClick={() => setShowEdifSwitch(v => !v)}
+                className="w-full px-3 py-2.5 rounded-xl text-left transition-colors"
+                style={{ background: 'rgba(37,99,174,0.25)', border: '1px solid rgba(37,99,174,0.4)' }}
+              >
+                <p className="text-xs font-medium mb-0.5" style={{ color: '#94b4d4' }}>Edificio activo</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-white truncate flex-1 mr-1">{nombreActivo}</p>
+                  <ChevronRight
+                    className="w-3.5 h-3.5 shrink-0 transition-transform"
+                    style={{
+                      color: '#94b4d4',
+                      transform: showEdifSwitch ? 'rotate(90deg)' : 'rotate(0deg)',
+                    }}
+                  />
+                </div>
+              </button>
+
+              {showEdifSwitch && (
+                <div
+                  className="absolute left-0 right-0 z-50 mt-1 rounded-xl overflow-hidden shadow-xl"
+                  style={{ background: '#0d1e38', border: '1px solid rgba(37,99,174,0.5)' }}
+                >
+                  {edificios.map(e => (
+                    <button
+                      key={e.id}
+                      onClick={() => { setShowEdifSwitch(false); cambiarEdificio(e.id) }}
+                      className="w-full px-3 py-2.5 text-left flex items-center justify-between gap-2 hover:bg-white/5 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{e.nombre}</p>
+                        <p className="text-xs truncate" style={{ color: '#94b4d4' }}>{e.comuna}</p>
+                      </div>
+                      {e.id === edificioActivo && (
+                        <span className="shrink-0 w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
-            <>
+            /* Admin con un solo edificio: info estática */
+            <div
+              className="px-3 py-2.5 rounded-xl cursor-default"
+              style={{ background: 'rgba(37,99,174,0.25)', border: '1px solid rgba(37,99,174,0.4)' }}
+            >
               <p className="text-xs font-medium mb-0.5" style={{ color: '#94b4d4' }}>Edificio activo</p>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-white truncate">Edificio Las Palmas</p>
+                <p className="text-sm font-semibold text-white truncate">{nombreActivo}</p>
                 <ChevronRight className="w-3.5 h-3.5 shrink-0 ml-1" style={{ color: '#94b4d4' }} />
               </div>
-            </>
+            </div>
           )}
         </div>
       )}

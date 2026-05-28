@@ -5,7 +5,12 @@ import {
   Building2, Users, Bell, User, Save, Shield,
   Mail, Phone, MapPin, Hash, ChevronRight, LogOut,
   X, UserPlus, Send, CreditCard, Zap, Crown, Check,
+  Smartphone, BellOff, BellRing,
 } from 'lucide-react'
+import {
+  isPushEnabled, getPermission,
+  requestPushPermission, disablePush,
+} from '@/lib/push-notifications'
 import Link from 'next/link'
 import { formatCLP } from '@/lib/db'
 import type { Edificio, Unidad, User as UserType, Suscripcion } from '@/types'
@@ -161,6 +166,29 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
 
   const toggle = (key: keyof typeof notifs) =>
     setNotifs(prev => ({ ...prev, [key]: !prev[key] }))
+
+  // ─── Push Notifications (Fase 28) ─────────────────────────
+  const [pushEnabled,    setPushEnabled]    = useState(false)
+  const [pushPermission, setPushPermission] = useState<ReturnType<typeof getPermission>>('default')
+  const [pushLoading,    setPushLoading]    = useState(false)
+
+  useEffect(() => {
+    setPushEnabled(isPushEnabled())
+    setPushPermission(getPermission())
+  }, [])
+
+  const handleTogglePush = async () => {
+    if (pushEnabled) {
+      disablePush()
+      setPushEnabled(false)
+      return
+    }
+    setPushLoading(true)
+    const ok = await requestPushPermission()
+    setPushEnabled(ok)
+    setPushPermission(getPermission())
+    setPushLoading(false)
+  }
 
   const handleSave = () => {
     setSaved(true)
@@ -479,6 +507,92 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ── Push Notifications (Fase 28) ── */}
+          <div
+            className="bg-white rounded-2xl border shadow-sm overflow-hidden"
+            style={{ borderColor: '#e2e8f0' }}
+          >
+            <div
+              className="px-5 py-4 border-b flex items-center gap-2.5"
+              style={{ borderColor: '#f1f5f9' }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: '#fef3c7' }}
+              >
+                <Smartphone className="w-4 h-4" style={{ color: '#d97706' }} />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-bold text-gray-900 text-sm">Notificaciones Push</h2>
+                <p className="text-xs text-gray-400">Alertas nativas del navegador / app instalada</p>
+              </div>
+              {pushPermission === 'denied' && (
+                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                  Bloqueadas
+                </span>
+              )}
+            </div>
+
+            <div className="px-5 py-5 space-y-4">
+              {/* Status banner */}
+              {pushPermission === 'denied' ? (
+                <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
+                  <BellOff className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#dc2626' }} />
+                  <div>
+                    <p className="text-sm font-semibold text-red-800">Notificaciones bloqueadas</p>
+                    <p className="text-xs text-red-600 mt-0.5">
+                      Para habilitarlas, ve a la configuración de tu navegador y permite notificaciones para este sitio.
+                    </p>
+                  </div>
+                </div>
+              ) : pushEnabled ? (
+                <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <BellRing className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#16a34a' }} />
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Push activado</p>
+                    <p className="text-xs text-green-600 mt-0.5">
+                      Recibirás alertas aunque la app esté en segundo plano.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <Bell className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Push desactivado</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Activa para recibir alertas de paquetes, visitas, mantenciones y más.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Toggle row */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Alertas en tiempo real</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Paquetes, mantenciones, circulares, mora</p>
+                </div>
+                {pushPermission === 'denied' ? (
+                  <span className="text-xs text-gray-400">Bloqueadas por el navegador</span>
+                ) : (
+                  <button
+                    onClick={handleTogglePush}
+                    disabled={pushLoading}
+                    className="relative shrink-0 w-11 h-6 rounded-full transition-all duration-200 disabled:opacity-50"
+                    style={{ background: pushEnabled ? '#d97706' : '#e2e8f0' }}
+                    aria-label={pushEnabled ? 'Desactivar push' : 'Activar push'}
+                  >
+                    <div
+                      className="absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+                      style={{ left: pushEnabled ? '24px' : '4px' }}
+                    />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

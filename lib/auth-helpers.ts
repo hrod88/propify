@@ -2,27 +2,47 @@
  * lib/auth-helpers.ts
  * Helpers para obtener datos del usuario autenticado en Server Components.
  * Usados por page.tsx para scoping multi-tenant de todas las queries.
+ *
+ * Fase 29: super_admin / administrador pueden sobreescribir el edificioId
+ * con la cookie `propify_edificio_activo` (set por edificio-context.tsx).
  */
+import { cookies }                    from 'next/headers'
 import { createSupabaseServerClient } from './supabase-server'
-import { supabase } from './supabase'
+import { supabase }                   from './supabase'
 
 /**
  * Retorna el edificioId del usuario autenticado actualmente.
+ * Para admin/super_admin: respeta la cookie de override si está presente.
  * Fallback a 'e1' si no hay sesión o el usuario no tiene edificio asignado.
  */
 export async function getEdificioActual(): Promise<string> {
   try {
+    const cookieStore = await cookies()
+
     const client = await createSupabaseServerClient()
     const { data: { user } } = await client.auth.getUser()
-    if (!user?.email) return 'e1'
+    if (!user?.email) {
+      // Sin sesión: usar cookie si existe, si no 'e1'
+      return cookieStore.get('propify_edificio_activo')?.value ?? 'e1'
+    }
 
     const { data } = await supabase
       .from('usuarios')
-      .select('edificioId')
+      .select('edificioId, rol')
       .eq('email', user.email)
       .single()
 
-    return (data as { edificioId?: string } | null)?.edificioId ?? 'e1'
+    const u           = data as { edificioId?: string; rol?: string } | null
+    const userEdifId  = u?.edificioId ?? 'e1'
+    const userRol     = u?.rol ?? ''
+
+    // Admins pueden cambiar de edificio vía cookie
+    if (userRol === 'super_admin' || userRol === 'administrador') {
+      const override = cookieStore.get('propify_edificio_activo')?.value
+      if (override) return override
+    }
+
+    return userEdifId
   } catch {
     return 'e1'
   }

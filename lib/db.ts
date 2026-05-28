@@ -23,6 +23,9 @@ import type {
   EgresoComunidad,
   Presupuesto,
   Proveedor,
+  ConfigFacturacion,
+  GeneracionFacturacion,
+  Contrato,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -320,4 +323,40 @@ export async function getPresupuestos(edificioId = 'e1', anio?: number): Promise
   const { data, error } = await q
   if (error) { console.error('getPresupuestos:', error.message); return [] }
   return (data ?? []) as Presupuesto[]
+}
+
+// ─── Facturación automática ───────────────────────────────────
+
+export async function getConfigFacturacion(edificioId = 'e1'): Promise<ConfigFacturacion | null> {
+  const { data, error } = await supabase
+    .from('config_facturacion')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .single()
+  if (error) { console.error('getConfigFacturacion:', error.message); return null }
+  return data as ConfigFacturacion
+}
+
+export async function getGeneraciones(edificioId = 'e1'): Promise<GeneracionFacturacion[]> {
+  const { data, error } = await supabase
+    .from('generaciones_facturacion')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('anio',    { ascending: false })
+    .order('mes',     { ascending: false })
+    .limit(24)
+  if (error) { console.error('getGeneraciones:', error.message); return [] }
+  return (data ?? []) as GeneracionFacturacion[]
+}
+
+// ─── Contratos ────────────────────────────────────────────────
+
+export async function getContratos(edificioId = 'e1'): Promise<Contrato[]> {
+  const { data, error } = await supabase
+    .from('contratos')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('creadoEn', { ascending: false })
+  if (error) { console.error('getContratos:', error.message); return [] }
+  return (data ?? []) as Contrato[]
 }

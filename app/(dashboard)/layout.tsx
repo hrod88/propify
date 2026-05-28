@@ -6,6 +6,7 @@ import Header                     from '@/components/header'
 import AsistenteIA                from '@/components/asistente-ia'
 import { NotificacionesProvider } from '@/context/notificaciones-context'
 import { RolProvider }            from '@/context/rol-context'
+import { EdificioProvider }       from '@/context/edificio-context'
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
 }) {
   return (
     <RolProvider>
+    <EdificioProvider>
     <NotificacionesProvider>
       <div className="flex h-screen overflow-hidden" style={{ background: '#f8fafc' }}>
         {/* Sidebar fijo */}
@@ -34,6 +36,7 @@ export default function DashboardLayout({
         <AsistenteIA />
       </div>
     </NotificacionesProvider>
+    </EdificioProvider>
     </RolProvider>
   )
 }

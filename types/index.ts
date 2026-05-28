@@ -314,6 +314,52 @@ export interface Presupuesto {
   created_at:  string
 }
 
+// ─── Facturación Automática ───────────────────────────────────
+export interface ConfigFacturacion {
+  id:                     string
+  edificioId:             string
+  diaVencimiento:         number
+  porcentajeFondoReserva: number
+  autoGenerar:            boolean
+  diaGeneracion:          number
+  ultimaGeneracion?:      string | null
+  created_at:             string
+  updated_at:             string
+}
+
+export interface GeneracionFacturacion {
+  id:             string
+  edificioId:     string
+  mes:            number
+  anio:           number
+  totalUnidades:  number
+  totalGenerado:  number
+  montoTotal:     number
+  generadoPorId?: string | null
+  creadoEn:       string
+}
+
+// ─── Contratos ────────────────────────────────────────────────
+export type TipoContrato   = 'arriendo' | 'comodato' | 'propietario' | 'otro'
+export type EstadoContrato = 'activo' | 'vencido' | 'terminado' | 'pendiente'
+
+export interface Contrato {
+  id:              string
+  edificioId:      string
+  unidadId:        string
+  usuarioId:       string
+  tipo:            TipoContrato
+  fechaInicio:     string
+  fechaFin?:       string | null
+  monto:           number
+  deposito?:       number | null
+  estado:          EstadoContrato
+  observaciones?:  string | null
+  documentoUrl?:   string | null
+  creadoEn:        string
+  actualizadoEn:   string
+}
+
 // ─── Actividad Reciente ───────────────────────────────────────
 export type TipoActividad =
   | 'pago'
