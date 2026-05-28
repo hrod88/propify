@@ -1,7 +1,7 @@
 /**
  * lib/db.ts — Capa de datos Supabase
- * Reemplaza lib/mock-data.ts para todas las queries de lectura.
- * Los nombres de columna en la DB coinciden con los tipos TypeScript.
+ * Todas las queries aceptan edificioId para soporte multi-tenant.
+ * El parámetro tiene default 'e1' para compatibilidad con código existente.
  */
 import { supabase } from './supabase'
 import type {
@@ -24,10 +24,13 @@ import type {
 export const formatCLP = (monto: number): string =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(monto)
 
-// ─── Queries de lectura ───────────────────────────────────────
+// ─── Edificios ────────────────────────────────────────────────
 
-export async function getEdificios(): Promise<Edificio[]> {
-  const { data, error } = await supabase.from('edificios').select('*').order('nombre')
+/** Retorna solo el edificio del tenant activo. Sin parámetro: retorna todos. */
+export async function getEdificios(edificioId?: string): Promise<Edificio[]> {
+  let q = supabase.from('edificios').select('*').order('nombre')
+  if (edificioId) q = q.eq('id', edificioId)
+  const { data, error } = await q
   if (error) { console.error('getEdificios:', error.message); return [] }
   return (data ?? []) as Edificio[]
 }
@@ -38,16 +41,23 @@ export async function getEdificioById(id: string): Promise<Edificio | null> {
   return data as Edificio
 }
 
-export async function getUsuarios(): Promise<User[]> {
-  const { data, error } = await supabase.from('usuarios').select('*').order('apellido')
+// ─── Usuarios ─────────────────────────────────────────────────
+
+export async function getUsuarios(edificioId = 'e1'): Promise<User[]> {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('apellido')
   if (error) { console.error('getUsuarios:', error.message); return [] }
   return (data ?? []) as User[]
 }
 
-export async function getResidentes(): Promise<User[]> {
+export async function getResidentes(edificioId = 'e1'): Promise<User[]> {
   const { data, error } = await supabase
     .from('usuarios')
     .select('*')
+    .eq('edificioId', edificioId)
     .in('rol', ['propietario', 'arrendatario'])
     .order('apellido')
   if (error) { console.error('getResidentes:', error.message); return [] }
@@ -60,8 +70,14 @@ export async function getUsuarioById(id: string): Promise<User | null> {
   return data as User
 }
 
-export async function getUnidades(): Promise<Unidad[]> {
-  const { data, error } = await supabase.from('unidades').select('*').order('numero')
+// ─── Unidades ─────────────────────────────────────────────────
+
+export async function getUnidades(edificioId = 'e1'): Promise<Unidad[]> {
+  const { data, error } = await supabase
+    .from('unidades')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('numero')
   if (error) { console.error('getUnidades:', error.message); return [] }
   return (data ?? []) as Unidad[]
 }
@@ -72,10 +88,13 @@ export async function getUnidadById(id: string): Promise<Unidad | null> {
   return data as Unidad
 }
 
-export async function getGastosComunes(): Promise<GastoComun[]> {
+// ─── Gastos Comunes ───────────────────────────────────────────
+
+export async function getGastosComunes(edificioId = 'e1'): Promise<GastoComun[]> {
   const { data, error } = await supabase
     .from('gastos_comunes')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('mes', { ascending: false })
   if (error) { console.error('getGastosComunes:', error.message); return [] }
   return (data ?? []) as GastoComun[]
@@ -87,78 +106,103 @@ export async function getGastoComunById(id: string): Promise<GastoComun | null> 
   return data as GastoComun
 }
 
-export async function getPagos(): Promise<Pago[]> {
+// ─── Pagos ────────────────────────────────────────────────────
+
+export async function getPagos(edificioId = 'e1'): Promise<Pago[]> {
   const { data, error } = await supabase
     .from('pagos')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('creadoEn', { ascending: false })
   if (error) { console.error('getPagos:', error.message); return [] }
   return (data ?? []) as Pago[]
 }
 
-export async function getSolicitudes(): Promise<SolicitudMantencion[]> {
+// ─── Solicitudes de Mantención ────────────────────────────────
+
+export async function getSolicitudes(edificioId = 'e1'): Promise<SolicitudMantencion[]> {
   const { data, error } = await supabase
     .from('solicitudes')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('creadoEn', { ascending: false })
   if (error) { console.error('getSolicitudes:', error.message); return [] }
   return (data ?? []) as SolicitudMantencion[]
 }
 
-export async function getEspaciosComunes(): Promise<EspacioComun[]> {
-  const { data, error } = await supabase.from('espacios_comunes').select('*').order('nombre')
+// ─── Espacios Comunes ─────────────────────────────────────────
+
+export async function getEspaciosComunes(edificioId = 'e1'): Promise<EspacioComun[]> {
+  const { data, error } = await supabase
+    .from('espacios_comunes')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('nombre')
   if (error) { console.error('getEspaciosComunes:', error.message); return [] }
   return (data ?? []) as EspacioComun[]
 }
 
-export async function getReservas(): Promise<Reserva[]> {
+// ─── Reservas ─────────────────────────────────────────────────
+
+export async function getReservas(edificioId = 'e1'): Promise<Reserva[]> {
   const { data, error } = await supabase
     .from('reservas')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('fechaInicio', { ascending: false })
   if (error) { console.error('getReservas:', error.message); return [] }
   return (data ?? []) as Reserva[]
 }
 
-export async function getComunicaciones(): Promise<Comunicacion[]> {
+// ─── Comunicaciones ───────────────────────────────────────────
+
+export async function getComunicaciones(edificioId = 'e1'): Promise<Comunicacion[]> {
   const { data, error } = await supabase
     .from('comunicaciones')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('creadoEn', { ascending: false })
   if (error) { console.error('getComunicaciones:', error.message); return [] }
   return (data ?? []) as Comunicacion[]
 }
 
-export async function getVisitas(): Promise<Visita[]> {
+// ─── Visitas ──────────────────────────────────────────────────
+
+export async function getVisitas(edificioId = 'e1'): Promise<Visita[]> {
   const { data, error } = await supabase
     .from('visitas')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('entradaEn', { ascending: false })
   if (error) { console.error('getVisitas:', error.message); return [] }
   return (data ?? []) as Visita[]
 }
 
-export async function getPaquetes(): Promise<Paquete[]> {
+// ─── Paquetes ─────────────────────────────────────────────────
+
+export async function getPaquetes(edificioId = 'e1'): Promise<Paquete[]> {
   const { data, error } = await supabase
     .from('paquetes')
     .select('*')
+    .eq('edificioId', edificioId)
     .order('recibidoEn', { ascending: false })
   if (error) { console.error('getPaquetes:', error.message); return [] }
   return (data ?? []) as Paquete[]
 }
 
 // ─── KPIs calculados ──────────────────────────────────────────
-export async function getDashboardData() {
+
+export async function getDashboardData(edificioId = 'e1') {
   const [gastos, pagos, solicitudes, espacios, visitas, paquetes, reservas, unidades] =
     await Promise.all([
-      getGastosComunes(),
-      getPagos(),
-      getSolicitudes(),
-      getEspaciosComunes(),
-      getVisitas(),
-      getPaquetes(),
-      getReservas(),
-      getUnidades(),
+      getGastosComunes(edificioId),
+      getPagos(edificioId),
+      getSolicitudes(edificioId),
+      getEspaciosComunes(edificioId),
+      getVisitas(edificioId),
+      getPaquetes(edificioId),
+      getReservas(edificioId),
+      getUnidades(edificioId),
     ])
 
   const hoy = new Date().toISOString().slice(0, 10)

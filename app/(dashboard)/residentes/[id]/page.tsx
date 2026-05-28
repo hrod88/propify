@@ -7,6 +7,7 @@ import {
   CheckCircle, Clock, XCircle, AlertCircle,
 } from 'lucide-react'
 import { getUsuarioById, getUnidades, getGastosComunes, getSolicitudes, formatCLP } from '@/lib/db'
+import { getEdificioActual } from '@/lib/auth-helpers'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -57,11 +58,12 @@ function getInitials(nombre: string, apellido: string) {
 // ─── Página ───────────────────────────────────────────────────
 export default async function ResidenteDetailPage({ params }: PageProps) {
   const { id } = await params
+  const edificioId = await getEdificioActual()
   const [residente, unidades, gastosComunes, solicitudesAll] = await Promise.all([
     getUsuarioById(id),
-    getUnidades(),
-    getGastosComunes(),
-    getSolicitudes(),
+    getUnidades(edificioId),
+    getGastosComunes(edificioId),
+    getSolicitudes(edificioId),
   ])
 
   if (!residente || (residente.rol !== 'propietario' && residente.rol !== 'arrendatario')) {

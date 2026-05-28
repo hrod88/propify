@@ -7,6 +7,7 @@ import {
   DollarSign, Home, User, Mail, Phone, Calendar,
 } from 'lucide-react'
 import { getGastoComunById, getUnidades, getUsuarios, formatCLP } from '@/lib/db'
+import { getEdificioActual } from '@/lib/auth-helpers'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -29,10 +30,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function GastoDetailPage({ params }: PageProps) {
   const { id } = await params
+  const edificioId = await getEdificioActual()
   const [gasto, unidades, users] = await Promise.all([
     getGastoComunById(id),
-    getUnidades(),
-    getUsuarios(),
+    getUnidades(edificioId),
+    getUsuarios(edificioId),
   ])
   if (!gasto) return notFound()
 

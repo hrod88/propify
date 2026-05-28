@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getDashboardData, formatCLP } from '@/lib/db'
+import { getEdificioActual } from '@/lib/auth-helpers'
 import type { ActividadReciente } from '@/types'
 
 export const metadata: Metadata = {
@@ -327,7 +328,8 @@ function ActividadItem({ item }: { item: ActividadReciente }) {
 
 // ─── Página principal ─────────────────────────────────────────
 export default async function DashboardPage() {
-  const { kpis: kpi, actividad, gastos, pagos, solicitudes: sols, espacios } = await getDashboardData()
+  const edificioId = await getEdificioActual()
+  const { kpis: kpi, actividad, gastos, pagos, solicitudes: sols, espacios } = await getDashboardData(edificioId)
   const ocupacion = Math.round((kpi.unidadesOcupadas / kpi.totalUnidades) * 100)
   const pagadosPct = Math.round(((kpi.totalUnidades - kpi.morosos) / kpi.totalUnidades) * 100)
 

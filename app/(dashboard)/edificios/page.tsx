@@ -5,6 +5,7 @@ import {
   Plus, Home, Calendar, Users,
 } from 'lucide-react'
 import { getEdificios, getUnidades, getUsuarios, formatCLP } from '@/lib/db'
+import { getEdificioActual } from '@/lib/auth-helpers'
 import type { Edificio, Unidad, User } from '@/types'
 
 export const metadata: Metadata = { title: 'Edificios' }
@@ -89,7 +90,12 @@ function EdificioCard({
 
 // ─── Página ───────────────────────────────────────────────────
 export default async function EdificiosPage() {
-  const [edificios, unidades, users] = await Promise.all([getEdificios(), getUnidades(), getUsuarios()])
+  const edificioId = await getEdificioActual()
+  const [edificios, unidades, users] = await Promise.all([
+    getEdificios(edificioId),
+    getUnidades(edificioId),
+    getUsuarios(edificioId),
+  ])
 
   const totalUnidades    = edificios.reduce((acc, e) => acc + e.totalUnidades, 0)
   const totalOcupadas    = unidades.filter(u => u.estado === 'ocupado').length

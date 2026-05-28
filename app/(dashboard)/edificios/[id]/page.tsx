@@ -6,6 +6,7 @@ import {
   Home, Layers, Users, Pencil, Hash,
 } from 'lucide-react'
 import { getEdificioById, getUnidades, getEspaciosComunes, getGastosComunes, getUsuarios, formatCLP } from '@/lib/db'
+import { getEdificioActual } from '@/lib/auth-helpers'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -48,12 +49,13 @@ function formatPiso(piso: number) {
 // ─── Página ───────────────────────────────────────────────────
 export default async function EdificioDetailPage({ params }: PageProps) {
   const { id } = await params
+  const edificioId = await getEdificioActual()
   const [edificio, todasUnidades, espacios, gastosComunes, users] = await Promise.all([
     getEdificioById(id),
-    getUnidades(),
-    getEspaciosComunes(),
-    getGastosComunes(),
-    getUsuarios(),
+    getUnidades(edificioId),
+    getEspaciosComunes(edificioId),
+    getGastosComunes(edificioId),
+    getUsuarios(edificioId),
   ])
   if (!edificio) return notFound()
 

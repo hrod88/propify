@@ -1,15 +1,17 @@
 import type { Metadata } from 'next'
 import { getGastosComunes, getPagos, getSolicitudes, getUnidades } from '@/lib/db'
+import { getEdificioActual } from '@/lib/auth-helpers'
 import ReportesView from './ReportesView'
 
 export const metadata: Metadata = { title: 'Reportes' }
 
 export default async function ReportesPage() {
+  const edificioId = await getEdificioActual()
   const [gastos, pagos, solicitudes, unidades] = await Promise.all([
-    getGastosComunes(),
-    getPagos(),
-    getSolicitudes(),
-    getUnidades(),
+    getGastosComunes(edificioId),
+    getPagos(edificioId),
+    getSolicitudes(edificioId),
+    getUnidades(edificioId),
   ])
   return <ReportesView gastos={gastos} pagos={pagos} solicitudes={solicitudes} unidades={unidades} />
 }
