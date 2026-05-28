@@ -1,5 +1,6 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import SwRegister from '@/components/sw-register'
 import './globals.css'
 
 const geistSans = Geist({
@@ -12,9 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+// ─── Metadata SEO + PWA ───────────────────────────────────────
 export const metadata: Metadata = {
   title: {
-    default: 'Propify — Administración de Edificios',
+    default:  'Propify — Administración de Edificios',
     template: '%s | Propify',
   },
   description:
@@ -22,8 +24,34 @@ export const metadata: Metadata = {
   keywords: ['administración', 'edificios', 'condominios', 'gastos comunes', 'propify'],
   authors: [{ name: 'Propify' }],
   creator: 'Propify',
+
+  // ── PWA / Manifest ──────────────────────────────────────────
+  manifest: '/manifest.webmanifest',
+
+  // ── Icons ───────────────────────────────────────────────────
+  icons: {
+    icon:  '/icon.svg',
+    apple: '/icon.svg',
+  },
+
+  // ── Apple Web App (iOS "Agregar a pantalla de inicio") ──────
+  appleWebApp: {
+    capable:         true,
+    title:           'Propify',
+    statusBarStyle:  'default',
+  },
 }
 
+// ─── Viewport + theme color (debe ser export separado en Next 14+) ──
+export const viewport: Viewport = {
+  themeColor:     '#2563ae',
+  width:          'device-width',
+  initialScale:   1,
+  minimumScale:   1,
+  maximumScale:   5,
+}
+
+// ─── Layout ───────────────────────────────────────────────────
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,6 +63,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full bg-background antialiased" suppressHydrationWarning>
+        {/* Service Worker — habilita instalación PWA en Chrome/Android/Edge */}
+        <SwRegister />
         {children}
       </body>
     </html>
