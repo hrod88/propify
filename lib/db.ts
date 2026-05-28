@@ -22,6 +22,7 @@ import type {
   Suscripcion,
   EgresoComunidad,
   Presupuesto,
+  Proveedor,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -296,6 +297,18 @@ export async function getEgresos(edificioId = 'e1'): Promise<EgresoComunidad[]> 
 }
 
 // ─── Presupuestos ─────────────────────────────────────────────
+
+// ─── Proveedores ──────────────────────────────────────────────
+
+export async function getProveedores(edificioId = 'e1'): Promise<Proveedor[]> {
+  const { data, error } = await supabase
+    .from('proveedores')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('nombre')
+  if (error) { console.error('getProveedores:', error.message); return [] }
+  return (data ?? []) as Proveedor[]
+}
 
 export async function getPresupuestos(edificioId = 'e1', anio?: number): Promise<Presupuesto[]> {
   let q = supabase

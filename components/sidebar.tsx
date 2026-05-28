@@ -25,6 +25,7 @@ import {
   TrendingDown,
   Scale,
   Target,
+  Truck,
 } from 'lucide-react'
 import { useRol } from '@/context/rol-context'
 import type { UserRole } from '@/types'
@@ -59,6 +60,7 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: '/gastos',         label: 'Gastos Comunes',   icon: Receipt },
       { href: '/egresos',        label: 'Egresos',          icon: TrendingDown },
+      { href: '/proveedores',    label: 'Proveedores',      icon: Truck },
       { href: '/balance',        label: 'Balance',          icon: Scale },
       { href: '/presupuesto',    label: 'Presupuesto',      icon: Target },
       { href: '/pagos',          label: 'Pagos',            icon: CreditCard },

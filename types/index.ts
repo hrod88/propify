@@ -288,6 +288,21 @@ export interface EgresoComunidad {
   creadoEn:          string
 }
 
+// ─── Proveedores ─────────────────────────────────────────────
+export interface Proveedor {
+  id:          string
+  edificioId:  string
+  nombre:      string
+  rut?:        string | null
+  categoria:   string
+  contacto?:   string | null
+  telefono?:   string | null
+  email?:      string | null
+  activo:      boolean
+  nota?:       string | null
+  created_at:  string
+}
+
 // ─── Presupuesto Anual ────────────────────────────────────────
 export interface Presupuesto {
   id:          string
