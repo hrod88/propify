@@ -6,7 +6,6 @@ import {
   Home, Layers, Users, Pencil, Hash,
 } from 'lucide-react'
 import FotosManager from './FotosManager'
-import UnidadesTable from './UnidadesTable'
 import { getEdificioById, getUnidades, getEspaciosComunes, getGastosComunes, getUsuarios, formatCLP } from '@/lib/db'
 import { getEdificioActual } from '@/lib/auth-helpers'
 
@@ -20,12 +19,33 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
+const estadoUnidadCfg = {
+  ocupado:          { label: 'Ocupado',     bg: '#dcfce7', color: '#16a34a' },
+  disponible:       { label: 'Disponible',  bg: '#dbeafe', color: '#2563ae' },
+  'en_mantención':  { label: 'Mantención',  bg: '#fef3c7', color: '#d97706' },
+} as const
+
 const estadoEspacioCfg = {
   disponible:    { bg: '#dcfce7', color: '#16a34a' },
   ocupado:       { bg: '#fee2e2', color: '#dc2626' },
   reservado:     { bg: '#fef3c7', color: '#d97706' },
   fuera_servicio:{ bg: '#f1f5f9', color: '#64748b' },
 } as const
+
+const tipoLabel: Record<string, string> = {
+  departamento:    'Depto',
+  casa:            'Casa',
+  local_comercial: 'Local',
+  oficina:         'Oficina',
+  bodega:          'Bodega',
+  estacionamiento: 'Estac.',
+}
+
+function formatPiso(piso: number) {
+  if (piso < 0) return `Sótano ${Math.abs(piso)}`
+  if (piso === 0) return 'PB'
+  return `Piso ${piso}`
+}
 
 // ─── Página ───────────────────────────────────────────────────
 export default async function EdificioDetailPage({ params }: PageProps) {
@@ -125,8 +145,49 @@ export default async function EdificioDetailPage({ params }: PageProps) {
 
       {/* Contenido principal */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Tabla de unidades con filtros (2/3) */}
-        <UnidadesTable unidades={unidades} />
+        {/* Tabla de unidades (2/3) */}
+        <div className="xl:col-span-2 bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#e2e8f0' }}>
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b" style={{ borderColor: '#f1f5f9' }}>
+            <h2 className="font-bold text-gray-900">Unidades</h2>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400">{unidades.length} registros</span>
+              <Link href="/unidades" className="text-xs font-semibold hover:opacity-75" style={{ color: '#2563ae' }}>Ver todas →</Link>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
+                  {['Número', 'Piso', 'Tipo', 'Estado', 'Superficie', 'Gastos C.', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {unidades.map(u => {
+                  const est = estadoUnidadCfg[u.estado as keyof typeof estadoUnidadCfg] ?? { label: u.estado, bg: '#f1f5f9', color: '#64748b' }
+                  return (
+                    <tr key={u.id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: '#f8fafc' }}>
+                      <td className="px-4 py-3.5 font-semibold text-gray-900 text-sm">Unidad {u.numero}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">{formatPiso(u.piso)}</td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs px-2 py-0.5 rounded-md font-medium" style={{ background: '#f1f5f9', color: '#64748b' }}>{tipoLabel[u.tipo] ?? u.tipo}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap" style={{ background: est.bg, color: est.color }}>{est.label}</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{u.superficieM2} m²</td>
+                      <td className="px-4 py-3.5 text-sm font-medium text-gray-700 whitespace-nowrap">{formatCLP(u.gastosComunesMonto)}</td>
+                      <td className="px-4 py-3.5">
+                        <Link href={`/unidades/${u.id}`} className="text-xs font-semibold hover:opacity-75" style={{ color: '#2563ae' }}>Ver →</Link>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* Espacios comunes (1/3) */}
         <div className="bg-white rounded-2xl border shadow-sm" style={{ borderColor: '#e2e8f0' }}>
