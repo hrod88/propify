@@ -1,8 +1,8 @@
 ﻿'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Plus, SlidersHorizontal } from 'lucide-react'
+import { Search, Plus, SlidersHorizontal, ChevronDown, Check } from 'lucide-react'
 import { formatCLP } from '@/lib/db'
 import type { Unidad, User } from '@/types'
 
@@ -56,14 +56,35 @@ interface Props {
 
 // ─── Componente ───────────────────────────────────────────────
 export default function UnidadesView({ unidades, users }: Props) {
-  const [tipoFiltro,   setTipoFiltro]   = useState<TipoFiltro>('todos')
-  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>('todos')
-  const [busqueda,     setBusqueda]     = useState('')
+  const [tipoFiltro,    setTipoFiltro]    = useState<TipoFiltro>('todos')
+  const [estadoFiltro,  setEstadoFiltro]  = useState<EstadoFiltro>('todos')
+  const [pisoFiltro,    setPisoFiltro]    = useState<number | null>(null)
+  const [pisoDropdown,  setPisoDropdown]  = useState(false)
+  const [busqueda,      setBusqueda]      = useState('')
+  const pisoRef = useRef<HTMLDivElement>(null)
+
+  // Cierra el dropdown al hacer clic fuera
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (pisoRef.current && !pisoRef.current.contains(e.target as Node)) {
+        setPisoDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Pisos únicos ordenados
+  const pisos = useMemo(() =>
+    Array.from(new Set(unidades.map(u => u.piso))).sort((a, b) => a - b),
+    [unidades]
+  )
 
   const filtered = useMemo(() => {
     return unidades.filter(u => {
       if (tipoFiltro !== 'todos' && u.tipo !== tipoFiltro) return false
       if (estadoFiltro !== 'todos' && u.estado !== estadoFiltro) return false
+      if (pisoFiltro !== null && u.piso !== pisoFiltro) return false
       if (busqueda) {
         const q = busqueda.toLowerCase()
         const prop = u.propietarioId ? users.find(usr => usr.id === u.propietarioId) : undefined
@@ -171,6 +192,48 @@ export default function UnidadesView({ unidades, users }: Props) {
                 {label}
               </button>
             ))}
+          </div>
+
+          {/* Dropdown piso */}
+          <div className="relative" ref={pisoRef}>
+            <button
+              onClick={() => setPisoDropdown(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={pisoFiltro !== null
+                ? { background: '#2563ae', color: 'white' }
+                : { background: '#f1f5f9', color: '#64748b' }}
+            >
+              {pisoFiltro !== null ? formatPiso(pisoFiltro) : 'Piso'}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            {pisoDropdown && (
+              <div
+                className="absolute left-0 top-full mt-1 bg-white rounded-xl border shadow-lg z-30 overflow-y-auto"
+                style={{ borderColor: '#e2e8f0', minWidth: 140, maxHeight: 260 }}
+              >
+                <button
+                  onClick={() => { setPisoFiltro(null); setPisoDropdown(false) }}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
+                  style={{ color: pisoFiltro === null ? '#2563ae' : '#374151' }}
+                >
+                  Todos los pisos
+                  {pisoFiltro === null && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
+                </button>
+                <div className="border-t" style={{ borderColor: '#f1f5f9' }} />
+                {pisos.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => { setPisoFiltro(p); setPisoDropdown(false) }}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
+                    style={{ color: pisoFiltro === p ? '#2563ae' : '#374151' }}
+                  >
+                    {formatPiso(p)}
+                    {pisoFiltro === p && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Búsqueda */}
