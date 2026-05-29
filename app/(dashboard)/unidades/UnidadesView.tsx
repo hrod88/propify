@@ -257,7 +257,7 @@ export default function UnidadesView({ unidades, users }: Props) {
                         value={pisoBusqueda}
                         onChange={e => setPisoBusqueda(e.target.value)}
                         placeholder="Ej: 10"
-                        className="w-20 px-2 py-0.5 text-xs border rounded-md outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-14 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider border rounded-md outline-none focus:ring-2 focus:ring-blue-400"
                         style={{ borderColor: '#2563ae' }}
                       />
                     )}
