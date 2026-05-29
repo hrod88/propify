@@ -194,48 +194,6 @@ export default function UnidadesView({ unidades, users }: Props) {
             ))}
           </div>
 
-          {/* Dropdown piso */}
-          <div className="relative" ref={pisoRef}>
-            <button
-              onClick={() => setPisoDropdown(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={pisoFiltro !== null
-                ? { background: '#2563ae', color: 'white' }
-                : { background: '#f1f5f9', color: '#64748b' }}
-            >
-              {pisoFiltro !== null ? formatPiso(pisoFiltro) : 'Piso'}
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-
-            {pisoDropdown && (
-              <div
-                className="absolute left-0 top-full mt-1 bg-white rounded-xl border shadow-lg z-30 overflow-y-auto"
-                style={{ borderColor: '#e2e8f0', minWidth: 140, maxHeight: 260 }}
-              >
-                <button
-                  onClick={() => { setPisoFiltro(null); setPisoDropdown(false) }}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
-                  style={{ color: pisoFiltro === null ? '#2563ae' : '#374151' }}
-                >
-                  Todos los pisos
-                  {pisoFiltro === null && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
-                </button>
-                <div className="border-t" style={{ borderColor: '#f1f5f9' }} />
-                {pisos.map(p => (
-                  <button
-                    key={p}
-                    onClick={() => { setPisoFiltro(p); setPisoDropdown(false) }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
-                    style={{ color: pisoFiltro === p ? '#2563ae' : '#374151' }}
-                  >
-                    {formatPiso(p)}
-                    {pisoFiltro === p && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Búsqueda */}
           <div className="relative ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -267,13 +225,53 @@ export default function UnidadesView({ unidades, users }: Props) {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
-                {['Unidad', 'Piso', 'Tipo', 'Estado', 'Residente', 'M²', 'Gastos C.', ''].map(h => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
+                {/* Unidad */}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">Unidad</th>
+
+                {/* PISO — con dropdown de filtro */}
+                <th className="px-4 py-3 text-left whitespace-nowrap">
+                  <div className="relative" ref={pisoRef}>
+                    <button
+                      onClick={() => setPisoDropdown(v => !v)}
+                      className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors hover:opacity-80"
+                      style={{ color: pisoFiltro !== null ? '#2563ae' : '#9ca3af' }}
+                    >
+                      {pisoFiltro !== null ? formatPiso(pisoFiltro) : 'Piso'}
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                    {pisoDropdown && (
+                      <div
+                        className="absolute left-0 top-full mt-1 bg-white rounded-xl border shadow-lg z-30 overflow-y-auto"
+                        style={{ borderColor: '#e2e8f0', minWidth: 150, maxHeight: 260 }}
+                      >
+                        <button
+                          onClick={() => { setPisoFiltro(null); setPisoDropdown(false) }}
+                          className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
+                          style={{ color: pisoFiltro === null ? '#2563ae' : '#374151' }}
+                        >
+                          Todos los pisos
+                          {pisoFiltro === null && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
+                        </button>
+                        <div className="border-t" style={{ borderColor: '#f1f5f9' }} />
+                        {pisos.map(p => (
+                          <button
+                            key={p}
+                            onClick={() => { setPisoFiltro(p); setPisoDropdown(false) }}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
+                            style={{ color: pisoFiltro === p ? '#2563ae' : '#374151' }}
+                          >
+                            {formatPiso(p)}
+                            {pisoFiltro === p && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </th>
+
+                {/* Resto de columnas */}
+                {['Tipo', 'Estado', 'Residente', 'M²', 'Gastos C.', ''].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
