@@ -160,8 +160,20 @@ export interface Comunicacion {
   autorId: string
   creadoEn: string
   lecturasCount?: number
-  linkReunion?: string   // URL de Zoom / Meet / Teams
-  fechaReunion?: string  // ISO datetime — sólo para tipo 'reunión'
+  // Reunión
+  linkReunion?: string
+  fechaReunion?: string
+  // Urgente
+  areaAfectada?: string
+  contactoUrgencia?: string
+  tiempoResolucion?: string
+  // Circular
+  urlDocumento?: string
+  validoHasta?: string
+  requiereAcuse?: boolean
+  // Informativo
+  categoriaInfo?: string
+  linkReferencia?: string
 }
 
 // ─── Visitas ──────────────────────────────────────────────────
