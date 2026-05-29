@@ -586,9 +586,17 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
             c.fechaReunion && getEstadoReunion(c.fechaReunion, now).estado === 'en_vivo')
           // Urgentes activos (sin resolución confirmada)
           const count    = items.length
+          const isFiltered = filtro === tipo
           return (
-            <div key={tipo} className="bg-white rounded-2xl border shadow-sm p-4"
-              style={{ borderColor: enVivo ? '#fca5a5' : '#e2e8f0' }}>
+            <div key={tipo} className="bg-white rounded-2xl p-4 transition-all"
+              style={{
+                border: isFiltered
+                  ? `2px solid ${cfg.color}`
+                  : `1px solid ${enVivo ? '#fca5a5' : '#e2e8f0'}`,
+                boxShadow: isFiltered
+                  ? `0 0 0 3px ${cfg.bg}, 0 4px 12px -2px rgba(0,0,0,0.06)`
+                  : '0 1px 2px 0 rgba(0,0,0,0.05)',
+              }}>
               <div className="flex items-center gap-2 mb-2">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${enVivo ? 'animate-pulse-soft' : ''}`}
                   style={{ background: cfg.bg }}>
@@ -609,13 +617,20 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
 
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
-        {tabs.map(({ value, label }) => (
-          <button key={value} onClick={() => setFiltro(value)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={filtro === value ? { background: '#7c3aed', color: 'white' } : { background: '#f1f5f9', color: '#64748b' }}>
-            {label}
-          </button>
-        ))}
+        {tabs.map(({ value, label }) => {
+          const activeColor = value === 'todos' ? '#7c3aed' : tipoCfg[value as keyof typeof tipoCfg].color
+          const activeBg    = value === 'todos' ? '#f3e8ff' : tipoCfg[value as keyof typeof tipoCfg].bg
+          const isActive    = filtro === value
+          return (
+            <button key={value} onClick={() => setFiltro(value)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={isActive
+                ? { background: activeColor, color: 'white', boxShadow: `0 0 0 3px ${activeBg}` }
+                : { background: '#f1f5f9', color: '#64748b' }}>
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Lista */}
