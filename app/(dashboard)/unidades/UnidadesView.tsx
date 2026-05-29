@@ -95,7 +95,7 @@ export default function UnidadesView({ unidades, users }: Props) {
       }
       return true
     })
-  }, [unidades, users, tipoFiltro, estadoFiltro, busqueda])
+  }, [unidades, users, tipoFiltro, estadoFiltro, pisoFiltro, busqueda])
 
   const totales = {
     total:      unidades.length,
