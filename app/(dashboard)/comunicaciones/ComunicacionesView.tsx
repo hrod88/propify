@@ -618,8 +618,8 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
         {tabs.map(({ value, label }) => {
-          const activeColor = value === 'todos' ? '#7c3aed' : tipoCfg[value as keyof typeof tipoCfg].color
-          const activeBg    = value === 'todos' ? '#f3e8ff' : tipoCfg[value as keyof typeof tipoCfg].bg
+          const activeColor = value === 'todos' ? '#475569' : tipoCfg[value as keyof typeof tipoCfg].color
+          const activeBg    = value === 'todos' ? '#e2e8f0' : tipoCfg[value as keyof typeof tipoCfg].bg
           const isActive    = filtro === value
           return (
             <button key={value} onClick={() => setFiltro(value)}
