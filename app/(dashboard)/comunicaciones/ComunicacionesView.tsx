@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Plus, Eye, Bell, Info, Users, FileText, Check, Pencil, Trash2 } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import {
+  Plus, Eye, Bell, Info, Users, FileText, Check,
+  Pencil, Trash2, Video, ExternalLink, Calendar, Clock,
+} from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import { supabase } from '@/lib/supabase'
@@ -17,13 +20,30 @@ const tipoCfg = {
   'reunión':   { Icon: Users,    label: 'Reunión',     bg: '#f3e8ff', color: '#7c3aed' },
 } as const
 
+// ─── Form state ───────────────────────────────────────────────
+interface FormState {
+  tipo:         Comunicacion['tipo']
+  titulo:       string
+  contenido:    string
+  linkReunion:  string
+  fechaReunion: string   // formato datetime-local "YYYY-MM-DDTHH:mm"
+}
+
+const EMPTY_FORM: FormState = {
+  tipo:         'circular',
+  titulo:       '',
+  contenido:    '',
+  linkReunion:  '',
+  fechaReunion: '',
+}
+
 // ─── Props ────────────────────────────────────────────────────
 interface Props {
   comunicaciones: Comunicacion[]
   users: User[]
 }
 
-// ─── Helpers de UI ────────────────────────────────────────────
+// ─── Helper UI ────────────────────────────────────────────────
 function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -34,66 +54,91 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
   )
 }
 
-// ─── Componente ───────────────────────────────────────────────
+// ─── Estado reunión ───────────────────────────────────────────
+type EstadoR = 'en_vivo' | 'proxima' | 'finalizada'
+
+function getEstadoReunion(fechaReunion: string, now: number): { estado: EstadoR; texto: string } {
+  const inicio = new Date(fechaReunion).getTime()
+  const fin    = inicio + 2 * 60 * 60 * 1000   // 2 h de duración estimada
+  const diff   = inicio - now
+
+  if (now >= inicio - 5 * 60 * 1000 && now <= fin) {
+    return { estado: 'en_vivo', texto: 'EN VIVO' }
+  }
+  if (diff > 0) {
+    const d = Math.floor(diff / 86_400_000)
+    const h = Math.floor((diff % 86_400_000) / 3_600_000)
+    const m = Math.ceil((diff % 3_600_000) / 60_000)
+    const texto = d > 0 ? `En ${d}d ${h}h` : h > 0 ? `En ${h}h ${m}m` : `En ${m} min`
+    return { estado: 'proxima', texto }
+  }
+  return { estado: 'finalizada', texto: 'Finalizada' }
+}
+
+// ─── Componente principal ────────────────────────────────────
 export default function ComunicacionesView({ comunicaciones, users }: Props) {
-  const { agregarNotificacion }     = useNotificaciones()
-  const [lista, setLista]           = useState<Comunicacion[]>(comunicaciones)
-  const [filtro, setFiltro]         = useState<TipoFiltro>('todos')
-  const [modalCrear, setModalCrear] = useState(false)
-  const [editando, setEditando]     = useState<Comunicacion | null>(null)
-  const [eliminarId, setEliminarId] = useState<string | null>(null)
-  const [toast, setToast]           = useState<string | null>(null)
+  const { agregarNotificacion }       = useNotificaciones()
+  const [lista, setLista]             = useState<Comunicacion[]>(comunicaciones)
+  const [filtro, setFiltro]           = useState<TipoFiltro>('todos')
+  const [modalCrear, setModalCrear]   = useState(false)
+  const [editando, setEditando]       = useState<Comunicacion | null>(null)
+  const [eliminarId, setEliminarId]   = useState<string | null>(null)
+  const [toast, setToast]             = useState<string | null>(null)
+  const [now, setNow]                 = useState(Date.now())
 
-  // ─── Formulario crear ────────────────────────────────────────
-  const [form, setForm] = useState({
-    tipo:      'circular' as Comunicacion['tipo'],
-    titulo:    '',
-    contenido: '',
-  })
-  const [errores, setErrores] = useState<Record<string, string>>({})
+  // Actualiza "ahora" cada minuto → badges EN VIVO se auto-actualizan
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
 
-  // ─── Formulario edición ──────────────────────────────────────
-  const [formEdit, setFormEdit] = useState({
-    tipo:      'circular' as Comunicacion['tipo'],
-    titulo:    '',
-    contenido: '',
-  })
+  const [form, setForm]               = useState<FormState>(EMPTY_FORM)
+  const [errores, setErrores]         = useState<Record<string, string>>({})
+  const [formEdit, setFormEdit]       = useState<FormState>(EMPTY_FORM)
   const [erroresEdit, setErroresEdit] = useState<Record<string, string>>({})
 
   function showToast(msg: string) {
     setToast(msg)
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 3200)
   }
 
-  // ─── Datos derivados ────────────────────────────────────────
+  // ─── Datos derivados ──────────────────────────────────────
   const filtered = useMemo(() =>
     filtro === 'todos' ? lista : lista.filter(c => c.tipo === filtro),
     [lista, filtro],
   )
-
   const getAutor = (id: string) => {
     const u = users.find(u => u.id === id)
     return u ? `${u.nombre} ${u.apellido}` : 'Admin'
   }
-
   const formatFecha = (iso: string) =>
     new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
-
+  const formatFechaHora = (iso: string) =>
+    new Date(iso).toLocaleString('es-CL', {
+      weekday: 'short', day: 'numeric', month: 'short',
+      hour: '2-digit', minute: '2-digit',
+    })
   const totalLecturas = useMemo(() =>
-    lista.reduce((s, c) => s + (c.lecturasCount ?? 0), 0),
-    [lista],
-  )
-
+    lista.reduce((s, c) => s + (c.lecturasCount ?? 0), 0), [lista])
   const comunicacionAEliminar = lista.find(x => x.id === eliminarId)
 
-  // ─── Handler crear ──────────────────────────────────────────
-  function handleCrear() {
+  // ─── Validación ───────────────────────────────────────────
+  function validateForm(f: FormState): Record<string, string> {
     const e: Record<string, string> = {}
-    if (!form.titulo.trim())    e.titulo    = 'El título es requerido'
-    if (!form.contenido.trim()) e.contenido = 'El contenido es requerido'
+    if (!f.titulo.trim())    e.titulo    = 'El título es requerido'
+    if (!f.contenido.trim()) e.contenido = 'El contenido es requerido'
+    if (f.tipo === 'reunión' && !f.fechaReunion)
+      e.fechaReunion = 'La fecha y hora son requeridas para reuniones'
+    return e
+  }
+
+  // ─── Handler crear ────────────────────────────────────────
+  function handleCrear() {
+    const e = validateForm(form)
     setErrores(e)
     if (Object.keys(e).length > 0) return
 
+    const esReunion = form.tipo === 'reunión'
     const nueva: Comunicacion = {
       id:            `c${Date.now()}`,
       edificioId:    'e1',
@@ -103,65 +148,167 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
       autorId:       'u1',
       creadoEn:      new Date().toISOString(),
       lecturasCount: 0,
+      linkReunion:   esReunion && form.linkReunion.trim()
+                       ? form.linkReunion.trim() : undefined,
+      fechaReunion:  esReunion && form.fechaReunion
+                       ? new Date(form.fechaReunion).toISOString() : undefined,
     }
     setLista(prev => [nueva, ...prev])
     setModalCrear(false)
-    setForm({ tipo: 'circular', titulo: '', contenido: '' })
+    setForm(EMPTY_FORM)
     setErrores({})
-    showToast('Comunicación publicada correctamente')
-    agregarNotificacion('circular', `Nueva comunicación: ${tipoCfg[form.tipo].label}`, form.titulo.trim())
-    supabase.from('comunicaciones').insert(nueva).then(({ error }) => { if (error) console.error('insert comunicacion:', error.message) })
+
+    if (esReunion) {
+      showToast('📹 Reunión programada y notificada a residentes')
+      agregarNotificacion('circular', '📹 Nueva reunión programada', form.titulo.trim())
+    } else {
+      showToast('Comunicación publicada correctamente')
+      agregarNotificacion('circular', `Nueva: ${tipoCfg[form.tipo].label}`, form.titulo.trim())
+    }
+    supabase.from('comunicaciones').insert(nueva).then(({ error }) => {
+      if (error) console.error('insert comunicacion:', error.message)
+    })
   }
 
-  // ─── Handler editar ─────────────────────────────────────────
+  // ─── Handler editar ───────────────────────────────────────
   function abrirEditar(c: Comunicacion) {
     setEditando(c)
-    setFormEdit({ tipo: c.tipo, titulo: c.titulo, contenido: c.contenido })
+    setFormEdit({
+      tipo:         c.tipo,
+      titulo:       c.titulo,
+      contenido:    c.contenido,
+      linkReunion:  c.linkReunion ?? '',
+      // datetime-local necesita "YYYY-MM-DDTHH:mm"
+      fechaReunion: c.fechaReunion
+        ? new Date(c.fechaReunion).toISOString().slice(0, 16)
+        : '',
+    })
     setErroresEdit({})
   }
 
   function handleEditar() {
     if (!editando) return
-    const e: Record<string, string> = {}
-    if (!formEdit.titulo.trim())    e.titulo    = 'El título es requerido'
-    if (!formEdit.contenido.trim()) e.contenido = 'El contenido es requerido'
+    const e = validateForm(formEdit)
     setErroresEdit(e)
     if (Object.keys(e).length > 0) return
 
-    setLista(prev => prev.map(c =>
-      c.id !== editando.id ? c : {
-        ...c,
-        tipo:      formEdit.tipo,
-        titulo:    formEdit.titulo.trim(),
-        contenido: formEdit.contenido.trim(),
-      }
-    ))
+    const esReunion = formEdit.tipo === 'reunión'
+    const payload = {
+      tipo:         formEdit.tipo,
+      titulo:       formEdit.titulo.trim(),
+      contenido:    formEdit.contenido.trim(),
+      linkReunion:  esReunion && formEdit.linkReunion.trim()
+                      ? formEdit.linkReunion.trim() : null,
+      fechaReunion: esReunion && formEdit.fechaReunion
+                      ? new Date(formEdit.fechaReunion).toISOString() : null,
+    }
+    setLista(prev => prev.map(c => c.id !== editando.id ? c : {
+      ...c, ...payload,
+      linkReunion:  payload.linkReunion  ?? undefined,
+      fechaReunion: payload.fechaReunion ?? undefined,
+    }))
     setEditando(null)
     setErroresEdit({})
     showToast('Comunicación actualizada correctamente')
-    if (editando) supabase.from('comunicaciones').update({ titulo: formEdit.titulo.trim(), contenido: formEdit.contenido.trim(), tipo: formEdit.tipo }).eq('id', editando.id).then(({ error }) => { if (error) console.error('update comunicacion:', error.message) })
+    supabase.from('comunicaciones').update(payload).eq('id', editando.id).then(({ error }) => {
+      if (error) console.error('update comunicacion:', error.message)
+    })
   }
 
-  // ─── Handler eliminar ────────────────────────────────────────
+  // ─── Handler eliminar ─────────────────────────────────────
   function handleEliminar() {
     setLista(prev => prev.filter(c => c.id !== eliminarId))
-    supabase.from('comunicaciones').delete().eq('id', eliminarId).then(({ error }) => { if (error) console.error('delete comunicacion:', error.message) })
+    supabase.from('comunicaciones').delete().eq('id', eliminarId).then(({ error }) => {
+      if (error) console.error('delete comunicacion:', error.message)
+    })
     setEliminarId(null)
     showToast('Comunicación eliminada')
   }
 
-  // ─── Clases comunes ─────────────────────────────────────────
+  // ─── Constantes de estilo ─────────────────────────────────
   const inp = 'w-full px-3 py-2.5 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors'
 
   const tabs: { value: TipoFiltro; label: string }[] = [
-    { value: 'todos',       label: 'Todas' },
-    { value: 'circular',    label: 'Circulares' },
-    { value: 'urgente',     label: 'Urgentes' },
+    { value: 'todos',       label: 'Todas'        },
+    { value: 'circular',    label: 'Circulares'   },
+    { value: 'urgente',     label: 'Urgentes'     },
     { value: 'informativo', label: 'Informativos' },
-    { value: 'reunión',     label: 'Reuniones' },
+    { value: 'reunión',     label: 'Reuniones'    },
   ]
 
-  // ─── Render ──────────────────────────────────────────────────
+  // ─── Campos extra para tipo reunión (helper, no componente) ──
+  function renderCamposReunion(
+    f: FormState,
+    setF: React.Dispatch<React.SetStateAction<FormState>>,
+    errs: Record<string, string>,
+  ) {
+    if (f.tipo !== 'reunión') return null
+    return (
+      <>
+        <Campo label="📅 Fecha y hora de la reunión" error={errs.fechaReunion}>
+          <input
+            type="datetime-local"
+            className={inp}
+            style={{ borderColor: errs.fechaReunion ? '#dc2626' : '#e2e8f0' }}
+            value={f.fechaReunion}
+            onChange={ev => setF(p => ({ ...p, fechaReunion: ev.target.value }))}
+          />
+        </Campo>
+        <Campo label="🔗 Link de reunión (Zoom / Meet / Teams)">
+          <div className="relative">
+            <Video className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="url"
+              className={inp + ' pl-9'}
+              style={{ borderColor: '#e2e8f0' }}
+              placeholder="https://zoom.us/j/123456789"
+              value={f.linkReunion}
+              onChange={ev => setF(p => ({ ...p, linkReunion: ev.target.value }))}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Opcional — aparecerá un botón "Unirse" en la tarjeta para todos los residentes
+          </p>
+        </Campo>
+      </>
+    )
+  }
+
+  // ─── Render tipo-selector (reutilizable en ambos modales) ────
+  function renderTipoSelector(
+    f: FormState,
+    setF: React.Dispatch<React.SetStateAction<FormState>>,
+  ) {
+    return (
+      <Campo label="Tipo de comunicación">
+        <div className="grid grid-cols-2 gap-2">
+          {(['circular', 'urgente', 'informativo', 'reunión'] as const).map(tipo => {
+            const cfg      = tipoCfg[tipo]
+            const activo   = f.tipo === tipo
+            const { Icon } = cfg
+            return (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => setF(p => ({ ...p, tipo }))}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all"
+                style={{
+                  borderColor: activo ? cfg.color : '#e2e8f0',
+                  background:  activo ? cfg.bg    : 'white',
+                  color:       activo ? cfg.color : '#64748b',
+                }}
+              >
+                <Icon className="w-4 h-4" />
+                {cfg.label}
+              </button>
+            )
+          })}
+        </div>
+      </Campo>
+    )
+  }
+
+  // ─── Render principal ────────────────────────────────────────
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -185,7 +332,7 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
           </p>
         </div>
         <button
-          onClick={() => { setModalCrear(true); setErrores({}) }}
+          onClick={() => { setModalCrear(true); setForm(EMPTY_FORM); setErrores({}) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
           style={{ background: '#7c3aed' }}
         >
@@ -199,15 +346,35 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
         {(['circular', 'urgente', 'informativo', 'reunión'] as const).map(tipo => {
           const cfg      = tipoCfg[tipo]
           const count    = lista.filter(c => c.tipo === tipo).length
-          const lecturas = lista.filter(c => c.tipo === tipo).reduce((s, c) => s + (c.lecturasCount ?? 0), 0)
+          const lecturas = lista.filter(c => c.tipo === tipo)
+                               .reduce((s, c) => s + (c.lecturasCount ?? 0), 0)
           const { Icon } = cfg
+          // ¿Hay alguna reunión EN VIVO ahora?
+          const enVivo = tipo === 'reunión' && lista.some(c =>
+            c.tipo === 'reunión' && c.fechaReunion &&
+            getEstadoReunion(c.fechaReunion, now).estado === 'en_vivo',
+          )
           return (
-            <div key={tipo} className="bg-white rounded-2xl border shadow-sm p-4" style={{ borderColor: '#e2e8f0' }}>
+            <div
+              key={tipo}
+              className="bg-white rounded-2xl border shadow-sm p-4"
+              style={{ borderColor: enVivo ? '#dc2626' : '#e2e8f0' }}
+            >
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: cfg.bg }}>
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${enVivo ? 'animate-pulse-soft' : ''}`}
+                  style={{ background: cfg.bg }}
+                >
                   <Icon className="w-4 h-4" style={{ color: cfg.color }} />
                 </div>
-                <span className="text-xs font-semibold" style={{ color: cfg.color }}>{cfg.label}</span>
+                <span className="text-xs font-semibold" style={{ color: cfg.color }}>
+                  {cfg.label}
+                </span>
+                {enVivo && (
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                    EN VIVO
+                  </span>
+                )}
               </div>
               <p className="text-xl font-bold text-gray-900">{count}</p>
               <p className="text-xs text-gray-400 mt-0.5">{lecturas} lecturas</p>
@@ -234,7 +401,7 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
         ))}
       </div>
 
-      {/* Lista */}
+      {/* Lista de comunicaciones */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border shadow-sm py-16 text-center" style={{ borderColor: '#e2e8f0' }}>
@@ -242,25 +409,37 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
             <p className="text-gray-400 text-sm">No hay comunicaciones en esta categoría</p>
           </div>
         ) : filtered.map(c => {
-          const cfg      = tipoCfg[c.tipo]
+          const cfg     = tipoCfg[c.tipo]
           const { Icon } = cfg
+          const estadoR = c.tipo === 'reunión' && c.fechaReunion
+            ? getEstadoReunion(c.fechaReunion, now)
+            : null
+
           return (
             <div
               key={c.id}
               className="bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-              style={{ borderColor: '#e2e8f0' }}
+              style={{
+                borderColor: estadoR?.estado === 'en_vivo' ? '#fca5a5' : '#e2e8f0',
+              }}
             >
+              {/* Barra superior de color */}
               <div className="h-1 w-full" style={{ background: cfg.color }} />
+
               <div className="p-5">
                 <div className="flex items-start justify-between gap-4">
+
+                  {/* Izquierda: icono + contenido */}
                   <div className="flex items-start gap-4 flex-1 min-w-0">
                     <div
-                      className="flex items-center justify-center w-12 h-12 rounded-xl shrink-0"
+                      className={`flex items-center justify-center w-12 h-12 rounded-xl shrink-0 ${estadoR?.estado === 'en_vivo' ? 'animate-pulse-soft' : ''}`}
                       style={{ background: cfg.bg }}
                     >
                       <Icon className="w-5 h-5" style={{ color: cfg.color }} />
                     </div>
+
                     <div className="flex-1 min-w-0">
+                      {/* Título + badges */}
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="font-bold text-gray-900">{c.titulo}</h3>
                         <span
@@ -269,14 +448,78 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
                         >
                           {cfg.label}
                         </span>
+
+                        {/* Badge estado reunión */}
+                        {estadoR && (
+                          estadoR.estado === 'en_vivo' ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full animate-pulse-soft"
+                              style={{ background: '#fee2e2', color: '#dc2626' }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                              EN VIVO
+                            </span>
+                          ) : estadoR.estado === 'proxima' ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                              style={{ background: '#f3e8ff', color: '#7c3aed' }}
+                            >
+                              <Clock className="w-3 h-3" />
+                              {estadoR.texto}
+                            </span>
+                          ) : (
+                            <span
+                              className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                              style={{ background: '#f1f5f9', color: '#94a3b8' }}
+                            >
+                              Finalizada
+                            </span>
+                          )
+                        )}
                       </div>
+
+                      {/* Autor y fecha */}
                       <p className="text-xs text-gray-400 mb-2">
                         {getAutor(c.autorId)} · {formatFecha(c.creadoEn)}
                       </p>
+
+                      {/* Contenido */}
                       <p className="text-sm text-gray-600 line-clamp-2">{c.contenido}</p>
+
+                      {/* Barra de reunión: fecha + botón Unirse */}
+                      {c.tipo === 'reunión' && (c.fechaReunion || c.linkReunion) && (
+                        <div
+                          className="flex flex-wrap items-center gap-3 mt-3 pt-3"
+                          style={{ borderTop: '1px dashed #e2e8f0' }}
+                        >
+                          {c.fechaReunion && (
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                              <Calendar className="w-3.5 h-3.5" style={{ color: '#7c3aed' }} />
+                              <span>{formatFechaHora(c.fechaReunion)}</span>
+                            </div>
+                          )}
+                          {c.linkReunion && (
+                            <a
+                              href={c.linkReunion}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                              style={{
+                                background: estadoR?.estado === 'en_vivo' ? '#dc2626' : '#7c3aed',
+                                color: 'white',
+                              }}
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              {estadoR?.estado === 'en_vivo' ? '🔴 Unirse ahora' : 'Unirse a la reunión'}
+                              <ExternalLink className="w-3 h-3 opacity-60" />
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
+                  {/* Derecha: lecturas + acciones */}
                   <div className="text-right shrink-0 flex flex-col items-end gap-2">
                     <div>
                       <div className="flex items-center gap-1 justify-end">
@@ -303,6 +546,7 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
                       </button>
                     </div>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -313,44 +557,24 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
       {/* ─── Modal: Nueva Comunicación ────────────────────────── */}
       <Modal
         abierto={modalCrear}
-        onCerrar={() => { setModalCrear(false); setErrores({}) }}
+        onCerrar={() => { setModalCrear(false); setForm(EMPTY_FORM); setErrores({}) }}
         titulo="Nueva comunicación"
         subtitulo="Publica un comunicado para todos los residentes del edificio"
         colorAccento="#7c3aed"
       >
         <div className="space-y-4">
-          <Campo label="Tipo de comunicación">
-            <div className="grid grid-cols-2 gap-2">
-              {(['circular', 'urgente', 'informativo', 'reunión'] as const).map(tipo => {
-                const cfg      = tipoCfg[tipo]
-                const activo   = form.tipo === tipo
-                const { Icon } = cfg
-                return (
-                  <button
-                    key={tipo}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, tipo }))}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all"
-                    style={{
-                      borderColor: activo ? cfg.color : '#e2e8f0',
-                      background:  activo ? cfg.bg    : 'white',
-                      color:       activo ? cfg.color : '#64748b',
-                    }}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {cfg.label}
-                  </button>
-                )
-              })}
-            </div>
-          </Campo>
+          {renderTipoSelector(form, setForm)}
 
           <Campo label="Título" error={errores.titulo}>
             <input
               type="text"
               className={inp}
               style={{ borderColor: errores.titulo ? '#dc2626' : '#e2e8f0' }}
-              placeholder="Ej: Corte de agua programado"
+              placeholder={
+                form.tipo === 'reunión'
+                  ? 'Ej: Reunión de copropietarios vía Zoom'
+                  : 'Ej: Corte de agua programado'
+              }
               value={form.titulo}
               onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
             />
@@ -358,19 +582,26 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
 
           <Campo label="Contenido" error={errores.contenido}>
             <textarea
-              rows={5}
+              rows={4}
               className={inp + ' resize-none'}
               style={{ borderColor: errores.contenido ? '#dc2626' : '#e2e8f0' }}
-              placeholder="Escribe el contenido completo de la comunicación..."
+              placeholder={
+                form.tipo === 'reunión'
+                  ? 'Agenda, temas a tratar, instrucciones de acceso...'
+                  : 'Escribe el contenido completo de la comunicación...'
+              }
               value={form.contenido}
               onChange={e => setForm(f => ({ ...f, contenido: e.target.value }))}
             />
           </Campo>
 
+          {renderCamposReunion(form, setForm, errores)}
+
+          {/* Vista previa */}
           {form.titulo && (
             <div className="p-3 rounded-xl" style={{ background: '#f8fafc' }}>
               <p className="text-xs text-gray-400 mb-1.5">Vista previa</p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className="text-xs font-semibold px-2 py-0.5 rounded-full"
                   style={{ background: tipoCfg[form.tipo].bg, color: tipoCfg[form.tipo].color }}
@@ -378,23 +609,33 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
                   {tipoCfg[form.tipo].label}
                 </span>
                 <span className="text-sm font-bold text-gray-800 truncate">{form.titulo}</span>
+                {form.tipo === 'reunión' && form.fechaReunion && (
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {formatFechaHora(new Date(form.fechaReunion).toISOString())}
+                  </span>
+                )}
               </div>
             </div>
           )}
 
           <div className="flex gap-3 justify-end pt-2">
             <button
-              onClick={() => { setModalCrear(false); setErrores({}) }}
+              onClick={() => { setModalCrear(false); setForm(EMPTY_FORM); setErrores({}) }}
               className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleCrear}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               style={{ background: '#7c3aed' }}
             >
-              Publicar
+              {form.tipo === 'reunión' ? (
+                <><Video className="w-4 h-4" /> Programar reunión</>
+              ) : (
+                'Publicar'
+              )}
             </button>
           </div>
         </div>
@@ -405,36 +646,12 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
         abierto={editando !== null}
         onCerrar={() => { setEditando(null); setErroresEdit({}) }}
         titulo="Editar comunicación"
-        subtitulo={editando ? editando.titulo : ''}
+        subtitulo={editando?.titulo ?? ''}
         colorAccento="#7c3aed"
       >
         {editando && (
           <div className="space-y-4">
-            <Campo label="Tipo de comunicación">
-              <div className="grid grid-cols-2 gap-2">
-                {(['circular', 'urgente', 'informativo', 'reunión'] as const).map(tipo => {
-                  const cfg      = tipoCfg[tipo]
-                  const activo   = formEdit.tipo === tipo
-                  const { Icon } = cfg
-                  return (
-                    <button
-                      key={tipo}
-                      type="button"
-                      onClick={() => setFormEdit(f => ({ ...f, tipo }))}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all"
-                      style={{
-                        borderColor: activo ? cfg.color : '#e2e8f0',
-                        background:  activo ? cfg.bg    : 'white',
-                        color:       activo ? cfg.color : '#64748b',
-                      }}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {cfg.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </Campo>
+            {renderTipoSelector(formEdit, setFormEdit)}
 
             <Campo label="Título" error={erroresEdit.titulo}>
               <input
@@ -448,13 +665,15 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
 
             <Campo label="Contenido" error={erroresEdit.contenido}>
               <textarea
-                rows={5}
+                rows={4}
                 className={inp + ' resize-none'}
                 style={{ borderColor: erroresEdit.contenido ? '#dc2626' : '#e2e8f0' }}
                 value={formEdit.contenido}
                 onChange={e => setFormEdit(f => ({ ...f, contenido: e.target.value }))}
               />
             </Campo>
+
+            {renderCamposReunion(formEdit, setFormEdit, erroresEdit)}
 
             <div className="flex gap-3 justify-end pt-2">
               <button
@@ -465,7 +684,7 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
               </button>
               <button
                 onClick={handleEditar}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                 style={{ background: '#7c3aed' }}
               >
                 Guardar cambios
@@ -497,7 +716,9 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
               </div>
               <div>
                 <p className="font-semibold text-gray-900">{comunicacionAEliminar.titulo}</p>
-                <p className="text-xs text-gray-500">{tipoCfg[comunicacionAEliminar.tipo].label} · {formatFecha(comunicacionAEliminar.creadoEn)}</p>
+                <p className="text-xs text-gray-500">
+                  {tipoCfg[comunicacionAEliminar.tipo].label} · {formatFecha(comunicacionAEliminar.creadoEn)}
+                </p>
               </div>
             </div>
           )}
