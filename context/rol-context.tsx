@@ -7,28 +7,31 @@ import { supabase }         from '@/lib/supabase'
 
 // ─── Tipos ────────────────────────────────────────────────────
 interface RolContextValue {
-  rol:     UserRole
-  usuario: User | null
-  unidad:  Unidad | null
-  cargado: boolean          // true después de resolver la sesión
-  setRol:  (r: UserRole) => void
+  rol:           UserRole
+  usuario:       User | null
+  unidad:        Unidad | null
+  edificioNombre: string
+  cargado:       boolean
+  setRol:        (r: UserRole) => void
 }
 
 // ─── Contexto ─────────────────────────────────────────────────
 const RolContext = createContext<RolContextValue>({
-  rol:     'administrador',
-  usuario: null,
-  unidad:  null,
-  cargado: false,
-  setRol:  () => {},
+  rol:           'administrador',
+  usuario:       null,
+  unidad:        null,
+  edificioNombre: '',
+  cargado:       false,
+  setRol:        () => {},
 })
 
 // ─── Provider ─────────────────────────────────────────────────
 export function RolProvider({ children }: { children: React.ReactNode }) {
-  const [rol,     setRolEstado] = useState<UserRole>('administrador')
-  const [usuario, setUsuario]   = useState<User | null>(null)
-  const [unidad,  setUnidad]    = useState<Unidad | null>(null)
-  const [cargado, setCargado]   = useState(false)
+  const [rol,            setRolEstado]    = useState<UserRole>('administrador')
+  const [usuario,        setUsuario]      = useState<User | null>(null)
+  const [unidad,         setUnidad]       = useState<Unidad | null>(null)
+  const [edificioNombre, setEdificioNombre] = useState<string>('')
+  const [cargado,        setCargado]      = useState(false)
 
   useEffect(() => {
     async function cargarSesion() {
@@ -66,7 +69,17 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('propify_rol', rolDB)
           setUsuario(dbUser as User)
 
-          // 3. Cargar su unidad si tiene una asignada
+          // 3. Cargar nombre del edificio
+          if (dbUser.edificioId) {
+            const { data: edif } = await supabase
+              .from('edificios')
+              .select('nombre')
+              .eq('id', dbUser.edificioId)
+              .single()
+            if (edif?.nombre) setEdificioNombre(edif.nombre)
+          }
+
+          // 4. Cargar su unidad si tiene una asignada
           if (dbUser.unidadId) {
             const { data: unidadDB } = await supabase
               .from('unidades')
@@ -100,7 +113,7 @@ export function RolProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <RolContext.Provider value={{ rol, usuario, unidad, cargado, setRol }}>
+    <RolContext.Provider value={{ rol, usuario, unidad, edificioNombre, cargado, setRol }}>
       {children}
     </RolContext.Provider>
   )

@@ -223,7 +223,7 @@ export default function Sidebar() {
   function closeAllGroups() {
     setOpenGroups(new Set())
   }
-  const { rol, usuario, unidad }        = useRol()
+  const { rol, usuario, unidad, edificioNombre } = useRol()
   const { edificios, edificioActivo, nombreActivo, cambiarEdificio } = useEdificio()
 
   const navGroups   = getNavGroups(rol)
@@ -341,7 +341,7 @@ export default function Sidebar() {
             >
               <p className="text-xs font-medium mb-0.5" style={{ color: '#94b4d4' }}>Edificio activo</p>
               <p className="text-sm font-semibold text-white truncate">
-                {edificios[0]?.nombre ?? nombreActivo}
+                {edificioNombre || edificios[0]?.nombre || nombreActivo}
               </p>
             </div>
           )}
