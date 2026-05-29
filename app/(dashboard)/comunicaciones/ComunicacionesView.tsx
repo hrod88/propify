@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import {
-  Plus, Eye, Bell, Info, Users, FileText, Check,
+  Plus, Eye, Info, Users, FileText, Check,
   Pencil, Trash2, Video, ExternalLink, Calendar, Clock,
   Building2, Phone, Tag, Paperclip, AlertTriangle,
 } from 'lucide-react'
@@ -445,7 +445,7 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
 
   // ─── Info bar de tarjeta según tipo ───────────────────────
   function renderCardInfoBar(c: Comunicacion, estadoR: { estado: EstadoR; texto: string } | null) {
-    const borderStyle = { borderTop: `1px dashed ${tipoCfg[c.tipo].bg === '#e2e8f0' ? '#e2e8f0' : tipoCfg[c.tipo].bg}` }
+    const borderStyle = { borderTop: `1px dashed ${tipoCfg[c.tipo].bg}` }
 
     // Reunión
     if (c.tipo === 'reunión' && (c.fechaReunion || c.linkReunion)) return (
