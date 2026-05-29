@@ -250,7 +250,7 @@ export default function UnidadesView({ unidades, users }: Props) {
                         <ChevronDown className="w-3 h-3" />
                       </button>
                     ) : (
-                      <div className="flex items-center rounded-md overflow-hidden" style={{ border: '1px solid #2563ae' }}>
+                      <div className="inline-flex items-center rounded overflow-hidden" style={{ border: '1px solid #93c5fd', height: 18 }}>
                         <input
                           autoFocus
                           type="text"
@@ -258,22 +258,23 @@ export default function UnidadesView({ unidades, users }: Props) {
                           onChange={e => setPisoBusqueda(e.target.value.replace(/\D/g, ''))}
                           onBlur={() => setPisoDropdown(false)}
                           placeholder="—"
-                          className="w-8 px-1.5 py-0.5 text-xs font-semibold text-center outline-none bg-transparent"
+                          className="w-6 text-xs font-semibold text-center outline-none bg-transparent"
+                          style={{ color: '#2563ae' }}
                         />
                         <div className="flex flex-col border-l" style={{ borderColor: '#bfdbfe' }}>
                           <button
                             onMouseDown={e => { e.preventDefault(); subirPiso() }}
-                            className="flex items-center justify-center px-1 hover:bg-blue-50 transition-colors"
-                            style={{ height: 11 }}
+                            className="flex items-center justify-center hover:bg-blue-50"
+                            style={{ width: 12, height: 9 }}
                           >
-                            <ChevronUp className="w-2.5 h-2.5" style={{ color: '#2563ae' }} />
+                            <ChevronUp className="w-2 h-2" style={{ color: '#93c5fd' }} />
                           </button>
                           <button
                             onMouseDown={e => { e.preventDefault(); bajarPiso() }}
-                            className="flex items-center justify-center px-1 hover:bg-blue-50 transition-colors border-t"
-                            style={{ height: 11, borderColor: '#bfdbfe' }}
+                            className="flex items-center justify-center hover:bg-blue-50 border-t"
+                            style={{ width: 12, height: 9, borderColor: '#bfdbfe' }}
                           >
-                            <ChevronDown className="w-2.5 h-2.5" style={{ color: '#2563ae' }} />
+                            <ChevronDown className="w-2 h-2" style={{ color: '#93c5fd' }} />
                           </button>
                         </div>
                       </div>
