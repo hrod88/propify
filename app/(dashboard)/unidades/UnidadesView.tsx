@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Plus, SlidersHorizontal } from 'lucide-react'
+import { Search, Plus, SlidersHorizontal, Layers } from 'lucide-react'
 import { formatCLP } from '@/lib/db'
 import type { Unidad, User } from '@/types'
 
@@ -58,12 +58,20 @@ interface Props {
 export default function UnidadesView({ unidades, users }: Props) {
   const [tipoFiltro,   setTipoFiltro]   = useState<TipoFiltro>('todos')
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>('todos')
+  const [pisoFiltro,   setPisoFiltro]   = useState<number | null>(null)
   const [busqueda,     setBusqueda]     = useState('')
+
+  // Pisos únicos ordenados
+  const pisos = useMemo(() =>
+    Array.from(new Set(unidades.map(u => u.piso))).sort((a, b) => a - b),
+    [unidades]
+  )
 
   const filtered = useMemo(() => {
     return unidades.filter(u => {
       if (tipoFiltro !== 'todos' && u.tipo !== tipoFiltro) return false
       if (estadoFiltro !== 'todos' && u.estado !== estadoFiltro) return false
+      if (pisoFiltro !== null && u.piso !== pisoFiltro) return false
       if (busqueda) {
         const q = busqueda.toLowerCase()
         const prop = u.propietarioId ? users.find(usr => usr.id === u.propietarioId) : undefined
@@ -169,6 +177,35 @@ export default function UnidadesView({ unidades, users }: Props) {
                 }
               >
                 {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="w-px h-5 bg-gray-200 hidden sm:block" />
+
+          {/* Filtro piso */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <Layers className="w-4 h-4 text-gray-400 mr-1" />
+            <button
+              onClick={() => setPisoFiltro(null)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={pisoFiltro === null
+                ? { background: '#1e3a5f', color: 'white' }
+                : { background: '#f1f5f9', color: '#64748b' }}
+            >
+              Todos
+            </button>
+            {pisos.map(p => (
+              <button
+                key={p}
+                onClick={() => setPisoFiltro(pisoFiltro === p ? null : p)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                style={pisoFiltro === p
+                  ? { background: '#2563ae', color: 'white' }
+                  : { background: '#f1f5f9', color: '#64748b' }}
+              >
+                {formatPiso(p)}
               </button>
             ))}
           </div>
