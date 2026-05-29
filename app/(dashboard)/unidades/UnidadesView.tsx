@@ -246,9 +246,9 @@ export default function UnidadesView({ unidades, users }: Props) {
                         value={pisoBusqueda}
                         onChange={e => setPisoBusqueda(e.target.value.replace(/\D/g, ''))}
                         onBlur={() => setPisoDropdown(false)}
-                        placeholder="PISO"
-                        className="outline-none border-none bg-transparent text-xs font-semibold uppercase tracking-wider p-0 m-0"
-                        style={{ width: 36, color: '#2563ae', caretColor: '#2563ae' }}
+                        placeholder=""
+                        className="text-xs font-semibold uppercase tracking-wider p-0 m-0 bg-transparent appearance-none"
+                        style={{ width: 36, color: '#2563ae', caretColor: '#2563ae', border: 'none', outline: 'none', boxShadow: 'none' }}
                       />
                     )}
                   </div>
