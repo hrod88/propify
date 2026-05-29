@@ -240,19 +240,16 @@ export default function UnidadesView({ unidades, users }: Props) {
                         <ChevronDown className="w-3 h-3" />
                       </button>
                     ) : (
-                      <div className="flex items-center gap-0.5 px-1 rounded" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', height: 16 }}>
-                        <Search className="w-2 h-2 shrink-0" style={{ color: '#93c5fd' }} />
-                        <input
-                          autoFocus
-                          type="text"
-                          value={pisoBusqueda}
-                          onChange={e => setPisoBusqueda(e.target.value.replace(/\D/g, ''))}
-                          onBlur={() => setPisoDropdown(false)}
-                          placeholder="piso"
-                          className="outline-none bg-transparent font-semibold uppercase tracking-wider"
-                          style={{ width: 32, fontSize: 10, color: '#2563ae' }}
-                        />
-                      </div>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={pisoBusqueda}
+                        onChange={e => setPisoBusqueda(e.target.value.replace(/\D/g, ''))}
+                        onBlur={() => setPisoDropdown(false)}
+                        placeholder="PISO"
+                        className="outline-none border-none bg-transparent text-xs font-semibold uppercase tracking-wider p-0 m-0"
+                        style={{ width: 36, color: '#2563ae', caretColor: '#2563ae' }}
+                      />
                     )}
                   </div>
                 </th>
