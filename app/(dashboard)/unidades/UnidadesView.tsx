@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Plus, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, Plus, SlidersHorizontal, ChevronDown } from 'lucide-react'
 import { formatCLP } from '@/lib/db'
 import type { Unidad, User } from '@/types'
 
@@ -71,16 +71,6 @@ export default function UnidadesView({ unidades, users }: Props) {
   const pisoMin = pisos[0]  ?? 1
   const pisoMax = pisos[pisos.length - 1] ?? 18
 
-  function subirPiso() {
-    const actual = parseInt(pisoBusqueda)
-    const siguiente = isNaN(actual) ? pisoMin : Math.min(actual + 1, pisoMax)
-    setPisoBusqueda(String(siguiente))
-  }
-  function bajarPiso() {
-    const actual = parseInt(pisoBusqueda)
-    const anterior = isNaN(actual) ? pisoMax : Math.max(actual - 1, pisoMin)
-    setPisoBusqueda(String(anterior))
-  }
 
   const filtered = useMemo(() => {
     return unidades.filter(u => {
@@ -250,34 +240,20 @@ export default function UnidadesView({ unidades, users }: Props) {
                         <ChevronDown className="w-3 h-3" />
                       </button>
                     ) : (
-                      <div className="inline-flex items-center rounded overflow-hidden" style={{ border: '1px solid #93c5fd', height: 18 }}>
-                        <input
-                          autoFocus
-                          type="text"
-                          value={pisoBusqueda}
-                          onChange={e => setPisoBusqueda(e.target.value.replace(/\D/g, ''))}
-                          onBlur={() => setPisoDropdown(false)}
-                          placeholder="—"
-                          className="w-6 text-xs font-semibold text-center outline-none bg-transparent"
-                          style={{ color: '#2563ae' }}
-                        />
-                        <div className="flex flex-col border-l" style={{ borderColor: '#bfdbfe' }}>
-                          <button
-                            onMouseDown={e => { e.preventDefault(); subirPiso() }}
-                            className="flex items-center justify-center hover:bg-blue-50"
-                            style={{ width: 12, height: 9 }}
-                          >
-                            <ChevronUp className="w-2 h-2" style={{ color: '#93c5fd' }} />
-                          </button>
-                          <button
-                            onMouseDown={e => { e.preventDefault(); bajarPiso() }}
-                            className="flex items-center justify-center hover:bg-blue-50 border-t"
-                            style={{ width: 12, height: 9, borderColor: '#bfdbfe' }}
-                          >
-                            <ChevronDown className="w-2 h-2" style={{ color: '#93c5fd' }} />
-                          </button>
-                        </div>
-                      </div>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={pisoBusqueda}
+                        onChange={e => setPisoBusqueda(e.target.value.replace(/\D/g, ''))}
+                        onBlur={() => setPisoDropdown(false)}
+                        placeholder="Piso..."
+                        className="text-xs font-semibold uppercase tracking-wider outline-none bg-transparent"
+                        style={{
+                          width: 52,
+                          borderBottom: '1px solid #2563ae',
+                          color: '#2563ae',
+                        }}
+                      />
                     )}
                   </div>
                 </th>
