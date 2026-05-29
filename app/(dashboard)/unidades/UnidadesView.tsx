@@ -60,6 +60,7 @@ export default function UnidadesView({ unidades, users }: Props) {
   const [estadoFiltro,  setEstadoFiltro]  = useState<EstadoFiltro>('todos')
   const [pisoFiltro,    setPisoFiltro]    = useState<number | null>(null)
   const [pisoDropdown,  setPisoDropdown]  = useState(false)
+  const [pisoBusqueda,  setPisoBusqueda]  = useState('')
   const [busqueda,      setBusqueda]      = useState('')
   const pisoRef = useRef<HTMLDivElement>(null)
 
@@ -68,6 +69,7 @@ export default function UnidadesView({ unidades, users }: Props) {
     function handler(e: MouseEvent) {
       if (pisoRef.current && !pisoRef.current.contains(e.target as Node)) {
         setPisoDropdown(false)
+        setPisoBusqueda('')
       }
     }
     document.addEventListener('mousedown', handler)
@@ -79,6 +81,12 @@ export default function UnidadesView({ unidades, users }: Props) {
     Array.from(new Set(unidades.map(u => u.piso))).sort((a, b) => a - b),
     [unidades]
   )
+
+  // Pisos filtrados por lo que se escribe en el input del dropdown
+  const pisosVisibles = useMemo(() => {
+    if (!pisoBusqueda.trim()) return pisos
+    return pisos.filter(p => formatPiso(p).toLowerCase().includes(pisoBusqueda.toLowerCase()))
+  }, [pisos, pisoBusqueda])
 
   const filtered = useMemo(() => {
     return unidades.filter(u => {
@@ -241,29 +249,47 @@ export default function UnidadesView({ unidades, users }: Props) {
                     </button>
                     {pisoDropdown && (
                       <div
-                        className="absolute left-0 top-full mt-1 bg-white rounded-xl border shadow-lg z-30 overflow-y-auto"
-                        style={{ borderColor: '#e2e8f0', minWidth: 150, maxHeight: 260 }}
+                        className="absolute left-0 top-full mt-1 bg-white rounded-xl border shadow-lg z-30 flex flex-col"
+                        style={{ borderColor: '#e2e8f0', width: 160, height: 240 }}
                       >
-                        <button
-                          onClick={() => { setPisoFiltro(null); setPisoDropdown(false) }}
-                          className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
-                          style={{ color: pisoFiltro === null ? '#2563ae' : '#374151' }}
-                        >
-                          Todos los pisos
-                          {pisoFiltro === null && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
-                        </button>
-                        <div className="border-t" style={{ borderColor: '#f1f5f9' }} />
-                        {pisos.map(p => (
+                        {/* Input de búsqueda */}
+                        <div className="p-2 border-b shrink-0" style={{ borderColor: '#f1f5f9' }}>
+                          <input
+                            autoFocus
+                            type="text"
+                            value={pisoBusqueda}
+                            onChange={e => setPisoBusqueda(e.target.value)}
+                            placeholder="Ej: 10"
+                            className="w-full px-2.5 py-1.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
+                            style={{ borderColor: '#e2e8f0' }}
+                          />
+                        </div>
+
+                        {/* Lista scrolleable — tamaño fijo */}
+                        <div className="overflow-y-auto flex-1">
                           <button
-                            key={p}
-                            onClick={() => { setPisoFiltro(p); setPisoDropdown(false) }}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
-                            style={{ color: pisoFiltro === p ? '#2563ae' : '#374151' }}
+                            onClick={() => { setPisoFiltro(null); setPisoDropdown(false); setPisoBusqueda('') }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
+                            style={{ color: pisoFiltro === null ? '#2563ae' : '#374151' }}
                           >
-                            {formatPiso(p)}
-                            {pisoFiltro === p && <Check className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />}
+                            Todos
+                            {pisoFiltro === null && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: '#2563ae' }} />}
                           </button>
-                        ))}
+                          {pisosVisibles.map(p => (
+                            <button
+                              key={p}
+                              onClick={() => { setPisoFiltro(p); setPisoDropdown(false); setPisoBusqueda('') }}
+                              className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-50 transition-colors"
+                              style={{ color: pisoFiltro === p ? '#2563ae' : '#374151' }}
+                            >
+                              {formatPiso(p)}
+                              {pisoFiltro === p && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: '#2563ae' }} />}
+                            </button>
+                          ))}
+                          {pisosVisibles.length === 0 && (
+                            <p className="px-3 py-3 text-xs text-gray-400 text-center">Sin resultados</p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
