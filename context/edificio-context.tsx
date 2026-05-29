@@ -70,7 +70,6 @@ export function EdificioProvider({ children }: { children: React.ReactNode }) {
         const { data } = await supabaseBrowser
           .from('edificios')
           .select('*')
-          .eq('activo', true)
           .order('nombre')
         lista = (data ?? []) as Edificio[]
         setEdificios(lista)
@@ -106,7 +105,9 @@ export function EdificioProvider({ children }: { children: React.ReactNode }) {
 
   // ── Nombre del edificio activo ────────────────────────────
   const nombreActivo =
-    edificios.find(e => e.id === edificioActivo)?.nombre ?? 'Edificio activo'
+    edificios.find(e => e.id === edificioActivo)?.nombre
+    ?? edificios[0]?.nombre
+    ?? 'Edificio activo'
 
   return (
     <EdificioContext.Provider value={{

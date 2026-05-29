@@ -340,10 +340,9 @@ export default function Sidebar() {
               style={{ background: 'rgba(37,99,174,0.25)', border: '1px solid rgba(37,99,174,0.4)' }}
             >
               <p className="text-xs font-medium mb-0.5" style={{ color: '#94b4d4' }}>Edificio activo</p>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-white truncate">{nombreActivo}</p>
-                <ChevronRight className="w-3.5 h-3.5 shrink-0 ml-1" style={{ color: '#94b4d4' }} />
-              </div>
+              <p className="text-sm font-semibold text-white truncate">
+                {edificios[0]?.nombre ?? nombreActivo}
+              </p>
             </div>
           )}
         </div>
