@@ -16,6 +16,7 @@ import type {
   Comunicacion,
   Visita,
   Paquete,
+  Amenidad,
   DashboardKPIs,
   ActividadReciente,
   Plan,
@@ -198,6 +199,18 @@ export async function getPaquetes(edificioId = 'mirador-sacramentinos'): Promise
     .order('recibidoEn', { ascending: false })
   if (error) { console.error('getPaquetes:', error.message); return [] }
   return (data ?? []) as Paquete[]
+}
+
+// ─── Amenidades ───────────────────────────────────────────────
+
+export async function getAmenidades(edificioId = 'e1'): Promise<Amenidad[]> {
+  const { data, error } = await supabase
+    .from('amenidades')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('nombre')
+  if (error) { console.error('getAmenidades:', error.message); return [] }
+  return (data ?? []) as Amenidad[]
 }
 
 // ─── Planes & Suscripciones ──────────────────────────────────

@@ -52,17 +52,19 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
 
   // ─── Formulario crear ────────────────────────────────────────
   const [form, setForm] = useState({
-    unidadId:    unidades[0]?.id ?? '',
-    courier:     COURIERS[0],
-    descripcion: '',
+    unidadId:         unidades[0]?.id ?? '',
+    courier:          COURIERS[0],
+    descripcion:      '',
+    numeroCasillero:  '',
   })
   const [errores, setErrores] = useState<Record<string, string>>({})
 
   // ─── Formulario edición ──────────────────────────────────────
   const [formEdit, setFormEdit] = useState({
-    unidadId:    '',
-    courier:     COURIERS[0],
-    descripcion: '',
+    unidadId:         '',
+    courier:          COURIERS[0],
+    descripcion:      '',
+    numeroCasillero:  '',
   })
   const [erroresEdit, setErroresEdit] = useState<Record<string, string>>({})
 
@@ -109,19 +111,21 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
     setErrores(e)
     if (Object.keys(e).length > 0) return
 
+    const nc = parseInt(form.numeroCasillero)
     const nuevo: Paquete = {
-      id:           `p${Date.now()}`,
-      edificioId:   'e1',
-      unidadId:     form.unidadId,
-      courier:      form.courier,
-      descripcion:  form.descripcion.trim() || undefined,
-      estado:       'recibido',
-      recibidoEn:   new Date().toISOString(),
-      codigoRetiro: generarCodigo(),
+      id:               `p${Date.now()}`,
+      edificioId:       'e1',
+      unidadId:         form.unidadId,
+      courier:          form.courier,
+      descripcion:      form.descripcion.trim() || undefined,
+      estado:           'recibido',
+      recibidoEn:       new Date().toISOString(),
+      codigoRetiro:     generarCodigo(),
+      numeroCasillero:  !isNaN(nc) && nc > 0 ? nc : undefined,
     }
     setLista(prev => [nuevo, ...prev])
     setModalCrear(false)
-    setForm({ unidadId: unidades[0]?.id ?? '', courier: COURIERS[0], descripcion: '' })
+    setForm({ unidadId: unidades[0]?.id ?? '', courier: COURIERS[0], descripcion: '', numeroCasillero: '' })
     setErrores({})
     showToast(`Paquete registrado · Código: ${nuevo.codigoRetiro}`)
     const unidadNum = getUnidad(nuevo.unidadId)?.numero ?? nuevo.unidadId
@@ -139,9 +143,10 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
   function abrirEditar(p: Paquete) {
     setEditando(p)
     setFormEdit({
-      unidadId:    p.unidadId,
-      courier:     p.courier,
-      descripcion: p.descripcion ?? '',
+      unidadId:        p.unidadId,
+      courier:         p.courier,
+      descripcion:     p.descripcion ?? '',
+      numeroCasillero: p.numeroCasillero != null ? String(p.numeroCasillero) : '',
     })
     setErroresEdit({})
   }
@@ -153,14 +158,22 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
     setErroresEdit(e)
     if (Object.keys(e).length > 0) return
 
+    const nc = parseInt(formEdit.numeroCasillero)
     setLista(prev => prev.map(p =>
       p.id !== editando.id ? p : {
         ...p,
-        unidadId:    formEdit.unidadId,
-        courier:     formEdit.courier,
-        descripcion: formEdit.descripcion.trim() || undefined,
+        unidadId:        formEdit.unidadId,
+        courier:         formEdit.courier,
+        descripcion:     formEdit.descripcion.trim() || undefined,
+        numeroCasillero: !isNaN(nc) && nc > 0 ? nc : undefined,
       }
     ))
+    supabase.from('paquetes').update({
+      unidadId:        formEdit.unidadId,
+      courier:         formEdit.courier,
+      descripcion:     formEdit.descripcion.trim() || null,
+      numeroCasillero: !isNaN(nc) && nc > 0 ? nc : null,
+    }).eq('id', editando.id).then(({ error }) => { if (error) console.error('update paquete:', error.message) })
     setEditando(null)
     setErroresEdit({})
     showToast('Paquete actualizado correctamente')
@@ -320,14 +333,25 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
                   </div>
 
                   <div className="flex flex-col items-end gap-3 shrink-0">
-                    {p.codigoRetiro && (
-                      <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">Código de retiro</p>
-                        <span className="text-2xl font-bold font-mono tracking-widest" style={{ color: '#1e3a5f' }}>
-                          {p.codigoRetiro}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-end gap-1">
+                      {p.codigoRetiro && (
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-0.5">Código de retiro</p>
+                          <span className="text-2xl font-bold font-mono tracking-widest" style={{ color: '#1e3a5f' }}>
+                            {p.codigoRetiro}
+                          </span>
+                        </div>
+                      )}
+                      {p.numeroCasillero != null && (
+                        <div
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}
+                        >
+                          <Package className="w-3 h-3" />
+                          Casillero #{p.numeroCasillero}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       {p.estado !== 'retirado' && (
                         <button
@@ -420,6 +444,20 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
             </Campo>
           </div>
 
+          <Campo label="Casillero Odihnx (opcional)">
+            <select
+              className={inp}
+              style={{ borderColor: '#e2e8f0' }}
+              value={form.numeroCasillero}
+              onChange={e => setForm(f => ({ ...f, numeroCasillero: e.target.value }))}
+            >
+              <option value="">— Sin casillero —</option>
+              {Array.from({ length: 32 }, (_, i) => i + 1).map(n => (
+                <option key={n} value={String(n)}>Casillero #{n}</option>
+              ))}
+            </select>
+          </Campo>
+
           <p className="text-xs text-gray-400 p-3 rounded-xl" style={{ background: '#f8fafc' }}>
             💡 Se generará un <strong>código de retiro</strong> automáticamente al registrar el paquete.
           </p>
@@ -493,6 +531,20 @@ export default function PaquetesView({ paquetes, unidades, users }: Props) {
                 />
               </Campo>
             </div>
+
+            <Campo label="Casillero Odihnx (opcional)">
+              <select
+                className={inp}
+                style={{ borderColor: '#e2e8f0' }}
+                value={formEdit.numeroCasillero}
+                onChange={e => setFormEdit(f => ({ ...f, numeroCasillero: e.target.value }))}
+              >
+                <option value="">— Sin casillero —</option>
+                {Array.from({ length: 32 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={String(n)}>Casillero #{n}</option>
+                ))}
+              </select>
+            </Campo>
 
             <div className="flex gap-3 justify-end pt-2">
               <button

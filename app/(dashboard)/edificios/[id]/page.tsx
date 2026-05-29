@@ -3,7 +3,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import {
   Building2, MapPin, ArrowLeft, ChevronRight,
-  Home, Layers, Users, Pencil, Hash,
+  Home, Layers, Users, Pencil, Hash, ImageIcon,
 } from 'lucide-react'
 import { getEdificioById, getUnidades, getEspaciosComunes, getGastosComunes, getUsuarios, formatCLP } from '@/lib/db'
 import { getEdificioActual } from '@/lib/auth-helpers'
@@ -214,6 +214,47 @@ export default async function EdificioDetailPage({ params }: PageProps) {
             </Link>
           </div>
         </div>
+      </div>
+      {/* Galería de fotos */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#e2e8f0' }}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b" style={{ borderColor: '#f1f5f9' }}>
+          <h2 className="font-bold text-gray-900">Galería del Edificio</h2>
+          <span className="text-xs text-gray-400">{(edificio.fotos ?? []).length} foto{(edificio.fotos ?? []).length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {(edificio.fotos ?? []).length === 0 ? (
+          <div className="py-12 flex flex-col items-center gap-3 text-center px-6">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: '#f1f5f9' }}>
+              <ImageIcon className="w-6 h-6 text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Sin fotos todavía</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Para agregar fotos: actualiza el campo <code className="bg-gray-100 px-1 rounded">fotos</code> del
+                edificio en Supabase con un array de URLs de imagen.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {(edificio.fotos ?? []).map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block aspect-square rounded-xl overflow-hidden hover:opacity-90 transition-opacity"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Foto ${i + 1} de ${edificio.nombre}`}
+                  className="w-full h-full object-cover"
+                />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

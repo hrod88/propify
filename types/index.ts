@@ -32,6 +32,7 @@ export interface Edificio {
   pisos: number
   anoconstruccion?: number
   imagen?: string
+  fotos?: string[]
   administradorId: string
   rut?: string
   activo: boolean
@@ -207,6 +208,25 @@ export interface Paquete {
   retiradoEn?: string
   codigoRetiro?: string
   imagen?: string
+  numeroCasillero?: number
+}
+
+// ─── Amenidades ───────────────────────────────────────────────
+export type EstadoAmenidad = 'disponible' | 'mantencion' | 'fuera_servicio'
+export type TipoAmenidad   = 'servicio' | 'instalacion' | 'espacio'
+
+export interface Amenidad {
+  id: string
+  edificioId: string
+  nombre: string
+  descripcion?: string
+  tipo: TipoAmenidad
+  estado: EstadoAmenidad
+  precioInfo?: string   // formato: "5L=650|10L=1100|20L=1650"
+  contacto?: string
+  website?: string
+  ubicacion?: string
+  icono?: string
 }
 
 // ─── Dashboard KPIs ───────────────────────────────────────────

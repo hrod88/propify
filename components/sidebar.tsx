@@ -31,6 +31,7 @@ import {
   FileText,
   BookMarked,
   NotebookPen,
+  Sparkles,
 } from 'lucide-react'
 import { useRol }      from '@/context/rol-context'
 import { useEdificio }  from '@/context/edificio-context'
@@ -83,6 +84,7 @@ const NAV_ADMIN: NavGroup[] = [
       { href: '/visitas',        label: 'Visitas',          icon: ClipboardList },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
       { href: '/paquetes',       label: 'Paquetes',         icon: Package,       badge: 3 },
+      { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
       { href: '/actas',          label: 'Actas',            icon: BookMarked },
       { href: '/novedades',      label: 'Novedades',        icon: NotebookPen },
     ],
@@ -108,6 +110,7 @@ const NAV_CONSERJE: NavGroup[] = [
     items: [
       { href: '/visitas',        label: 'Visitas',          icon: ClipboardList },
       { href: '/paquetes',       label: 'Paquetes',         icon: Package,       badge: 3 },
+      { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
       { href: '/mantenciones',   label: 'Mantenciones',     icon: Wrench,        badge: 4 },
@@ -141,6 +144,7 @@ const NAV_PROPIETARIO: NavGroup[] = [
     title: 'Información',
     items: [
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
+      { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
     ],
   },
 ]
@@ -164,6 +168,7 @@ const NAV_ARRENDATARIO: NavGroup[] = [
     title: 'Información',
     items: [
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
+      { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
     ],
   },
 ]
