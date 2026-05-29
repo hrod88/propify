@@ -351,9 +351,12 @@ export default function Sidebar() {
                         Edificio activo
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-white truncate">
-                      {edificioNombre || edificios[0]?.nombre || nombreActivo}
-                    </p>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {edificioNombre || edificios[0]?.nombre || nombreActivo}
+                      </p>
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0" style={{ color: '#94b4d4' }} />
+                    </div>
                   </div>
                 </div>
               )
