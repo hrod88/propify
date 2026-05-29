@@ -7,6 +7,7 @@ import {
   Sparkles, Check, Info, CreditCard,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useNotificaciones } from '@/context/notificaciones-context'
 import type { Amenidad, EstadoAmenidad } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
@@ -41,8 +42,9 @@ interface Props {
 
 // ─── Componente ───────────────────────────────────────────────
 export default function AmenidadesView({ amenidades: initial }: Props) {
-  const [lista, setLista]       = useState<Amenidad[]>(initial)
-  const [toast, setToast]       = useState<string | null>(null)
+  const { agregarNotificacion }   = useNotificaciones()
+  const [lista, setLista]         = useState<Amenidad[]>(initial)
+  const [toast, setToast]         = useState<string | null>(null)
   const [cambiando, setCambiando] = useState<string | null>(null)
 
   function showToast(msg: string) {
@@ -52,8 +54,22 @@ export default function AmenidadesView({ amenidades: initial }: Props) {
 
   function cambiarEstado(id: string, nuevoEstado: EstadoAmenidad) {
     setCambiando(null)
+    const amenidad = lista.find(a => a.id === id)
     setLista(prev => prev.map(a => a.id === id ? { ...a, estado: nuevoEstado } : a))
-    showToast('Estado actualizado')
+    const estadoLabel = estadoCfg[nuevoEstado].label
+    showToast(`${amenidad?.nombre ?? 'Amenidad'} → ${estadoLabel}`)
+    // Notificar a todos los residentes del cambio de estado
+    if (amenidad) {
+      agregarNotificacion(
+        'circular',
+        `${amenidad.nombre}: ${estadoLabel}`,
+        nuevoEstado === 'disponible'
+          ? 'El servicio está disponible nuevamente.'
+          : nuevoEstado === 'mantencion'
+          ? 'El servicio está temporalmente en mantención.'
+          : 'El servicio no está disponible por el momento.',
+      )
+    }
     supabase.from('amenidades').update({ estado: nuevoEstado }).eq('id', id).then(({ error }) => {
       if (error) console.error('update amenidad:', error.message)
     })
