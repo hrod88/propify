@@ -1,11 +1,42 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, LogIn, LogOut, Car, Clock, Users, Check, Pencil, Trash2 } from 'lucide-react'
+import { Plus, LogIn, LogOut, Car, Clock, Users, Check, Pencil, Trash2, ParkingSquare, Timer } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import { supabase } from '@/lib/supabase'
 import type { Visita, Unidad, User } from '@/types'
+
+// ─── Constantes ───────────────────────────────────────────────
+const MOTIVOS_VISITA = [
+  'Visita familiar',
+  'Delivery / Encomienda',
+  'Servicio técnico',
+  'Visita médica / cuidados',
+  'Mudanza',
+  'Reunión / Negocios',
+  'Arriendo / Propietario',
+  'Otro',
+]
+
+const TIPOS_VEHICULO = [
+  { value: 'auto',      label: 'Auto' },
+  { value: 'camioneta', label: 'Camioneta / SUV' },
+  { value: 'furgon',    label: 'Furgón / Minivan' },
+  { value: 'moto',      label: 'Moto' },
+  { value: 'bicicleta', label: 'Bicicleta' },
+  { value: 'otro',      label: 'Otro' },
+]
+
+const TIEMPOS_ESTADIA = [
+  { value: 0,   label: 'Indefinido' },
+  { value: 30,  label: 'Menos de 1 hora' },
+  { value: 60,  label: '1 hora' },
+  { value: 120, label: '2 horas' },
+  { value: 180, label: '3 horas' },
+  { value: 240, label: '4 horas' },
+  { value: 480, label: 'Más de 4 horas' },
+]
 
 // ─── Props ────────────────────────────────────────────────────
 interface Props {
@@ -14,7 +45,7 @@ interface Props {
   users: User[]
 }
 
-// ─── Helpers de UI ────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────
 function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -23,6 +54,30 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
       {error && <p className="text-xs mt-1" style={{ color: '#dc2626' }}>{error}</p>}
     </div>
   )
+}
+
+function formatTiempo(min?: number) {
+  if (!min || min === 0) return null
+  if (min < 60) return `${min} min`
+  const h = min / 60
+  return h === 1 ? '1h' : `${h}h`
+}
+
+function labelTipoVehiculo(val?: string) {
+  return TIPOS_VEHICULO.find(t => t.value === val)?.label ?? val ?? ''
+}
+
+// ─── Tipo formulario ──────────────────────────────────────────
+type FormState = {
+  nombreVisitante: string
+  rutVisitante: string
+  unidadId: string
+  motivoVisita: string
+  tieneVehiculo: boolean
+  tipoVehiculo: string
+  vehiculoPatente: string
+  estacionamiento: string
+  tiempoEstadiaMin: number
 }
 
 // ─── Componente ───────────────────────────────────────────────
@@ -35,24 +90,21 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
   const [eliminarId, setEliminarId] = useState<string | null>(null)
   const [toast, setToast]           = useState<string | null>(null)
 
-  // ─── Formulario crear ────────────────────────────────────────
-  const [form, setForm] = useState({
+  const formVacio: FormState = {
     nombreVisitante:  '',
     rutVisitante:     '',
     unidadId:         unidades[0]?.id ?? '',
     motivoVisita:     '',
+    tieneVehiculo:    false,
+    tipoVehiculo:     '',
     vehiculoPatente:  '',
-  })
-  const [errores, setErrores] = useState<Record<string, string>>({})
+    estacionamiento:  '',
+    tiempoEstadiaMin: 0,
+  }
 
-  // ─── Formulario edición ──────────────────────────────────────
-  const [formEdit, setFormEdit] = useState({
-    nombreVisitante: '',
-    rutVisitante:    '',
-    unidadId:        '',
-    motivoVisita:    '',
-    vehiculoPatente: '',
-  })
+  const [form, setForm]         = useState<FormState>(formVacio)
+  const [formEdit, setFormEdit] = useState<FormState>(formVacio)
+  const [errores, setErrores]   = useState<Record<string, string>>({})
   const [erroresEdit, setErroresEdit] = useState<Record<string, string>>({})
 
   function showToast(msg: string) {
@@ -77,29 +129,43 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
 
   const visitaAEliminar = lista.find(x => x.id === eliminarId)
 
+  function validar(f: FormState) {
+    const e: Record<string, string> = {}
+    if (!f.nombreVisitante.trim()) e.nombreVisitante = 'El nombre es requerido'
+    if (!f.unidadId)               e.unidadId        = 'Selecciona una unidad'
+    if (!f.motivoVisita)           e.motivoVisita    = 'Selecciona un motivo'
+    if (f.tieneVehiculo && !f.tipoVehiculo) e.tipoVehiculo = 'Selecciona el tipo'
+    return e
+  }
+
+  function formAVisita(f: FormState, base: Partial<Visita>): Visita {
+    return {
+      id:               base.id ?? `v${Date.now()}`,
+      edificioId:       base.edificioId ?? 'e1',
+      entradaEn:        base.entradaEn ?? new Date().toISOString(),
+      salidaEn:         base.salidaEn,
+      registradoPorId:  base.registradoPorId ?? 'u1',
+      unidadId:         f.unidadId,
+      nombreVisitante:  f.nombreVisitante.trim(),
+      rutVisitante:     f.rutVisitante.trim() || undefined,
+      motivoVisita:     f.motivoVisita,
+      tipoVehiculo:     f.tieneVehiculo && f.tipoVehiculo ? f.tipoVehiculo : undefined,
+      vehiculoPatente:  f.tieneVehiculo && f.vehiculoPatente ? f.vehiculoPatente.trim().toUpperCase() : undefined,
+      estacionamiento:  f.tieneVehiculo && f.estacionamiento ? f.estacionamiento.trim() : undefined,
+      tiempoEstadiaMin: f.tiempoEstadiaMin || undefined,
+    }
+  }
+
   // ─── Handlers ───────────────────────────────────────────────
   function handleCrear() {
-    const e: Record<string, string> = {}
-    if (!form.nombreVisitante.trim()) e.nombreVisitante = 'El nombre es requerido'
-    if (!form.unidadId)               e.unidadId        = 'Selecciona una unidad'
-    if (!form.motivoVisita.trim())    e.motivoVisita    = 'El motivo es requerido'
+    const e = validar(form)
     setErrores(e)
     if (Object.keys(e).length > 0) return
 
-    const nueva: Visita = {
-      id:              `v${Date.now()}`,
-      edificioId:      'e1',
-      unidadId:        form.unidadId,
-      nombreVisitante: form.nombreVisitante.trim(),
-      rutVisitante:    form.rutVisitante.trim() || undefined,
-      motivoVisita:    form.motivoVisita.trim(),
-      vehiculoPatente: form.vehiculoPatente.trim().toUpperCase() || undefined,
-      entradaEn:       new Date().toISOString(),
-      registradoPorId: 'u1',
-    }
+    const nueva = formAVisita(form, {})
     setLista(prev => [nueva, ...prev])
     setModalCrear(false)
-    setForm({ nombreVisitante: '', rutVisitante: '', unidadId: unidades[0]?.id ?? '', motivoVisita: '', vehiculoPatente: '' })
+    setForm(formVacio)
     setErrores({})
     showToast(`Visita registrada · ${nueva.nombreVisitante}`)
     const unidadNum = getUnidad(nueva.unidadId)?.numero ?? nueva.unidadId
@@ -108,47 +174,40 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
   }
 
   function registrarSalida(id: string) {
-    setLista(prev => prev.map(v =>
-      v.id !== id ? v : { ...v, salidaEn: new Date().toISOString() }
-    ))
+    const salidaEn = new Date().toISOString()
+    setLista(prev => prev.map(v => v.id !== id ? v : { ...v, salidaEn }))
+    supabase.from('visitas').update({ salidaEn }).eq('id', id).then(({ error }) => { if (error) console.error('salida visita:', error.message) })
     showToast('Salida registrada correctamente')
   }
 
   function abrirEditar(v: Visita) {
     setEditando(v)
     setFormEdit({
-      nombreVisitante: v.nombreVisitante,
-      rutVisitante:    v.rutVisitante ?? '',
-      unidadId:        v.unidadId,
-      motivoVisita:    v.motivoVisita,
-      vehiculoPatente: v.vehiculoPatente ?? '',
+      nombreVisitante:  v.nombreVisitante,
+      rutVisitante:     v.rutVisitante ?? '',
+      unidadId:         v.unidadId,
+      motivoVisita:     v.motivoVisita,
+      tieneVehiculo:    !!(v.tipoVehiculo || v.vehiculoPatente),
+      tipoVehiculo:     v.tipoVehiculo ?? '',
+      vehiculoPatente:  v.vehiculoPatente ?? '',
+      estacionamiento:  v.estacionamiento ?? '',
+      tiempoEstadiaMin: v.tiempoEstadiaMin ?? 0,
     })
     setErroresEdit({})
   }
 
   function handleEditar() {
     if (!editando) return
-    const e: Record<string, string> = {}
-    if (!formEdit.nombreVisitante.trim()) e.nombreVisitante = 'El nombre es requerido'
-    if (!formEdit.unidadId)               e.unidadId        = 'Selecciona una unidad'
-    if (!formEdit.motivoVisita.trim())    e.motivoVisita    = 'El motivo es requerido'
+    const e = validar(formEdit)
     setErroresEdit(e)
     if (Object.keys(e).length > 0) return
 
-    setLista(prev => prev.map(v =>
-      v.id !== editando.id ? v : {
-        ...v,
-        nombreVisitante: formEdit.nombreVisitante.trim(),
-        rutVisitante:    formEdit.rutVisitante.trim() || undefined,
-        unidadId:        formEdit.unidadId,
-        motivoVisita:    formEdit.motivoVisita.trim(),
-        vehiculoPatente: formEdit.vehiculoPatente.trim().toUpperCase() || undefined,
-      }
-    ))
+    const updated = formAVisita(formEdit, editando)
+    setLista(prev => prev.map(v => v.id !== editando.id ? v : updated))
+    supabase.from('visitas').update(updated).eq('id', editando.id).then(({ error }) => { if (error) console.error('update visita:', error.message) })
     setEditando(null)
     setErroresEdit({})
     showToast('Visita actualizada correctamente')
-    if (editando) supabase.from('visitas').update({ nombreVisitante: editando.nombreVisitante, motivoVisita: editando.motivoVisita, vehiculoPatente: editando.vehiculoPatente ?? null }).eq('id', editando.id).then(({ error }) => { if (error) console.error('update visita:', error.message) })
   }
 
   function handleEliminar() {
@@ -160,6 +219,149 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
 
   // ─── Clases comunes ─────────────────────────────────────────
   const inp = 'w-full px-3 py-2.5 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors'
+
+  // ─── Sección formulario ──────────────────────────────────────
+  function renderForm(f: FormState, setF: React.Dispatch<React.SetStateAction<FormState>>, errs: Record<string, string>) {
+    return (
+      <div className="space-y-4">
+        {/* Nombre */}
+        <Campo label="Nombre del visitante" error={errs.nombreVisitante}>
+          <input
+            type="text"
+            className={inp}
+            style={{ borderColor: errs.nombreVisitante ? '#dc2626' : '#e2e8f0' }}
+            placeholder="Nombre completo"
+            value={f.nombreVisitante}
+            onChange={e => setF(p => ({ ...p, nombreVisitante: e.target.value }))}
+          />
+        </Campo>
+
+        {/* RUT + Unidad */}
+        <div className="grid grid-cols-2 gap-4">
+          <Campo label="RUT (opcional)">
+            <input
+              type="text"
+              className={inp}
+              style={{ borderColor: '#e2e8f0' }}
+              placeholder="12.345.678-9"
+              value={f.rutVisitante}
+              onChange={e => setF(p => ({ ...p, rutVisitante: e.target.value }))}
+            />
+          </Campo>
+          <Campo label="Unidad destino" error={errs.unidadId}>
+            <select
+              className={inp}
+              style={{ borderColor: errs.unidadId ? '#dc2626' : '#e2e8f0' }}
+              value={f.unidadId}
+              onChange={e => setF(p => ({ ...p, unidadId: e.target.value }))}
+            >
+              {unidades.map(u => {
+                const uid = u.arrendatarioId ?? u.propietarioId
+                const res = uid ? users.find(x => x.id === uid) : undefined
+                return (
+                  <option key={u.id} value={u.id}>
+                    Unidad {u.numero}{res ? ` — ${res.nombre}` : ''}
+                  </option>
+                )
+              })}
+            </select>
+          </Campo>
+        </div>
+
+        {/* Motivo + Tiempo */}
+        <div className="grid grid-cols-2 gap-4">
+          <Campo label="Motivo de visita" error={errs.motivoVisita}>
+            <select
+              className={inp}
+              style={{ borderColor: errs.motivoVisita ? '#dc2626' : '#e2e8f0' }}
+              value={f.motivoVisita}
+              onChange={e => setF(p => ({ ...p, motivoVisita: e.target.value }))}
+            >
+              <option value="">Selecciona...</option>
+              {MOTIVOS_VISITA.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="Tiempo de estadía">
+            <select
+              className={inp}
+              style={{ borderColor: '#e2e8f0' }}
+              value={f.tiempoEstadiaMin}
+              onChange={e => setF(p => ({ ...p, tiempoEstadiaMin: Number(e.target.value) }))}
+            >
+              {TIEMPOS_ESTADIA.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </Campo>
+        </div>
+
+        {/* Vehículo */}
+        <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: '#e2e8f0', background: '#f8fafc' }}>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+              checked={f.tieneVehiculo}
+              onChange={e => setF(p => ({
+                ...p,
+                tieneVehiculo:   e.target.checked,
+                tipoVehiculo:    '',
+                vehiculoPatente: '',
+                estacionamiento: '',
+              }))}
+            />
+            <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Car className="w-4 h-4 text-gray-400" />
+              Viene en vehículo
+            </span>
+          </label>
+
+          {f.tieneVehiculo && (
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Tipo de vehículo" error={errs.tipoVehiculo}>
+                  <select
+                    className={inp}
+                    style={{ borderColor: errs.tipoVehiculo ? '#dc2626' : '#e2e8f0' }}
+                    value={f.tipoVehiculo}
+                    onChange={e => setF(p => ({ ...p, tipoVehiculo: e.target.value }))}
+                  >
+                    <option value="">Selecciona...</option>
+                    {TIPOS_VEHICULO.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </Campo>
+                <Campo label="Patente (opcional)">
+                  <input
+                    type="text"
+                    className={inp + ' uppercase'}
+                    style={{ borderColor: '#e2e8f0' }}
+                    placeholder="ABCD12"
+                    maxLength={8}
+                    value={f.vehiculoPatente}
+                    onChange={e => setF(p => ({ ...p, vehiculoPatente: e.target.value.toUpperCase() }))}
+                  />
+                </Campo>
+              </div>
+              <Campo label="Estacionamiento asignado (opcional)">
+                <input
+                  type="text"
+                  className={inp}
+                  style={{ borderColor: '#e2e8f0' }}
+                  placeholder="Ej: E-101, Visita 2, Subterráneo 3..."
+                  value={f.estacionamiento}
+                  onChange={e => setF(p => ({ ...p, estacionamiento: e.target.value }))}
+                />
+              </Campo>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   // ─── Render ──────────────────────────────────────────────────
   return (
@@ -240,7 +442,7 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
-                {['Estado', 'Visitante', 'Destino', 'Motivo', 'Vehículo', 'Entrada', 'Salida', ''].map(h => (
+                {['Estado', 'Visitante', 'Destino', 'Motivo', 'Vehículo', 'Estadía', 'Entrada', 'Salida', ''].map(h => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
@@ -253,13 +455,14 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
                     No hay visitas en esta categoría
                   </td>
                 </tr>
               ) : filtered.map(v => {
                 const unidad = getUnidad(v.unidadId)
                 const activo = !v.salidaEn
+                const tiempo = formatTiempo(v.tiempoEstadiaMin)
 
                 return (
                   <tr key={v.id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: '#f8fafc' }}>
@@ -290,20 +493,41 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                     </td>
 
                     {/* Motivo */}
-                    <td className="px-4 py-3.5 text-sm text-gray-600">{v.motivoVisita}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{v.motivoVisita}</td>
 
                     {/* Vehículo */}
                     <td className="px-4 py-3.5">
-                      {v.vehiculoPatente ? (
-                        <span
-                          className="inline-flex items-center gap-1 text-xs font-mono font-semibold px-2 py-0.5 rounded"
-                          style={{ background: '#f1f5f9', color: '#1e3a5f' }}
-                        >
-                          <Car className="w-3 h-3" />
-                          {v.vehiculoPatente}
-                        </span>
+                      {v.tipoVehiculo || v.vehiculoPatente ? (
+                        <div className="space-y-0.5">
+                          <span
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded"
+                            style={{ background: '#f1f5f9', color: '#1e3a5f' }}
+                          >
+                            <Car className="w-3 h-3" />
+                            {labelTipoVehiculo(v.tipoVehiculo)}
+                            {v.vehiculoPatente && ` · ${v.vehiculoPatente}`}
+                          </span>
+                          {v.estacionamiento && (
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <ParkingSquare className="w-3 h-3 text-gray-400" />
+                              {v.estacionamiento}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-300 text-sm">—</span>
+                      )}
+                    </td>
+
+                    {/* Estadía */}
+                    <td className="px-4 py-3.5">
+                      {tiempo ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded" style={{ background: '#fef9c3', color: '#854d0e' }}>
+                          <Timer className="w-3 h-3" />
+                          {tiempo}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
                       )}
                     </td>
 
@@ -376,80 +600,16 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
       {/* ─── Modal: Registrar Visita ──────────────────────────── */}
       <Modal
         abierto={modalCrear}
-        onCerrar={() => { setModalCrear(false); setErrores({}) }}
+        onCerrar={() => { setModalCrear(false); setErrores({}); setForm(formVacio) }}
         titulo="Registrar visita"
         subtitulo="Completa los datos del visitante al ingresar al edificio"
         colorAccento="#16a34a"
       >
         <div className="space-y-4">
-          <Campo label="Nombre del visitante" error={errores.nombreVisitante}>
-            <input
-              type="text"
-              className={inp}
-              style={{ borderColor: errores.nombreVisitante ? '#dc2626' : '#e2e8f0' }}
-              placeholder="Nombre completo"
-              value={form.nombreVisitante}
-              onChange={e => setForm(f => ({ ...f, nombreVisitante: e.target.value }))}
-            />
-          </Campo>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="RUT (opcional)">
-              <input
-                type="text"
-                className={inp}
-                style={{ borderColor: '#e2e8f0' }}
-                placeholder="12.345.678-9"
-                value={form.rutVisitante}
-                onChange={e => setForm(f => ({ ...f, rutVisitante: e.target.value }))}
-              />
-            </Campo>
-            <Campo label="Unidad destino" error={errores.unidadId}>
-              <select
-                className={inp}
-                style={{ borderColor: errores.unidadId ? '#dc2626' : '#e2e8f0' }}
-                value={form.unidadId}
-                onChange={e => setForm(f => ({ ...f, unidadId: e.target.value }))}
-              >
-                {unidades.map(u => {
-                  const uid = u.arrendatarioId ?? u.propietarioId
-                  const res = uid ? users.find(x => x.id === uid) : undefined
-                  return (
-                    <option key={u.id} value={u.id}>
-                      Unidad {u.numero}{res ? ` — ${res.nombre}` : ''}
-                    </option>
-                  )
-                })}
-              </select>
-            </Campo>
-          </div>
-
-          <Campo label="Motivo de visita" error={errores.motivoVisita}>
-            <input
-              type="text"
-              className={inp}
-              style={{ borderColor: errores.motivoVisita ? '#dc2626' : '#e2e8f0' }}
-              placeholder="Ej: Visita familiar, delivery, servicio técnico..."
-              value={form.motivoVisita}
-              onChange={e => setForm(f => ({ ...f, motivoVisita: e.target.value }))}
-            />
-          </Campo>
-
-          <Campo label="Patente vehículo (opcional)">
-            <input
-              type="text"
-              className={inp + ' uppercase'}
-              style={{ borderColor: '#e2e8f0' }}
-              placeholder="ABCD12"
-              maxLength={8}
-              value={form.vehiculoPatente}
-              onChange={e => setForm(f => ({ ...f, vehiculoPatente: e.target.value.toUpperCase() }))}
-            />
-          </Campo>
-
+          {renderForm(form, setForm, errores)}
           <div className="flex gap-3 justify-end pt-2">
             <button
-              onClick={() => { setModalCrear(false); setErrores({}) }}
+              onClick={() => { setModalCrear(false); setErrores({}); setForm(formVacio) }}
               className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
             >
               Cancelar
@@ -475,67 +635,7 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
       >
         {editando && (
           <div className="space-y-4">
-            <Campo label="Nombre del visitante" error={erroresEdit.nombreVisitante}>
-              <input
-                type="text"
-                className={inp}
-                style={{ borderColor: erroresEdit.nombreVisitante ? '#dc2626' : '#e2e8f0' }}
-                value={formEdit.nombreVisitante}
-                onChange={e => setFormEdit(f => ({ ...f, nombreVisitante: e.target.value }))}
-              />
-            </Campo>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Campo label="RUT (opcional)">
-                <input
-                  type="text"
-                  className={inp}
-                  style={{ borderColor: '#e2e8f0' }}
-                  value={formEdit.rutVisitante}
-                  onChange={e => setFormEdit(f => ({ ...f, rutVisitante: e.target.value }))}
-                />
-              </Campo>
-              <Campo label="Unidad destino" error={erroresEdit.unidadId}>
-                <select
-                  className={inp}
-                  style={{ borderColor: erroresEdit.unidadId ? '#dc2626' : '#e2e8f0' }}
-                  value={formEdit.unidadId}
-                  onChange={e => setFormEdit(f => ({ ...f, unidadId: e.target.value }))}
-                >
-                  {unidades.map(u => {
-                    const uid = u.arrendatarioId ?? u.propietarioId
-                    const res = uid ? users.find(x => x.id === uid) : undefined
-                    return (
-                      <option key={u.id} value={u.id}>
-                        Unidad {u.numero}{res ? ` — ${res.nombre}` : ''}
-                      </option>
-                    )
-                  })}
-                </select>
-              </Campo>
-            </div>
-
-            <Campo label="Motivo de visita" error={erroresEdit.motivoVisita}>
-              <input
-                type="text"
-                className={inp}
-                style={{ borderColor: erroresEdit.motivoVisita ? '#dc2626' : '#e2e8f0' }}
-                value={formEdit.motivoVisita}
-                onChange={e => setFormEdit(f => ({ ...f, motivoVisita: e.target.value }))}
-              />
-            </Campo>
-
-            <Campo label="Patente vehículo (opcional)">
-              <input
-                type="text"
-                className={inp + ' uppercase'}
-                style={{ borderColor: '#e2e8f0' }}
-                maxLength={8}
-                value={formEdit.vehiculoPatente}
-                onChange={e => setFormEdit(f => ({ ...f, vehiculoPatente: e.target.value.toUpperCase() }))}
-              />
-            </Campo>
-
+            {renderForm(formEdit, setFormEdit, erroresEdit)}
             <div className="flex gap-3 justify-end pt-2">
               <button
                 onClick={() => { setEditando(null); setErroresEdit({}) }}

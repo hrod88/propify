@@ -170,7 +170,10 @@ export interface Visita {
   nombreVisitante: string
   rutVisitante?: string
   motivoVisita: string
+  tipoVehiculo?: string
   vehiculoPatente?: string
+  estacionamiento?: string
+  tiempoEstadiaMin?: number
   entradaEn: string
   salidaEn?: string
   registradoPorId: string
