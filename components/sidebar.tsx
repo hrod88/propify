@@ -334,31 +334,27 @@ export default function Sidebar() {
               )}
             </>
           ) : (
-            /* Admin con un solo edificio: info estática */
+            /* Admin con un solo edificio: borde neón rotatorio */
             (() => {
-              const estaActivo = !!(edificioNombre || edificios[0]?.nombre)
-              const neonColor  = estaActivo ? '#22c55e' : '#ef4444'
+              const estaActivo  = !!(edificioNombre || edificios[0]?.nombre)
+              const colorTexto  = estaActivo ? '#22c55e' : '#ef4444'
+              const claseNeon   = estaActivo ? 'neon-border-green' : 'neon-border-red'
               return (
-                <div
-                  className="px-3 py-2.5 rounded-xl cursor-default"
-                  style={{
-                    background: 'rgba(15,35,65,0.6)',
-                    border:     `1px solid ${neonColor}`,
-                    boxShadow:  `0 0 6px ${neonColor}, 0 0 14px ${neonColor}55, inset 0 0 6px ${neonColor}22`,
-                  }}
-                >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span
-                      className="w-1.5 h-1.5 rounded-full animate-pulse"
-                      style={{ background: neonColor, boxShadow: `0 0 4px ${neonColor}` }}
-                    />
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: neonColor }}>
-                      Edificio activo
+                <div className={`neon-border-wrapper ${claseNeon}`}>
+                  <div className="neon-border-inner">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span
+                        className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
+                        style={{ background: colorTexto, boxShadow: `0 0 4px ${colorTexto}` }}
+                      />
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: colorTexto }}>
+                        Edificio activo
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-white truncate">
+                      {edificioNombre || edificios[0]?.nombre || nombreActivo}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-white truncate">
-                    {edificioNombre || edificios[0]?.nombre || nombreActivo}
-                  </p>
                 </div>
               )
             })()

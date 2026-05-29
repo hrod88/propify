@@ -98,3 +98,54 @@ body {
 .animate-fade-in  { animation: fadeIn 0.3s ease-out; }
 .animate-slide-in { animation: slideIn 0.25s ease-out; }
 .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+/* ─── Borde neón rotatorio ──────────────────────────────────── */
+@keyframes neon-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.neon-border-wrapper {
+  position: relative;
+  border-radius: 12px;
+  padding: 1.5px;
+  overflow: hidden;
+}
+
+.neon-border-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -100%;
+  animation: neon-spin 3s linear infinite;
+}
+
+.neon-border-green::before {
+  background: conic-gradient(
+    transparent 0deg,
+    transparent 60deg,
+    #22c55e 120deg,
+    #86efac 180deg,
+    #22c55e 240deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+}
+
+.neon-border-red::before {
+  background: conic-gradient(
+    transparent 0deg,
+    transparent 60deg,
+    #ef4444 120deg,
+    #fca5a5 180deg,
+    #ef4444 240deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+}
+
+.neon-border-inner {
+  position: relative;
+  border-radius: 10px;
+  background: rgba(15, 35, 65, 0.85);
+  padding: 10px 12px;
+}
