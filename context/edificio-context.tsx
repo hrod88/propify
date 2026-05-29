@@ -76,16 +76,16 @@ export function EdificioProvider({ children }: { children: React.ReactNode }) {
         setEdificios(lista)
       }
 
-      // Prioridad: cookie > edificioId del usuario > 'e1'
-      const cookieId = getCookieEdificio()
-      const usuarioId = usuario?.edificioId ?? 'e1'
+      // Prioridad: cookie > edificioId del usuario > primer edificio de la lista
+      const cookieId  = getCookieEdificio()
+      const usuarioId = usuario?.edificioId ?? ''
 
       let activo = cookieId ?? usuarioId
 
-      // Verificar que el edificio de la cookie exista en la lista (para admins)
-      if (cookieId && esAdmin && lista.length > 0) {
-        const existe = lista.some(e => e.id === cookieId)
-        if (!existe) activo = usuarioId
+      if (esAdmin && lista.length > 0) {
+        // Si el activo no existe en la lista, usar el primer edificio disponible
+        const existe = lista.some(e => e.id === activo)
+        if (!existe) activo = lista[0].id
       }
 
       setEdificioActivo(activo)
