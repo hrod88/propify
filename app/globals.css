@@ -108,7 +108,7 @@ body {
 .neon-border-wrapper {
   position: relative;
   border-radius: 12px;
-  padding: 1.5px;
+  padding: 1px;
   overflow: hidden;
 }
 
@@ -121,31 +121,27 @@ body {
 
 .neon-border-green::before {
   background: conic-gradient(
-    transparent 0deg,
-    transparent 60deg,
-    #22c55e 120deg,
+    #14532d   0deg,
+    #22c55e  90deg,
     #86efac 180deg,
-    #22c55e 240deg,
-    transparent 300deg,
-    transparent 360deg
+    #22c55e 270deg,
+    #14532d 360deg
   );
 }
 
 .neon-border-red::before {
   background: conic-gradient(
-    transparent 0deg,
-    transparent 60deg,
-    #ef4444 120deg,
+    #450a0a   0deg,
+    #ef4444  90deg,
     #fca5a5 180deg,
-    #ef4444 240deg,
-    transparent 300deg,
-    transparent 360deg
+    #ef4444 270deg,
+    #450a0a 360deg
   );
 }
 
 .neon-border-inner {
   position: relative;
-  border-radius: 10px;
+  border-radius: 11px;
   background: rgba(15, 35, 65, 0.85);
   padding: 10px 12px;
 }
