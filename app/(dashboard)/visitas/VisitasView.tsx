@@ -497,23 +497,21 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
       {/* Tabla */}
       <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#e2e8f0' }}>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
-                {['Estado', 'Método', 'Visitante', 'Destino', 'Motivo', 'Vehículo', 'Estadía', 'Entrada', 'Salida', ''].map(h => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-28">Estado</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Visitante</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Destino · Motivo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-40">Vehículo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-36">Horario</th>
+                <th className="px-4 py-3 w-20"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={6} className="px-4 py-12 text-center text-gray-400 text-sm">
                     No hay visitas en esta categoría
                   </td>
                 </tr>
@@ -521,59 +519,45 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                 const unidad = getUnidad(v.unidadId)
                 const activo = !v.salidaEn
                 const tiempo = formatTiempo(v.tiempoEstadiaMin)
+                const m = METODOS_ACCESO.find(x => x.value === (v.metodoAcceso ?? 'manual')) ?? METODOS_ACCESO[0]
 
                 return (
                   <tr key={v.id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: '#f8fafc' }}>
-                    {/* Estado */}
+
+                    {/* Estado + Método (combinados) */}
                     <td className="px-4 py-3.5">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1.5">
                         <span
                           className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit"
-                          style={
-                            activo
-                              ? { background: '#dcfce7', color: '#16a34a' }
-                              : { background: '#f1f5f9', color: '#64748b' }
-                          }
+                          style={activo ? { background: '#dcfce7', color: '#16a34a' } : { background: '#f1f5f9', color: '#64748b' }}
                         >
                           {activo ? <LogIn className="w-3 h-3" /> : <LogOut className="w-3 h-3" />}
                           {activo ? 'Dentro' : 'Salió'}
                         </span>
-                        {v.sentido === 'salida' && (
-                          <span className="text-xs text-gray-400">↑ sólo salida</span>
-                        )}
+                        <span
+                          className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded w-fit"
+                          style={{ background: m.bg, color: m.color }}
+                        >
+                          {m.label}{v.sentido === 'salida' ? ' ↑' : ''}
+                        </span>
                       </div>
                     </td>
 
-                    {/* Método acceso */}
-                    <td className="px-4 py-3.5">
-                      {(() => {
-                        const m = METODOS_ACCESO.find(x => x.value === (v.metodoAcceso ?? 'manual')) ?? METODOS_ACCESO[0]
-                        return (
-                          <span
-                            className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded"
-                            style={{ background: m.bg, color: m.color }}
-                          >
-                            {m.label}
-                          </span>
-                        )
-                      })()}
-                    </td>
-
                     {/* Visitante */}
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-gray-900">{v.nombreVisitante}</p>
+                    <td className="px-4 py-3.5 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{v.nombreVisitante}</p>
                       {v.rutVisitante && <p className="text-xs text-gray-400">{v.rutVisitante}</p>}
                     </td>
 
-                    {/* Destino */}
-                    <td className="px-4 py-3.5 text-sm text-gray-600">
-                      {unidad ? `Unidad ${unidad.numero}` : v.unidadId}
+                    {/* Destino + Motivo (combinados) */}
+                    <td className="px-4 py-3.5 min-w-0">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {unidad ? `Unidad ${unidad.numero}` : v.unidadId}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{v.motivoVisita}</p>
                     </td>
 
-                    {/* Motivo */}
-                    <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{v.motivoVisita}</td>
-
-                    {/* Vehículo */}
+                    {/* Vehículo + Estadía (combinados) */}
                     <td className="px-4 py-3.5">
                       {v.tipoVehiculo || v.vehiculoPatente ? (
                         <div className="space-y-0.5">
@@ -586,54 +570,45 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                             {v.vehiculoPatente && ` · ${v.vehiculoPatente}`}
                           </span>
                           {v.estacionamiento && (
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <ParkingSquare className="w-3 h-3 text-gray-400" />
+                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                              <ParkingSquare className="w-3 h-3" />
                               {v.estacionamiento}
                             </div>
                           )}
+                          {tiempo && (
+                            <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#854d0e' }}>
+                              <Timer className="w-3 h-3" />{tiempo}
+                            </div>
+                          )}
                         </div>
+                      ) : tiempo ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded" style={{ background: '#fef9c3', color: '#854d0e' }}>
+                          <Timer className="w-3 h-3" />{tiempo}
+                        </span>
                       ) : (
                         <span className="text-gray-300 text-sm">—</span>
                       )}
                     </td>
 
-                    {/* Estadía */}
+                    {/* Horario: Entrada → Salida (combinados) */}
                     <td className="px-4 py-3.5">
-                      {tiempo ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded" style={{ background: '#fef9c3', color: '#854d0e' }}>
-                          <Timer className="w-3 h-3" />
-                          {tiempo}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
-                    </td>
-
-                    {/* Entrada */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Clock className="w-3 h-3 text-gray-300" />
+                      <div className="flex items-center gap-1 text-xs text-gray-600">
+                        <LogIn className="w-3 h-3 text-gray-300 shrink-0" />
                         <span suppressHydrationWarning>{formatHora(v.entradaEn)}</span>
+                        <span className="text-gray-300" suppressHydrationWarning>{formatFecha(v.entradaEn)}</span>
                       </div>
-                      <p className="text-xs text-gray-400" suppressHydrationWarning>
-                        {formatFecha(v.entradaEn)}
-                      </p>
-                    </td>
-
-                    {/* Salida */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
                       {v.salidaEn ? (
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                          <Clock className="w-3 h-3 text-gray-300" />
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                          <LogOut className="w-3 h-3 text-gray-300 shrink-0" />
                           <span suppressHydrationWarning>{formatHora(v.salidaEn)}</span>
                         </div>
                       ) : (
                         <button
                           onClick={() => registrarSalida(v.id)}
-                          className="text-xs font-semibold px-3 py-1 rounded-lg hover:opacity-80 transition-opacity"
+                          className="text-xs font-semibold px-2 py-0.5 rounded-lg hover:opacity-80 transition-opacity mt-1"
                           style={{ background: '#f1f5f9', color: '#2563ae' }}
                         >
-                          Registrar salida
+                          + Salida
                         </button>
                       )}
                     </td>
