@@ -547,6 +547,68 @@ ALTER TABLE visitas ADD COLUMN IF NOT EXISTS "sentido"        text DEFAULT 'entr
 -- Fuente: terminal biométrico Dahua Technology en hall de ingreso
 
 
+-- ─── 11. VISITAS DE PRUEBA — HOY Y AYER ──────────────────────
+-- Escenarios reales: familiar, delivery, técnico, facial Dahua, mudanza, tarjeta salida
+-- unidadId apunta a subquery por número → no requiere conocer el UUID exacto
+INSERT INTO visitas (
+  id, "edificioId", "unidadId",
+  "nombreVisitante", "rutVisitante", "motivoVisita",
+  "tipoVehiculo", "vehiculoPatente", "estacionamiento", "tiempoEstadiaMin",
+  "entradaEn", "salidaEn", "registradoPorId",
+  "metodoAcceso", "sentido"
+) VALUES
+
+  -- 1. Visita familiar · ayer tarde · manual · salida registrada
+  ('vis-001', 'mirador-sacramentinos',
+   (SELECT id FROM unidades WHERE "edificioId"='mirador-sacramentinos' AND numero='0804' LIMIT 1),
+   'María Alzamora Vera', '9.123.456-7', 'Visita familiar',
+   NULL, NULL, NULL, 120,
+   '2026-05-28T15:30:00', '2026-05-28T17:35:00',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f', 'manual', 'entrada'),
+
+  -- 2. Delivery Rappi · ayer noche · moto · salida inmediata
+  ('vis-002', 'mirador-sacramentinos',
+   (SELECT id FROM unidades WHERE "edificioId"='mirador-sacramentinos' AND numero='0804' LIMIT 1),
+   'Repartidor Rappi', NULL, 'Delivery / Encomienda',
+   'moto', 'XY3490', NULL, 30,
+   '2026-05-28T19:12:00', '2026-05-28T19:18:00',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f', 'manual', 'entrada'),
+
+  -- 3. Técnico Quality Tech · hoy mañana · aún dentro (sin salidaEn)
+  ('vis-003', 'mirador-sacramentinos',
+   (SELECT id FROM unidades WHERE "edificioId"='mirador-sacramentinos' AND numero='0804' LIMIT 1),
+   'Ángel Neira — Quality Tech', '12.345.678-9', 'Servicio técnico',
+   'furgon', 'FKJP21', 'E-Visita 1', 240,
+   '2026-05-29T09:00:00', NULL,
+   'f675177e-6751-47ce-840e-f5c6a7573a0f', 'manual', 'entrada'),
+
+  -- 4. Propietario · hoy · acceso facial Dahua (sin RUT — lo reconoció el terminal)
+  ('vis-004', 'mirador-sacramentinos',
+   (SELECT id FROM unidades WHERE "edificioId"='mirador-sacramentinos' AND numero='0804' LIMIT 1),
+   'Jorge Alzamora Vejarez', NULL, 'Arriendo / Propietario',
+   NULL, NULL, NULL, NULL,
+   '2026-05-29T08:03:00', '2026-05-29T22:00:00',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f', 'facial', 'entrada'),
+
+  -- 5. Mudanza · anteayer · camioneta · acceso carga
+  ('vis-005', 'mirador-sacramentinos',
+   (SELECT id FROM unidades WHERE "edificioId"='mirador-sacramentinos' AND numero='0804' LIMIT 1),
+   'Transportes Rápidos Ltda.', '76.543.210-K', 'Mudanza',
+   'camioneta', 'BCLM34', 'Acceso carga / Subterráneo', 480,
+   '2026-05-27T10:00:00', '2026-05-27T14:30:00',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f', 'manual', 'entrada'),
+
+  -- 6. Tarjeta RFID · salida detectada Dahua sin registro previo · hoy madrugada
+  ('vis-006', 'mirador-sacramentinos',
+   (SELECT id FROM unidades WHERE "edificioId"='mirador-sacramentinos' AND numero='0804' LIMIT 1),
+   'Residente no identificado', NULL, 'Otro',
+   NULL, NULL, NULL, NULL,
+   '2026-05-29T00:47:00', NULL,
+   'f675177e-6751-47ce-840e-f5c6a7573a0f', 'tarjeta', 'salida')
+
+ON CONFLICT (id) DO NOTHING;
+
+
 -- ─── 7. VERIFICAR ──────────────────────────────────────────────
 SELECT 'EDIFICIO'         AS tabla, count(*) AS filas FROM edificios
 UNION ALL
@@ -564,7 +626,9 @@ SELECT 'PAGOS',           count(*) FROM pagos
 UNION ALL
 SELECT 'COMUNICACIONES',  count(*) FROM comunicaciones
 UNION ALL
-SELECT 'SOLICITUDES',     count(*) FROM solicitudes;
+SELECT 'SOLICITUDES',     count(*) FROM solicitudes
+UNION ALL
+SELECT 'VISITAS',         count(*) FROM visitas;
 
 -- ─── RESULTADO ESPERADO ────────────────────────────────────────
 -- EDIFICIO         1
@@ -576,3 +640,4 @@ SELECT 'SOLICITUDES',     count(*) FROM solicitudes;
 -- PAGOS            3  (3 pagos realizados — abril pendiente)
 -- COMUNICACIONES   3  (circular valores, urgente demanda, informativo ascensor)
 -- SOLICITUDES      5  (mantenciones preventivas ene-may 2026 Quality Tech)
+-- VISITAS          6  (familiar, delivery, técnico, facial, mudanza, tarjeta-salida)
