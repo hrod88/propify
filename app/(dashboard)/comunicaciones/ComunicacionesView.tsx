@@ -126,10 +126,19 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
     return () => clearInterval(t)
   }, [])
 
+  const [expandidas, setExpandidas]   = useState<Set<string>>(new Set())
   const [form, setForm]               = useState<FormState>(EMPTY_FORM)
   const [errores, setErrores]         = useState<Record<string, string>>({})
   const [formEdit, setFormEdit]       = useState<FormState>(EMPTY_FORM)
   const [erroresEdit, setErroresEdit] = useState<Record<string, string>>({})
+
+  function toggleExpandir(id: string) {
+    setExpandidas(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3200) }
 
@@ -692,7 +701,18 @@ export default function ComunicacionesView({ comunicaciones, users }: Props) {
                       </div>
 
                       <p className="text-xs text-gray-400 mb-2">{getAutor(c.autorId)} · {formatFecha(c.creadoEn)}</p>
-                      <p className="text-sm text-gray-600 line-clamp-2">{c.contenido}</p>
+                      <p className={`text-sm text-gray-600 whitespace-pre-line ${expandidas.has(c.id) ? '' : 'line-clamp-3'}`}>
+                        {c.contenido}
+                      </p>
+                      {c.contenido.length > 180 && (
+                        <button
+                          onClick={() => toggleExpandir(c.id)}
+                          className="text-xs font-semibold mt-1 hover:opacity-70 transition-opacity"
+                          style={{ color: tipoCfg[c.tipo].color }}
+                        >
+                          {expandidas.has(c.id) ? '▲ Ver menos' : '▼ Ver más'}
+                        </button>
+                      )}
 
                       {/* Info bar específica del tipo */}
                       {renderCardInfoBar(c, estadoR)}

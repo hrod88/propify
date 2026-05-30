@@ -403,20 +403,146 @@ INSERT INTO pagos (id, "gastoId", "unidadId", "edificioId", monto, mes, "año", 
     'FOLIO-3007045', 'Boleta N°7252 — pagado 1 día antes del vencimiento', '2026-05-09');
 
 
+-- ─── 8. COMUNICACIONES ────────────────────────────────────────
+-- Fuente: avisos físicos en ascensores Mirador Sacramentinos
+INSERT INTO comunicaciones (id, "edificioId", titulo, contenido, tipo, "autorId", "creadoEn",
+  "areaAfectada", "categoriaInfo", "urlDocumento", "requiereAcuse") VALUES
+
+  -- Circular: valores comunitarios (foto 1)
+  ('com-valores',
+   'mirador-sacramentinos',
+   'Juntos elegimos y creamos el lugar donde queremos vivir',
+   'Seguridad · Convivencia · Respeto · Comunidad.
+
+La voluntad de nuestra comunidad expresada en las asambleas fortalece nuestro edificio y su espíritu residencial.
+
+Entre todos, hoy y siempre. Un mejor edificio, una mejor comunidad.',
+   'circular',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   '2026-01-05T09:00:00',
+   NULL, 'convivencia', NULL, false),
+
+  -- Urgente: demanda anfitriones arriendo temporal (foto 2)
+  ('com-demanda',
+   'mirador-sacramentinos',
+   '⚠️ Comunidad enfrenta demanda millonaria por anfitriones de arriendo temporal',
+   'Mientras trabajamos por una comunidad sana, la comunidad enfrenta una demanda millonaria.
+
+5 anfitriones de plataformas de arriendo temporal (Airbnb y similares) demandaron a nuestra comunidad por $25.000.000 (veinticinco millones de pesos).
+
+Reglamentar no es perjudicar, es PROTEGER.
+Reglamentar hoy es evitar conflictos mayores, demandas más costosas y un daño irreparable a nuestra convivencia.
+
+La comunidad somos todos, y juntos la cuidamos.
+Actuamos por el bien común. No por intereses individuales.
+
+— Administración y Comité de Administración
+  Edificio Mirador Sacramentinos',
+   'urgente',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   '2026-04-01T10:00:00',
+   'Legal / Arriendo temporal', NULL, NULL, true),
+
+  -- Informativo: uso correcto ascensor (foto 3)
+  ('com-ascensor',
+   'mirador-sacramentinos',
+   'Uso correcto del ascensor — instrucciones y seguridad',
+   'Para subir, accionar el botón de subida; para bajar, el de bajada. Apretar ambos botones sólo genera viajes innecesarios.
+
+Si el ascensor sigue subiendo sin parar, es porque hay llamadas más arriba. Los ascensores atienden las llamadas en dirección de bajada.
+
+Al subir y bajar, tener precaución con posibles desniveles entre cabina y piso.
+
+En caso de quedar atrapado: no se asuste, llame por citófono y espere hasta ser rescatado. El ascensor no se cae y existe ventilación interior.
+
+Apretar solamente el botón del piso de destino. El viaje será más rápido y se ahorra energía.
+
+No permitir que niños jueguen o viajen solos. Pueden dañar el equipo.
+
+No forzar, interrumpir o presionar la puerta. Al abrir, mantener las manos lejos de los bordes.
+
+No saltar ni hacer movimientos bruscos. Observar la capacidad máxima del ascensor.
+
+Mantenimiento: Quality Tech Maintenance Service
+Antonio Varas 2615 · Ñuñoa · Santiago
+Fono: (+56) 2 2974 8320 · Emergencias: (+56) 2 2264 9867',
+   'informativo',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   '2026-01-02T08:00:00',
+   NULL, 'seguridad', NULL, false);
+
+
+-- ─── 9. SOLICITUDES — MANTENCIÓN PREVENTIVA ASCENSORES 2026 ───
+-- Fuente: Registro de Mantención Preventiva 2026 (foto 4)
+-- Técnico responsable: Quality Tech Maintenance Service (pv-06)
+-- unidadId NULL → mantención de área común (no pertenece a unidad específica)
+INSERT INTO solicitudes (id, "unidadId", "edificioId", titulo, descripcion,
+  estado, prioridad, categoria, "solicitanteId", "asignadoA", "creadoEn", "actualizadoEn", "resueltoEn") VALUES
+
+  ('sol-mant-ene26',
+   NULL, 'mirador-sacramentinos',
+   'Mantención preventiva mensual — ascensores (enero 2026)',
+   'Mantención preventiva realizada por Quality Tech Maintenance Service. Técnico: Fabián Soto.',
+   'resuelto', 'baja', 'Ascensor',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   'Fabián Soto — Quality Tech',
+   '2026-01-16T10:00:00', '2026-01-16T12:00:00', '2026-01-16T12:00:00'),
+
+  ('sol-mant-feb26',
+   NULL, 'mirador-sacramentinos',
+   'Mantención preventiva mensual — ascensores (febrero 2026)',
+   'Mantención preventiva realizada por Quality Tech Maintenance Service. Técnico: Roxan Arias.',
+   'resuelto', 'baja', 'Ascensor',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   'Roxan Arias — Quality Tech',
+   '2026-02-10T10:00:00', '2026-02-10T12:00:00', '2026-02-10T12:00:00'),
+
+  ('sol-mant-mar26',
+   NULL, 'mirador-sacramentinos',
+   'Mantención preventiva mensual — ascensores (marzo 2026)',
+   'Mantención preventiva realizada por Quality Tech Maintenance Service. Técnico: Ángel Neira.',
+   'resuelto', 'baja', 'Ascensor',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   'Ángel Neira — Quality Tech',
+   '2026-03-11T10:00:00', '2026-03-11T12:00:00', '2026-03-11T12:00:00'),
+
+  ('sol-mant-abr26',
+   NULL, 'mirador-sacramentinos',
+   'Mantención preventiva mensual — ascensores (abril 2026)',
+   'Mantención preventiva realizada por Quality Tech Maintenance Service. Técnico: Ángel Neira.',
+   'resuelto', 'baja', 'Ascensor',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   'Ángel Neira — Quality Tech',
+   '2026-04-17T10:00:00', '2026-04-17T12:00:00', '2026-04-17T12:00:00'),
+
+  ('sol-mant-may26',
+   NULL, 'mirador-sacramentinos',
+   'Mantención preventiva mensual — ascensores (mayo 2026)',
+   'Mantención preventiva realizada por Quality Tech Maintenance Service. Técnico: Ángel Neira.',
+   'resuelto', 'baja', 'Ascensor',
+   'f675177e-6751-47ce-840e-f5c6a7573a0f',
+   'Ángel Neira — Quality Tech',
+   '2026-05-19T10:00:00', '2026-05-19T12:00:00', '2026-05-19T12:00:00');
+
+
 -- ─── 7. VERIFICAR ──────────────────────────────────────────────
-SELECT 'EDIFICIO'       AS tabla, count(*) AS filas FROM edificios
+SELECT 'EDIFICIO'         AS tabla, count(*) AS filas FROM edificios
 UNION ALL
-SELECT 'PROVEEDORES',   count(*) FROM proveedores
+SELECT 'PROVEEDORES',     count(*) FROM proveedores
 UNION ALL
-SELECT 'EGRESOS',       count(*) FROM egresos_comunidad
+SELECT 'EGRESOS',         count(*) FROM egresos_comunidad
 UNION ALL
-SELECT 'UNIDADES',      count(*) FROM unidades
+SELECT 'UNIDADES',        count(*) FROM unidades
 UNION ALL
-SELECT 'USUARIOS',      count(*) FROM usuarios
+SELECT 'USUARIOS',        count(*) FROM usuarios
 UNION ALL
-SELECT 'GASTOS_COMUNES',count(*) FROM gastos_comunes
+SELECT 'GASTOS_COMUNES',  count(*) FROM gastos_comunes
 UNION ALL
-SELECT 'PAGOS',         count(*) FROM pagos;
+SELECT 'PAGOS',           count(*) FROM pagos
+UNION ALL
+SELECT 'COMUNICACIONES',  count(*) FROM comunicaciones
+UNION ALL
+SELECT 'SOLICITUDES',     count(*) FROM solicitudes;
 
 -- ─── RESULTADO ESPERADO ────────────────────────────────────────
 -- EDIFICIO         1
@@ -426,3 +552,5 @@ SELECT 'PAGOS',         count(*) FROM pagos;
 -- USUARIOS         2  (Rodrigo admin + Jorge residente)
 -- GASTOS_COMUNES   4  (4 meses unidad 0804)
 -- PAGOS            3  (3 pagos realizados — abril pendiente)
+-- COMUNICACIONES   3  (circular valores, urgente demanda, informativo ascensor)
+-- SOLICITUDES      5  (mantenciones preventivas ene-may 2026 Quality Tech)
