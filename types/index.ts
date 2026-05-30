@@ -178,6 +178,9 @@ export interface Comunicacion {
 }
 
 // ─── Visitas ──────────────────────────────────────────────────
+export type MetodoAcceso = 'manual' | 'facial' | 'huella' | 'tarjeta'
+export type SentidoVisita = 'entrada' | 'salida'
+
 export interface Visita {
   id: string
   edificioId: string
@@ -192,6 +195,8 @@ export interface Visita {
   entradaEn: string
   salidaEn?: string
   registradoPorId: string
+  metodoAcceso?: MetodoAcceso
+  sentido?: SentidoVisita
 }
 
 // ─── Paquetes / Delivery ──────────────────────────────────────

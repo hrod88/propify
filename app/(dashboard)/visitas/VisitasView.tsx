@@ -5,7 +5,7 @@ import { Plus, LogIn, LogOut, Car, Clock, Users, Check, Pencil, Trash2, ParkingS
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import { supabase } from '@/lib/supabase'
-import type { Visita, Unidad, User } from '@/types'
+import type { Visita, Unidad, User, MetodoAcceso, SentidoVisita } from '@/types'
 
 // ─── Constantes ───────────────────────────────────────────────
 const MOTIVOS_VISITA = [
@@ -36,6 +36,13 @@ const TIEMPOS_ESTADIA = [
   { value: 180, label: '3 horas' },
   { value: 240, label: '4 horas' },
   { value: 480, label: 'Más de 4 horas' },
+]
+
+const METODOS_ACCESO: { value: MetodoAcceso; label: string; color: string; bg: string }[] = [
+  { value: 'manual',  label: 'Manual',  color: '#64748b', bg: '#f1f5f9' },
+  { value: 'facial',  label: 'Facial',  color: '#2563ae', bg: '#dbeafe' },
+  { value: 'huella',  label: 'Huella',  color: '#7c3aed', bg: '#f3e8ff' },
+  { value: 'tarjeta', label: 'Tarjeta', color: '#059669', bg: '#ecfdf5' },
 ]
 
 // ─── Props ────────────────────────────────────────────────────
@@ -78,6 +85,8 @@ type FormState = {
   vehiculoPatente: string
   estacionamiento: string
   tiempoEstadiaMin: number
+  metodoAcceso: MetodoAcceso
+  sentido: SentidoVisita
 }
 
 // ─── Componente ───────────────────────────────────────────────
@@ -100,6 +109,8 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
     vehiculoPatente:  '',
     estacionamiento:  '',
     tiempoEstadiaMin: 0,
+    metodoAcceso:     'manual',
+    sentido:          'entrada',
   }
 
   const [form, setForm]         = useState<FormState>(formVacio)
@@ -153,6 +164,8 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
       vehiculoPatente:  f.tieneVehiculo && f.vehiculoPatente ? f.vehiculoPatente.trim().toUpperCase() : undefined,
       estacionamiento:  f.tieneVehiculo && f.estacionamiento ? f.estacionamiento.trim() : undefined,
       tiempoEstadiaMin: f.tiempoEstadiaMin || undefined,
+      metodoAcceso:     f.metodoAcceso,
+      sentido:          f.sentido,
     }
   }
 
@@ -192,6 +205,8 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
       vehiculoPatente:  v.vehiculoPatente ?? '',
       estacionamiento:  v.estacionamiento ?? '',
       tiempoEstadiaMin: v.tiempoEstadiaMin ?? 0,
+      metodoAcceso:     v.metodoAcceso  ?? 'manual',
+      sentido:          v.sentido       ?? 'entrada',
     })
     setErroresEdit({})
   }
@@ -294,6 +309,49 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
+          </Campo>
+        </div>
+
+        {/* Método de acceso + Sentido */}
+        <div className="grid grid-cols-2 gap-4">
+          <Campo label="Método de acceso">
+            <div className="flex gap-1.5 flex-wrap">
+              {METODOS_ACCESO.map(m => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setF(p => ({ ...p, metodoAcceso: m.value }))}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={f.metodoAcceso === m.value
+                    ? { background: m.bg, color: m.color, outline: `1.5px solid ${m.color}` }
+                    : { background: '#f8fafc', color: '#94a3b8', outline: '1.5px solid #e2e8f0' }
+                  }
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </Campo>
+          <Campo label="Sentido">
+            <div className="flex gap-2">
+              {([
+                { value: 'entrada' as const, label: '↓ Entrada', color: '#16a34a', bg: '#dcfce7' },
+                { value: 'salida'  as const, label: '↑ Salida',  color: '#64748b', bg: '#f1f5f9' },
+              ]).map(s => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setF(p => ({ ...p, sentido: s.value }))}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={f.sentido === s.value
+                    ? { background: s.bg, color: s.color, outline: `1.5px solid ${s.color}` }
+                    : { background: '#f8fafc', color: '#94a3b8', outline: '1.5px solid #e2e8f0' }
+                  }
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </Campo>
         </div>
 
@@ -442,7 +500,7 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fafbfc' }}>
-                {['Estado', 'Visitante', 'Destino', 'Motivo', 'Vehículo', 'Estadía', 'Entrada', 'Salida', ''].map(h => (
+                {['Estado', 'Método', 'Visitante', 'Destino', 'Motivo', 'Vehículo', 'Estadía', 'Entrada', 'Salida', ''].map(h => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
@@ -455,7 +513,7 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">
                     No hay visitas en esta categoría
                   </td>
                 </tr>
@@ -468,17 +526,37 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                   <tr key={v.id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: '#f8fafc' }}>
                     {/* Estado */}
                     <td className="px-4 py-3.5">
-                      <span
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-                        style={
-                          activo
-                            ? { background: '#dcfce7', color: '#16a34a' }
-                            : { background: '#f1f5f9', color: '#64748b' }
-                        }
-                      >
-                        {activo ? <LogIn className="w-3 h-3" /> : <LogOut className="w-3 h-3" />}
-                        {activo ? 'Dentro' : 'Salió'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit"
+                          style={
+                            activo
+                              ? { background: '#dcfce7', color: '#16a34a' }
+                              : { background: '#f1f5f9', color: '#64748b' }
+                          }
+                        >
+                          {activo ? <LogIn className="w-3 h-3" /> : <LogOut className="w-3 h-3" />}
+                          {activo ? 'Dentro' : 'Salió'}
+                        </span>
+                        {v.sentido === 'salida' && (
+                          <span className="text-xs text-gray-400">↑ sólo salida</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Método acceso */}
+                    <td className="px-4 py-3.5">
+                      {(() => {
+                        const m = METODOS_ACCESO.find(x => x.value === (v.metodoAcceso ?? 'manual')) ?? METODOS_ACCESO[0]
+                        return (
+                          <span
+                            className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded"
+                            style={{ background: m.bg, color: m.color }}
+                          >
+                            {m.label}
+                          </span>
+                        )
+                      })()}
                     </td>
 
                     {/* Visitante */}

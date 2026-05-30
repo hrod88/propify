@@ -33,7 +33,8 @@ INSERT INTO proveedores (id, "edificioId", nombre, rut, categoria, contacto, tel
   ('pv-15','mirador-sacramentinos','Pedro Morales Saavedra',                   null,  'Jardín',           null,                        null,         null,                              true, 'Jardinería y sistema de riego por aspersión',                     NOW()),
   ('pv-16','mirador-sacramentinos','Juan Carlos Lueiza',                       null,  'Comunicaciones',   null,                        null,         null,                              true, 'Servicio cartero — conducción correspondencia mensual Correos Chile', NOW()),
   ('pv-17','mirador-sacramentinos','Comunidad Feliz Spa',                      null,  'Otros',            null,                        null,         null,                              true, 'Plataforma software administración — plan anual (cuotas mensuales)', NOW()),
-  ('pv-18','mirador-sacramentinos','Ossa Sistema Contra Incendios SPA',        null,  'Mantenimiento',    null,                        null,         null,                              true, 'Mantención red húmeda, red seca y sistema contra incendios',      NOW());
+  ('pv-18','mirador-sacramentinos','Ossa Sistema Contra Incendios SPA',        null,  'Mantenimiento',    null,                        null,         null,                              true, 'Mantención red húmeda, red seca y sistema contra incendios',      NOW())
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 2. EGRESOS REALES (Enero–Abril 2026) ──────────────────────
@@ -345,21 +346,24 @@ INSERT INTO egresos_comunidad (id, "edificioId", mes, "año", categoria, descrip
   ('eg-202604-15','mirador-sacramentinos',4,2026,
     'Otros',
     'Lockers ODIHNX + numerales adhesivos/letrero Grafica Letrilandia + plataforma ComunidadFeliz',
-    474418, 'ODIHNX + Grafica Letrilandia + Comunidad Feliz', null, '2026-04-30');
+    474418, 'ODIHNX + Grafica Letrilandia + Comunidad Feliz', null, '2026-04-30')
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 3. UNIDAD 0804 ────────────────────────────────────────────
 -- Prorrateo 0.5573% → estimado de 179 unidades totales
 -- gastosComunesMonto: monto cobrado en abril 2026
 INSERT INTO unidades (id, "edificioId", numero, piso, tipo, estado, "superficieM2", habitaciones, banos, "propietarioId", "arrendatarioId", "gastosComunesMonto") VALUES
-  ('un-0804','mirador-sacramentinos','0804', 8, 'departamento', 'ocupado', null, null, null, 'u-jorge-alzamora', null, 189602);
+  ('un-0804','mirador-sacramentinos','0804', 8, 'departamento', 'ocupado', null, null, null, 'u-jorge-alzamora', null, 189602)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 4. RESIDENTE JORGE ALZAMORA ───────────────────────────────
 -- Residente unidad 0804 según liquidaciones ComunidadFeliz
 -- Email ficticio — actualizar cuando se tenga el real
 INSERT INTO usuarios (id, nombre, apellido, email, telefono, rol, "edificioId", "unidadId", activo, "creadoEn") VALUES
-  ('u-jorge-alzamora','Jorge','Alzamora Vejarez','jorge.alzamora@mirador297.cl', null, 'propietario','mirador-sacramentinos','un-0804', true, NOW());
+  ('u-jorge-alzamora','Jorge','Alzamora Vejarez','jorge.alzamora@mirador297.cl', null, 'propietario','mirador-sacramentinos','un-0804', true, NOW())
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 5. GASTOS COMUNES — UNIDAD 0804 ───────────────────────────
@@ -381,7 +385,8 @@ INSERT INTO gastos_comunes (id, "unidadId", "edificioId", mes, "año", "montoBas
 
   -- Abril 2026: GC $116.963 + FR $5.848 + AC $66.791 = $189.602
   -- Pendiente — vence 10/06/2026
-  ('gc-0804-abr','un-0804','mirador-sacramentinos', 4, 2026, 116963, 66791, 5848, 189602, 'pendiente', '2026-06-10', null,         null);
+  ('gc-0804-abr','un-0804','mirador-sacramentinos', 4, 2026, 116963, 66791, 5848, 189602, 'pendiente', '2026-06-10', null,         null)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 6. PAGOS — UNIDAD 0804 ────────────────────────────────────
@@ -400,7 +405,8 @@ INSERT INTO pagos (id, "gastoId", "unidadId", "edificioId", monto, mes, "año", 
   ('pag-0804-mar','gc-0804-mar','un-0804','mirador-sacramentinos',
     179834, 3, 2026, 'transferencia', 'completado',
     'f675177e-6751-47ce-840e-f5c6a7573a0f', 'u-jorge-alzamora',
-    'FOLIO-3007045', 'Boleta N°7252 — pagado 1 día antes del vencimiento', '2026-05-09');
+    'FOLIO-3007045', 'Boleta N°7252 — pagado 1 día antes del vencimiento', '2026-05-09')
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 8. COMUNICACIONES ────────────────────────────────────────
@@ -469,7 +475,8 @@ Fono: (+56) 2 2974 8320 · Emergencias: (+56) 2 2264 9867',
    'informativo',
    'f675177e-6751-47ce-840e-f5c6a7573a0f',
    '2026-01-02T08:00:00',
-   NULL, 'seguridad', NULL, false);
+   NULL, 'seguridad', NULL, false)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ─── 9. SOLICITUDES — MANTENCIÓN PREVENTIVA ASCENSORES 2026 ───
@@ -522,7 +529,22 @@ INSERT INTO solicitudes (id, "unidadId", "edificioId", titulo, descripcion,
    'resuelto', 'baja', 'Ascensor',
    'f675177e-6751-47ce-840e-f5c6a7573a0f',
    'Ángel Neira — Quality Tech',
-   '2026-05-19T10:00:00', '2026-05-19T12:00:00', '2026-05-19T12:00:00');
+   '2026-05-19T10:00:00', '2026-05-19T12:00:00', '2026-05-19T12:00:00')
+ON CONFLICT (id) DO NOTHING;
+
+
+-- ─── 10. COLUMNAS CONTROL DE ACCESO (visitas) ─────────────────
+-- Agrega campos de vehículo, método de acceso y sentido
+-- Ejecutar solo una vez — IF NOT EXISTS hace la operación idempotente
+ALTER TABLE visitas ADD COLUMN IF NOT EXISTS "tipoVehiculo"   text;
+ALTER TABLE visitas ADD COLUMN IF NOT EXISTS "estacionamiento" text;
+ALTER TABLE visitas ADD COLUMN IF NOT EXISTS "tiempoEstadiaMin" integer;
+ALTER TABLE visitas ADD COLUMN IF NOT EXISTS "metodoAcceso"   text DEFAULT 'manual';
+ALTER TABLE visitas ADD COLUMN IF NOT EXISTS "sentido"        text DEFAULT 'entrada';
+
+-- metodoAcceso: 'manual' | 'facial' | 'huella' | 'tarjeta'
+-- sentido:      'entrada' | 'salida'
+-- Fuente: terminal biométrico Dahua Technology en hall de ingreso
 
 
 -- ─── 7. VERIFICAR ──────────────────────────────────────────────
