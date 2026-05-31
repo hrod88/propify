@@ -34,6 +34,7 @@ import {
   Sparkles,
   Gauge,
   PiggyBank,
+  PlusCircle,
 } from 'lucide-react'
 import { useRol }      from '@/context/rol-context'
 import { useEdificio }  from '@/context/edificio-context'
@@ -58,10 +59,11 @@ const NAV_ADMIN: NavGroup[] = [
   {
     title: 'General',
     items: [
-      { href: '/dashboard',      label: 'Dashboard',        icon: LayoutDashboard },
-      { href: '/edificios',      label: 'Edificios',        icon: Building2 },
-      { href: '/unidades',       label: 'Unidades',         icon: DoorOpen },
-      { href: '/residentes',     label: 'Residentes',       icon: Users },
+      { href: '/dashboard',       label: 'Dashboard',        icon: LayoutDashboard },
+      { href: '/edificios',       label: 'Edificios',        icon: Building2 },
+      { href: '/nuevo-edificio',  label: 'Nuevo Edificio',   icon: PlusCircle },
+      { href: '/unidades',        label: 'Unidades',         icon: DoorOpen },
+      { href: '/residentes',      label: 'Residentes',       icon: Users },
     ],
   },
   {

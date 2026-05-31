@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { getGastoComunById, getUnidades, getUsuarios, getEdificioById, formatCLP } from '@/lib/db'
 import { notFound } from 'next/navigation'
+import WebPayButton from './WebPayButton'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -194,6 +195,8 @@ export default async function PortalPagarPage({ params }: PageProps) {
               </div>
             </div>
             <div className="px-6 py-5 space-y-4">
+              {/* Botón WebPay */}
+              <WebPayButton gastoId={id} monto={gasto.montoTotal} />
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                   Transferencia bancaria

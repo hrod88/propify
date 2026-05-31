@@ -21,6 +21,7 @@ export default async function ReportesPage() {
       solicitudes={solicitudes}
       unidades={unidades}
       edificioNombre={edificio?.nombre ?? 'Edificio'}
+      edificioId={edificioId}
     />
   )
 }

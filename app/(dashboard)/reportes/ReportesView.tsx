@@ -39,10 +39,11 @@ interface Props {
   solicitudes: SolicitudMantencion[]
   unidades: Unidad[]
   edificioNombre: string
+  edificioId: string
 }
 
 // ─── Componente ───────────────────────────────────────────────
-export default function ReportesView({ gastos, pagos, solicitudes, unidades, edificioNombre }: Props) {
+export default function ReportesView({ gastos, pagos, solicitudes, unidades, edificioNombre, edificioId }: Props) {
   const [tab, setTab]               = useState<Tab>('resumen')
   const [showExportMenu, setShowExportMenu] = useState(false)
 
@@ -242,9 +243,12 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades, edi
 
                 <div className="border-t mx-4" style={{ borderColor: '#f1f5f9' }} />
 
-                {/* PDF */}
-                <button
-                  onClick={() => { window.print(); setShowExportMenu(false) }}
+                {/* PDF Reporte contable */}
+                <a
+                  href={`/api/reporte/${edificioId}?mes=${periodoActual.mes}&año=${periodoActual.año}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowExportMenu(false)}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
                 >
                   <div
@@ -254,10 +258,10 @@ export default function ReportesView({ gastos, pagos, solicitudes, unidades, edi
                     <Printer className="w-4 h-4" style={{ color: '#2563ae' }} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">Exportar PDF</p>
-                    <p className="text-xs text-gray-400">Imprimir / Guardar como PDF</p>
+                    <p className="text-sm font-semibold text-gray-800">Reporte contable PDF</p>
+                    <p className="text-xs text-gray-400">Balance completo {periodoLargo}</p>
                   </div>
-                </button>
+                </a>
               </div>
             </>
           )}
