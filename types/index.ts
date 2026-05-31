@@ -37,6 +37,12 @@ export interface Edificio {
   rut?: string
   activo: boolean
   creadoEn: string
+  // ── Datos financieros (configuración de pagos) ──
+  banco?: string           // Banco BCI / Banco de Chile / etc.
+  cuentaCorriente?: string // Número de cuenta corriente
+  emailPago?: string       // Email donde enviar comprobante
+  telefonoAdmin?: string   // Teléfono administrador (+56 9 3914 7492)
+  horarioAdmin?: string    // Horario atención (Lunes a Viernes 9:30-17:30)
 }
 
 // ─── Unidad ───────────────────────────────────────────────────
@@ -63,6 +69,7 @@ export interface Unidad {
   propietarioId?: string
   arrendatarioId?: string
   gastosComunesMonto: number
+  prorrateo?: number   // Porcentaje de prorrateo: 0.5573 = 0.5573%
 }
 
 // ─── Gastos Comunes ───────────────────────────────────────────

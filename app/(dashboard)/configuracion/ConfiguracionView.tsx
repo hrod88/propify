@@ -5,7 +5,7 @@ import {
   Building2, Users, Bell, User, Save, Shield,
   Mail, Phone, MapPin, Hash, ChevronRight, LogOut,
   X, UserPlus, Send, CreditCard, Zap, Crown, Check,
-  Smartphone, BellOff, BellRing,
+  Smartphone, BellOff, BellRing, Banknote, Clock,
 } from 'lucide-react'
 import {
   isPushEnabled, getPermission,
@@ -16,7 +16,7 @@ import { formatCLP } from '@/lib/db'
 import type { Edificio, Unidad, User as UserType, Suscripcion } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Tab = 'edificio' | 'usuarios' | 'notificaciones' | 'cuenta' | 'plan'
+type Tab = 'edificio' | 'facturacion' | 'usuarios' | 'notificaciones' | 'cuenta' | 'plan'
 
 // ─── Planes (espejo del seed SQL) ─────────────────────────────
 const PLANES_INFO = [
@@ -200,8 +200,42 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
     return unidades.find(u => u.id === unidadId)?.numero ?? unidadId
   }
 
+  // ─── Facturación state ────────────────────────────────────
+  const [fact, setFact] = useState({
+    rut:             edificio?.rut             ?? '',
+    banco:           edificio?.banco           ?? '',
+    cuentaCorriente: edificio?.cuentaCorriente ?? '',
+    emailPago:       edificio?.emailPago       ?? '',
+    telefonoAdmin:   edificio?.telefonoAdmin   ?? '',
+    horarioAdmin:    edificio?.horarioAdmin    ?? '',
+  })
+  const [factSaving,  setFactSaving]  = useState(false)
+  const [factSaved,   setFactSaved]   = useState(false)
+  const [factError,   setFactError]   = useState('')
+
+  const handleGuardarFacturacion = async () => {
+    if (!edificio?.id) return
+    setFactSaving(true); setFactError(''); setFactSaved(false)
+    try {
+      const res = await fetch(`/api/edificios/${edificio.id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(fact),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+      if (!res.ok) { setFactError(data.error ?? 'Error al guardar'); return }
+      setFactSaved(true)
+      setTimeout(() => setFactSaved(false), 3000)
+    } catch {
+      setFactError('Error de conexión')
+    } finally {
+      setFactSaving(false)
+    }
+  }
+
   const tabs: { value: Tab; label: string; Icon: React.ElementType }[] = [
     { value: 'edificio',       label: 'Edificio',       Icon: Building2   },
+    { value: 'facturacion',    label: 'Facturación',    Icon: Banknote    },
     { value: 'usuarios',       label: 'Usuarios',       Icon: Users       },
     { value: 'notificaciones', label: 'Notificaciones', Icon: Bell        },
     { value: 'cuenta',         label: 'Mi cuenta',      Icon: User        },
@@ -317,6 +351,202 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
             >
               <Save className="w-4 h-4" />
               Guardar cambios
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════ FACTURACIÓN ════════════ */}
+      {tab === 'facturacion' && (
+        <div className="space-y-5">
+
+          {/* Banner */}
+          <div
+            className="rounded-2xl p-4 flex items-start gap-3"
+            style={{ background: 'linear-gradient(135deg,#0f2341 0%,#2563ae 100%)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.15)' }}>
+              <Banknote className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-white text-sm">Datos de pago del edificio</p>
+              <p className="text-blue-200 text-xs mt-0.5">
+                Esta información aparece en el PDF de liquidación y en el portal de pago del residente.
+              </p>
+            </div>
+          </div>
+
+          {/* Formulario */}
+          <div className="bg-white rounded-2xl border shadow-sm p-6" style={{ borderColor: '#e2e8f0' }}>
+            <h2 className="font-bold text-gray-900 mb-5">Identificación legal</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">RUT del edificio</label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fact.rut}
+                    onChange={e => setFact(f => ({ ...f, rut: e.target.value }))}
+                    placeholder="65.018.713-K"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
+              <div className="sm:col-span-1" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border shadow-sm p-6" style={{ borderColor: '#e2e8f0' }}>
+            <h2 className="font-bold text-gray-900 mb-5">Cuenta de transferencia</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Banco</label>
+                <div className="relative">
+                  <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fact.banco}
+                    onChange={e => setFact(f => ({ ...f, banco: e.target.value }))}
+                    placeholder="Banco Crédito e Inversiones BCI"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">N° de cuenta corriente</label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fact.cuentaCorriente}
+                    onChange={e => setFact(f => ({ ...f, cuentaCorriente: e.target.value }))}
+                    placeholder="29922518"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Correo para comprobantes</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email"
+                    value={fact.emailPago}
+                    onChange={e => setFact(f => ({ ...f, emailPago: e.target.value }))}
+                    placeholder="pagogastocomuncarmen297@gmail.com"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border shadow-sm p-6" style={{ borderColor: '#e2e8f0' }}>
+            <h2 className="font-bold text-gray-900 mb-5">Datos de contacto</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Teléfono administrador</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={fact.telefonoAdmin}
+                    onChange={e => setFact(f => ({ ...f, telefonoAdmin: e.target.value }))}
+                    placeholder="+56 9 3914 7492"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Horario de atención</label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fact.horarioAdmin}
+                    onChange={e => setFact(f => ({ ...f, horarioAdmin: e.target.value }))}
+                    placeholder="Lunes a Viernes 9:30 a 17:30 hrs"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview de cómo aparecerá en el PDF */}
+          {(fact.banco || fact.cuentaCorriente || fact.emailPago) && (
+            <div className="rounded-2xl border p-5" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Vista previa en PDF / portal de pago
+              </p>
+              <div className="space-y-2 text-sm">
+                {fact.banco && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">Banco</span>
+                    <span className="font-semibold text-gray-900">{fact.banco}</span>
+                  </div>
+                )}
+                {fact.rut && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">RUT</span>
+                    <span className="font-semibold text-gray-900">{fact.rut}</span>
+                  </div>
+                )}
+                {fact.cuentaCorriente && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">Cta. corriente</span>
+                    <span className="font-semibold text-gray-900">{fact.cuentaCorriente}</span>
+                  </div>
+                )}
+                {fact.emailPago && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">Email pago</span>
+                    <span className="font-semibold text-gray-900">{fact.emailPago}</span>
+                  </div>
+                )}
+                {fact.telefonoAdmin && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">Teléfono</span>
+                    <span className="font-semibold text-gray-900">{fact.telefonoAdmin}</span>
+                  </div>
+                )}
+                {fact.horarioAdmin && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">Horario</span>
+                    <span className="font-semibold text-gray-900">{fact.horarioAdmin}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Guardar */}
+          <div className="flex items-center justify-end gap-3">
+            {factError && (
+              <span className="text-sm font-medium" style={{ color: '#dc2626' }}>⚠ {factError}</span>
+            )}
+            {factSaved && (
+              <span className="text-sm font-semibold flex items-center gap-1" style={{ color: '#16a34a' }}>
+                <Check className="w-4 h-4" /> Datos guardados
+              </span>
+            )}
+            <button
+              onClick={handleGuardarFacturacion}
+              disabled={factSaving}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+              style={{ background: '#2563ae' }}
+            >
+              {factSaving
+                ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" /> Guardando…</>
+                : <><Save className="w-4 h-4" /> Guardar datos</>
+              }
             </button>
           </div>
         </div>

@@ -13,7 +13,7 @@ import Link from 'next/link'
 import {
   DollarSign, TrendingUp, Clock, AlertTriangle,
   CheckCircle, XCircle, AlertCircle, Plus, Edit2, Trash2, X, Check, FileDown,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Send, Mail,
 } from 'lucide-react'
 import { formatCLP } from '@/lib/db'
 import { supabaseBrowser } from '@/lib/supabase-browser'
@@ -47,10 +47,18 @@ function calcFechaVenc(mes: number, año: number): string {
 }
 
 // ─── Props ────────────────────────────────────────────────────
+interface EnvioResult {
+  unidadNumero: string
+  email:        string | null
+  status:       'ok' | 'sin_email' | 'error'
+  error?:       string
+}
+
 interface Props {
-  gastos:   GastoComun[]
-  unidades: Unidad[]
-  users:    User[]
+  gastos:     GastoComun[]
+  unidades:   Unidad[]
+  users:      User[]
+  edificioId: string
 }
 
 interface FormCrear {
@@ -70,7 +78,7 @@ interface FormEdit {
 }
 
 // ─── Componente ───────────────────────────────────────────────
-export default function GastosView({ gastos: initial, unidades, users }: Props) {
+export default function GastosView({ gastos: initial, unidades, users, edificioId }: Props) {
   const { agregarNotificacion } = useNotificaciones()
 
   const [gastos,  setGastos]  = useState<GastoComun[]>(initial)
@@ -125,6 +133,13 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
 
   // ── Confirmar eliminar ─────────────────────────────────────
   const [eliminarId, setEliminarId] = useState<string | null>(null)
+
+  // ── Envío masivo de emails ─────────────────────────────────
+  const [enviandoMasivo,  setEnviandoMasivo]  = useState(false)
+  const [resultadoMasivo, setResultadoMasivo] = useState<{
+    enviados: number; fallidos: number; sinEmail: number
+    detalle: EnvioResult[]
+  } | null>(null)
 
   // ── Computed ────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -289,6 +304,57 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     agregarNotificacion('pago', 'Gasto liquidado', 'Marcado como pagado exitosamente')
   }, [agregarNotificacion])
 
+  /** Envía email de liquidación a todos los pendientes/vencidos del período */
+  const handleEnviarMasivo = useCallback(async () => {
+    const pendientes = gastosEnPeriodo.filter(
+      g => g.estadoPago === 'pendiente' || g.estadoPago === 'vencido',
+    )
+    if (pendientes.length === 0) return
+
+    const ok = window.confirm(
+      `¿Enviar liquidación por email a ${pendientes.length} unidades pendientes de ${MESES[periodoSel.mes]} ${periodoSel.año}?`,
+    )
+    if (!ok) return
+
+    setEnviandoMasivo(true)
+    setResultadoMasivo(null)
+
+    try {
+      const res = await fetch('/api/gastos/enviar-masivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ edificioId, mes: periodoSel.mes, año: periodoSel.año }),
+      })
+      const data = await res.json() as {
+        ok?: boolean; enviados?: number; fallidos?: number
+        detalle?: EnvioResult[]; error?: string
+      }
+
+      if (!res.ok || !data.ok) {
+        agregarNotificacion('mora', 'Error en envío masivo', data.error ?? 'Error desconocido')
+        return
+      }
+
+      const sinEmail = (data.detalle ?? []).filter(d => d.status === 'sin_email').length
+      setResultadoMasivo({
+        enviados:  data.enviados  ?? 0,
+        fallidos:  data.fallidos  ?? 0,
+        sinEmail,
+        detalle:   data.detalle   ?? [],
+      })
+
+      agregarNotificacion(
+        'circular',
+        `${data.enviados ?? 0} emails enviados`,
+        `${MESES[periodoSel.mes]} ${periodoSel.año} · ${data.fallidos ?? 0} fallidos`,
+      )
+    } catch {
+      agregarNotificacion('mora', 'Error de conexión', 'No se pudo contactar al servidor')
+    } finally {
+      setEnviandoMasivo(false)
+    }
+  }, [gastosEnPeriodo, periodoSel, edificioId, agregarNotificacion])
+
   /** Elimina el gasto confirmado */
   const handleEliminar = useCallback(() => {
     if (!eliminarId) return
@@ -308,26 +374,69 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     <div className="space-y-5 animate-fade-in">
 
       {/* ── Encabezado ── */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gastos Comunes</h1>
           <p className="text-gray-500 mt-1">
             {periodos.length} período{periodos.length !== 1 ? 's' : ''} · {unidades.length} unidades en el edificio
           </p>
         </div>
-        <button
-          onClick={() => {
-            setFormCrear(f => ({ ...f, mes: hoy.getMonth() + 1, año: hoy.getFullYear() }))
-            setErroresCrear({})
-            setModalCrear(true)
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-          style={{ background: '#2563ae' }}
-        >
-          <Plus className="w-4 h-4" />
-          Generar cobros
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Enviar emails masivo */}
+          {gastosEnPeriodo.some(g => g.estadoPago === 'pendiente' || g.estadoPago === 'vencido') && (
+            <button
+              onClick={handleEnviarMasivo}
+              disabled={enviandoMasivo}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+              style={{ background: '#f1f5f9', color: '#1e3a5f' }}
+              title="Enviar liquidación por email a todos los pendientes de este período"
+            >
+              {enviandoMasivo ? (
+                <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block" /> Enviando…</>
+              ) : (
+                <><Send className="w-4 h-4" /> Enviar emails ({gastosEnPeriodo.filter(g => g.estadoPago === 'pendiente' || g.estadoPago === 'vencido').length})</>
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setFormCrear(f => ({ ...f, mes: hoy.getMonth() + 1, año: hoy.getFullYear() }))
+              setErroresCrear({})
+              setModalCrear(true)
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+            style={{ background: '#2563ae' }}
+          >
+            <Plus className="w-4 h-4" />
+            Generar cobros
+          </button>
+        </div>
       </div>
+
+      {/* ── Resultado envío masivo ── */}
+      {resultadoMasivo && (
+        <div className="rounded-2xl border p-4 flex items-start gap-4 flex-wrap" style={{ background: '#f0fdf4', borderColor: '#86efac' }}>
+          <div className="flex items-center gap-2 shrink-0">
+            <Mail className="w-5 h-5" style={{ color: '#16a34a' }} />
+            <p className="font-bold text-sm" style={{ color: '#16a34a' }}>Envío completado</p>
+          </div>
+          <div className="flex gap-4 flex-wrap text-sm">
+            <span className="font-semibold" style={{ color: '#16a34a' }}>✓ {resultadoMasivo.enviados} enviados</span>
+            {resultadoMasivo.sinEmail > 0 && (
+              <span className="text-gray-500">⚠ {resultadoMasivo.sinEmail} sin email</span>
+            )}
+            {resultadoMasivo.fallidos > 0 && (
+              <span style={{ color: '#dc2626' }}>✗ {resultadoMasivo.fallidos} fallidos</span>
+            )}
+          </div>
+          <button
+            onClick={() => setResultadoMasivo(null)}
+            className="ml-auto text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* ── Selector de período ── */}
       <div className="bg-white rounded-2xl border shadow-sm p-4" style={{ borderColor: '#e2e8f0' }}>

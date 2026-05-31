@@ -477,6 +477,24 @@ export function LiquidacionPDF({
                           <Text style={s.payVal}>{edificio.rut}</Text>
                         </View>
                       )}
+                      {edificio?.banco && (
+                        <View style={s.payRow}>
+                          <Text style={s.payLabel}>Banco</Text>
+                          <Text style={s.payVal}>{edificio.banco}</Text>
+                        </View>
+                      )}
+                      {edificio?.cuentaCorriente && (
+                        <View style={s.payRow}>
+                          <Text style={s.payLabel}>Cta. Corriente</Text>
+                          <Text style={s.payVal}>{edificio.cuentaCorriente}</Text>
+                        </View>
+                      )}
+                      {edificio?.emailPago && (
+                        <View style={s.payRow}>
+                          <Text style={s.payLabel}>Email pago</Text>
+                          <Text style={s.payVal}>{edificio.emailPago}</Text>
+                        </View>
+                      )}
                       <View style={s.payRow}>
                         <Text style={s.payLabel}>Referencia</Text>
                         <Text style={s.payVal}>GC Unidad {unidad?.numero ?? ''} {MESES[gasto.mes]} {año}</Text>
@@ -489,6 +507,22 @@ export function LiquidacionPDF({
                         <Text style={s.payVenceLabel}>Fecha límite:</Text>
                         <Text style={s.payVenceVal}> {fechaLarga(gasto.fechaVencimiento)}</Text>
                       </View>
+                      {(edificio?.telefonoAdmin || edificio?.horarioAdmin) && (
+                        <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border }}>
+                          {edificio.telefonoAdmin && (
+                            <View style={s.payRow}>
+                              <Text style={s.payLabel}>Contacto</Text>
+                              <Text style={s.payVal}>{edificio.telefonoAdmin}</Text>
+                            </View>
+                          )}
+                          {edificio.horarioAdmin && (
+                            <View style={s.payRow}>
+                              <Text style={s.payLabel}>Horario</Text>
+                              <Text style={s.payVal}>{edificio.horarioAdmin}</Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
                     </View>
 
                     {/* QR portal */}

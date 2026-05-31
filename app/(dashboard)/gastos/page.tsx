@@ -12,5 +12,5 @@ export default async function GastosPage() {
     getUnidades(edificioId),
     getUsuarios(edificioId),
   ])
-  return <GastosView gastos={gastos} unidades={unidades} users={users} />
+  return <GastosView gastos={gastos} unidades={unidades} users={users} edificioId={edificioId} />
 }

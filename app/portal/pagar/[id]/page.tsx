@@ -200,9 +200,12 @@ export default async function PortalPagarPage({ params }: PageProps) {
                 </p>
                 <div className="space-y-2.5">
                   {[
-                    ['Beneficiario', `Comunidad ${edificio?.nombre ?? ''}`],
-                    ...(edificio?.rut ? [['RUT', edificio.rut]] : []),
-                    ['Referencia',   `GC Unidad ${unidad?.numero ?? ''} ${MESES[gasto.mes]} ${año}`],
+                    ['Beneficiario',   `Comunidad ${edificio?.nombre ?? ''}`],
+                    ...(edificio?.rut             ? [['RUT',          edificio.rut]]             : []),
+                    ...(edificio?.banco           ? [['Banco',        edificio.banco]]           : []),
+                    ...(edificio?.cuentaCorriente ? [['Cta. Cte.',    edificio.cuentaCorriente]] : []),
+                    ...(edificio?.emailPago       ? [['Email pago',   edificio.emailPago]]       : []),
+                    ['Referencia',     `GC Unidad ${unidad?.numero ?? ''} ${MESES[gasto.mes]} ${año}`],
                   ].map(([lbl, val]) => (
                     <div key={lbl} className="flex gap-3">
                       <span className="text-xs text-gray-400 w-24 shrink-0 mt-0.5">{lbl}</span>
@@ -210,6 +213,23 @@ export default async function PortalPagarPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
+                {(edificio?.telefonoAdmin || edificio?.horarioAdmin) && (
+                  <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: '#f1f5f9' }}>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contacto administración</p>
+                    {edificio.telefonoAdmin && (
+                      <div className="flex gap-3">
+                        <span className="text-xs text-gray-400 w-24 shrink-0">Teléfono</span>
+                        <span className="text-sm font-semibold text-gray-900">{edificio.telefonoAdmin}</span>
+                      </div>
+                    )}
+                    {edificio.horarioAdmin && (
+                      <div className="flex gap-3">
+                        <span className="text-xs text-gray-400 w-24 shrink-0">Horario</span>
+                        <span className="text-sm font-semibold text-gray-900">{edificio.horarioAdmin}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div
                 className="flex items-center gap-2 px-4 py-3 rounded-xl mt-2"
