@@ -60,11 +60,12 @@ export default async function PortalPagarPage({ params }: PageProps) {
   const isPaid    = gasto.estadoPago === 'pagado'
 
   const conceptos = [
-    { label: 'Gastos comunes base',  monto: gasto.montoBase },
-    { label: 'Fondo de reserva',     monto: gasto.montoFondoReserva  ?? 0 },
-    { label: 'Agua',                 monto: gasto.montoAgua           ?? 0 },
-    { label: 'Electricidad',         monto: gasto.montoElectricidad   ?? 0 },
-    { label: 'Gas / Calefacción',    monto: gasto.montoGas            ?? 0 },
+    { label: 'Gastos comunes base',                       monto: gasto.montoBase },
+    { label: 'Fondo de reserva',                          monto: gasto.montoFondoReserva  ?? 0 },
+    { label: 'Agua caliente',                             monto: gasto.montoAgua           ?? 0 },
+    { label: 'Electricidad',                              monto: gasto.montoElectricidad   ?? 0 },
+    { label: 'Gas / Calefacción',                         monto: gasto.montoGas            ?? 0 },
+    { label: gasto.notaMultas ?? 'Cargos adicionales',    monto: gasto.montoMultas         ?? 0 },
   ].filter(c => c.monto > 0)
 
   const diasMora    = gasto.diasMora ?? 0

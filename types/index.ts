@@ -87,6 +87,8 @@ export interface GastoComun {
   montoElectricidad?: number
   montoGas?: number
   montoFondoReserva?: number
+  montoMultas?: number        // Multas / cargos adicionales específicos de la unidad
+  notaMultas?: string | null  // Descripción del cargo (ej: "Multa ruidos molestos")
   montoTotal: number
   estadoPago: EstadoPago
   fechaVencimiento: string

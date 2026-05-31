@@ -5,7 +5,8 @@
  * Mejoras v2:
  *   - Filtro por período (mes/año) — vista por mes estilo Comunidad Feliz
  *   - Cobro masivo con desglose completo (agua, electricidad, gas)
- *   - vencimiento corregido: día 5 del mes siguiente
+ *   - vencimiento: día 10 del mes +2 (igual a liquidaciones reales Mirador Sacramentinos)
+ *   - Multas / cargos adicionales por unidad (montoMultas + notaMultas)
  */
 
 import { useState, useMemo, useCallback } from 'react'
@@ -39,11 +40,12 @@ function formatFecha(iso: string) {
   catch { return iso }
 }
 
-/** Vencimiento: día 5 del mes siguiente al período (ej: mayo → 5 junio) */
+/** Vencimiento: día 10 del mes +2 (ej: enero → 10 marzo · noviembre → 10 enero año+1) */
 function calcFechaVenc(mes: number, año: number): string {
-  const m = mes === 12 ? 1  : mes + 1
-  const y = mes === 12 ? año + 1 : año
-  return `${y}-${String(m).padStart(2,'0')}-05`
+  const mesBase = mes + 2
+  const m = mesBase > 12 ? mesBase - 12 : mesBase
+  const y = mesBase > 12 ? año + 1 : año
+  return `${y}-${String(m).padStart(2,'0')}-10`
 }
 
 // ─── Props ────────────────────────────────────────────────────
@@ -75,6 +77,9 @@ interface FormEdit {
   estadoPago:       EstadoPago
   montoTotal:       number
   fechaVencimiento: string
+  montoMultas:      number
+  notaMultas:       string
+  _montoBase:       number   // suma de componentes fijos (sólo para recalcular total)
 }
 
 // ─── Componente ───────────────────────────────────────────────
@@ -128,7 +133,7 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
 
   // ── Modal: Editar ──────────────────────────────────────────
   const [editandoId,  setEditandoId]  = useState<string | null>(null)
-  const [formEdit,    setFormEdit]    = useState<FormEdit>({ estadoPago: 'pendiente', montoTotal: 0, fechaVencimiento: '' })
+  const [formEdit,    setFormEdit]    = useState<FormEdit>({ estadoPago: 'pendiente', montoTotal: 0, fechaVencimiento: '', montoMultas: 0, notaMultas: '', _montoBase: 0 })
   const [erroresEdit, setErroresEdit] = useState<Partial<Record<keyof FormEdit, string>>>({})
 
   // ── Confirmar eliminar ─────────────────────────────────────
@@ -180,9 +185,11 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
   // Total por unidad (preview del form)
   const montoTotalPorUnidad = formCrear.montoBase + formCrear.montoFondoReserva + formCrear.montoAgua + formCrear.montoElectricidad + formCrear.montoGas
 
-  // Mes/año de vencimiento para el modal
-  const mesVencLabel = formCrear.mes === 12 ? MESES[1]               : MESES[formCrear.mes + 1]
-  const añoVencLabel = formCrear.mes === 12 ? formCrear.año + 1       : formCrear.año
+  // Mes/año de vencimiento para el modal (día 10 del mes +2)
+  const mesVencBase  = formCrear.mes + 2
+  const mesVencIdx   = mesVencBase > 12 ? mesVencBase - 12 : mesVencBase
+  const mesVencLabel = MESES[mesVencIdx]
+  const añoVencLabel = mesVencBase > 12 ? formCrear.año + 1 : formCrear.año
 
   // ── Acciones CRUD ──────────────────────────────────────────
 
@@ -262,10 +269,19 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
   /** Abre el modal de edición */
   const abrirEditar = useCallback((g: GastoComun) => {
     setEditandoId(g.id)
+    const baseComponents =
+      g.montoBase +
+      (g.montoFondoReserva  ?? 0) +
+      (g.montoAgua          ?? 0) +
+      (g.montoElectricidad  ?? 0) +
+      (g.montoGas           ?? 0)
     setFormEdit({
-      estadoPago:      g.estadoPago,
-      montoTotal:      g.montoTotal,
-      fechaVencimiento:g.fechaVencimiento.slice(0, 10),
+      estadoPago:       g.estadoPago,
+      montoTotal:       g.montoTotal,
+      fechaVencimiento: g.fechaVencimiento.slice(0, 10),
+      montoMultas:      g.montoMultas ?? 0,
+      notaMultas:       g.notaMultas  ?? '',
+      _montoBase:       baseComponents,
     })
     setErroresEdit({})
   }, [])
@@ -278,13 +294,29 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
     if (!formEdit.fechaVencimiento) err.fechaVencimiento = 'Fecha requerida'
     if (Object.keys(err).length) { setErroresEdit(err); return }
 
-    setGastos(prev => prev.map(g => g.id === editandoId ? { ...g, ...formEdit } : g))
+    setGastos(prev => prev.map(g =>
+      g.id === editandoId
+        ? { ...g,
+            estadoPago:       formEdit.estadoPago,
+            montoTotal:       formEdit.montoTotal,
+            fechaVencimiento: formEdit.fechaVencimiento,
+            montoMultas:      formEdit.montoMultas || undefined,
+            notaMultas:       formEdit.notaMultas  || null,
+          }
+        : g,
+    ))
     const id = editandoId
     setEditandoId(null)
 
     supabaseBrowser
       .from('gastos_comunes')
-      .update({ estadoPago: formEdit.estadoPago, montoTotal: formEdit.montoTotal, fechaVencimiento: formEdit.fechaVencimiento })
+      .update({
+        estadoPago:       formEdit.estadoPago,
+        montoTotal:       formEdit.montoTotal,
+        fechaVencimiento: formEdit.fechaVencimiento,
+        montoMultas:      formEdit.montoMultas > 0 ? formEdit.montoMultas : null,
+        notaMultas:       formEdit.notaMultas  || null,
+      })
       .eq('id', id)
       .then(({ error }) => { if (error) console.warn('[Gastos] Error editando:', error.message) })
 
@@ -883,7 +915,7 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
 
               {/* Vencimiento automático */}
               <p className="text-xs text-gray-400">
-                📅 Vencimiento: 5 de {mesVencLabel} {añoVencLabel}
+                📅 Vencimiento: 10 de {mesVencLabel} {añoVencLabel}
               </p>
             </div>
 
@@ -982,6 +1014,47 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
                   />
                   {erroresEdit.fechaVencimiento && (
                     <p className="text-xs text-red-500 mt-1">{erroresEdit.fechaVencimiento}</p>
+                  )}
+                </div>
+
+                {/* ── Cargos adicionales / Multas ── */}
+                <div className="pt-3 border-t space-y-3" style={{ borderColor: '#f1f5f9' }}>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Cargos adicionales <span className="font-normal normal-case text-gray-300">(multas, sobre tiempos, etc.)</span>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">Monto cargos adicionales (CLP)</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formEdit.montoMultas || ''}
+                      onChange={e => {
+                        const multas = Number(e.target.value) || 0
+                        setFormEdit(f => ({
+                          ...f,
+                          montoMultas: multas,
+                          montoTotal:  f._montoBase + multas,
+                        }))
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">Descripción del cargo</label>
+                    <input
+                      type="text"
+                      placeholder="ej: Multa por ruidos molestos"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formEdit.notaMultas}
+                      onChange={e => setFormEdit(f => ({ ...f, notaMultas: e.target.value }))}
+                    />
+                  </div>
+                  {formEdit.montoMultas > 0 && (
+                    <p className="text-xs" style={{ color: '#d97706' }}>
+                      ⚠ Total actualizado: base {formatCLP(formEdit._montoBase)} + cargos {formatCLP(formEdit.montoMultas)} = <strong>{formatCLP(formEdit.montoTotal)}</strong>
+                    </p>
                   )}
                 </div>
               </div>

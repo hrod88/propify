@@ -51,10 +51,11 @@ export default async function GastoDetailPage({ params }: PageProps) {
 
   const conceptos = [
     { label: 'Gastos base',      monto: gasto.montoBase },
-    { label: 'Agua',             monto: gasto.montoAgua ?? 0 },
+    { label: 'Fondo de reserva', monto: gasto.montoFondoReserva ?? 0 },
+    { label: 'Agua caliente',    monto: gasto.montoAgua ?? 0 },
     { label: 'Electricidad',     monto: gasto.montoElectricidad ?? 0 },
     { label: 'Gas',              monto: gasto.montoGas ?? 0 },
-    { label: 'Fondo de reserva', monto: gasto.montoFondoReserva ?? 0 },
+    { label: gasto.notaMultas ?? 'Cargos adicionales', monto: gasto.montoMultas ?? 0 },
   ].filter(c => c.monto > 0)
 
   return (
