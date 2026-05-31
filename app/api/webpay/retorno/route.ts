@@ -4,7 +4,7 @@
  * Confirma la transacción y actualiza el gasto en Supabase.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { WebpayPlus, Environment, IntegrationCommerceCodes, IntegrationApiKeys } from 'transbank-sdk'
+import { WebpayPlus, IntegrationCommerceCodes, IntegrationApiKeys } from 'transbank-sdk'
 import { createClient } from '@supabase/supabase-js'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://propify-rust.vercel.app'
@@ -17,21 +17,12 @@ async function handleRetorno(token: string | null) {
   const commerceCode = process.env.WEBPAY_COMMERCE_CODE
   const apiKey       = process.env.WEBPAY_API_KEY
 
-  let tx: WebpayPlus.Transaction
-
-  if (commerceCode && apiKey) {
-    tx = new WebpayPlus.Transaction(
-      new WebpayPlus.Options(commerceCode, apiKey, Environment.Production),
-    )
-  } else {
-    tx = new WebpayPlus.Transaction(
-      new WebpayPlus.Options(
+  const tx = (commerceCode && apiKey)
+    ? WebpayPlus.Transaction.buildForProduction(commerceCode, apiKey)
+    : WebpayPlus.Transaction.buildForIntegration(
         IntegrationCommerceCodes.WEBPAY_PLUS,
         IntegrationApiKeys.WEBPAY,
-        Environment.Integration,
-      ),
-    )
-  }
+      )
 
   try {
     const response = await tx.commit(token)
@@ -42,10 +33,7 @@ async function handleRetorno(token: string | null) {
       return NextResponse.redirect(`${BASE_URL}/portal/webpay/error?reason=rejected&code=${response.responseCode}`)
     }
 
-    // ── Extraer gastoId desde buyOrder: "GC-{unidad}-{mes}-{año}" ──
-    // buyOrder es "GC-{num}-{mes}-{año}" — necesitamos el gastoId
-    // Lo buscamos por monto + sessionId embebido o desde la DB directamente.
-    // sessionId tiene formato "propify-{gastoId}-{timestamp}"
+    // ── Extraer gastoId desde sessionId: "propify-{gastoId}-{timestamp}" ──
     const sessionId = response.sessionId ?? ''
     const gastoId   = sessionId.replace(/^propify-/, '').replace(/-\d+$/, '')
 
@@ -62,7 +50,7 @@ async function handleRetorno(token: string | null) {
           .from('gastos_comunes')
           .update({ estadoPago: 'pagado', fechaPago: hoy })
           .eq('id', gastoId)
-          .eq('estadoPago', 'pendiente') // solo si no estaba ya pagado
+          .eq('estadoPago', 'pendiente')
 
         console.log(`[webpay/retorno] gasto ${gastoId} marcado como pagado`)
         return NextResponse.redirect(`${BASE_URL}/portal/pagar/${gastoId}?webpay=ok`)

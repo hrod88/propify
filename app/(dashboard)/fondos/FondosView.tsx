@@ -292,35 +292,29 @@ export default function FondosView({ fondos: initial, edificioId }: Props) {
         )}
       </div>
 
-      {modalCrear && (
-        <Modal title="Nuevo fondo" onClose={() => setModalCrear(false)}>
-          <FormFondo f={form} setF={setForm} errs={errores}
-            onOk={handleCrear} onCancel={() => setModalCrear(false)} label="Registrar" />
-        </Modal>
-      )}
+      <Modal abierto={modalCrear} onCerrar={() => setModalCrear(false)} titulo="Nuevo fondo">
+        <FormFondo f={form} setF={setForm} errs={errores}
+          onOk={handleCrear} onCancel={() => setModalCrear(false)} label="Registrar" />
+      </Modal>
 
-      {editandoId && (
-        <Modal title="Editar fondo" onClose={() => setEditandoId(null)}>
-          <FormFondo f={formEdit} setF={setFormEdit} errs={erroresEdit}
-            onOk={handleEditar} onCancel={() => setEditandoId(null)} label="Guardar" />
-        </Modal>
-      )}
+      <Modal abierto={!!editandoId} onCerrar={() => setEditandoId(null)} titulo="Editar fondo">
+        <FormFondo f={formEdit} setF={setFormEdit} errs={erroresEdit}
+          onOk={handleEditar} onCancel={() => setEditandoId(null)} label="Guardar" />
+      </Modal>
 
-      {eliminarId && (
-        <Modal title="Eliminar fondo" onClose={() => setEliminarId(null)}>
-          <p className="text-sm text-gray-600 mb-5">
-            ¿Eliminar el fondo <strong>{fondoPorEliminar?.nombre}</strong>?
-          </p>
-          <div className="flex gap-3">
-            <button onClick={() => setEliminarId(null)}
-              className="flex-1 py-2.5 rounded-xl border text-sm font-semibold text-gray-600 hover:bg-slate-50"
-              style={{ borderColor: '#e2e8f0' }}>Cancelar</button>
-            <button onClick={handleEliminar}
-              className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
-              style={{ background: '#dc2626' }}>Eliminar</button>
-          </div>
-        </Modal>
-      )}
+      <Modal abierto={!!eliminarId} onCerrar={() => setEliminarId(null)} titulo="Eliminar fondo" colorAccento="#dc2626">
+        <p className="text-sm text-gray-600 mb-5">
+          ¿Eliminar el fondo <strong>{fondoPorEliminar?.nombre}</strong>?
+        </p>
+        <div className="flex gap-3">
+          <button onClick={() => setEliminarId(null)}
+            className="flex-1 py-2.5 rounded-xl border text-sm font-semibold text-gray-600 hover:bg-slate-50"
+            style={{ borderColor: '#e2e8f0' }}>Cancelar</button>
+          <button onClick={handleEliminar}
+            className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+            style={{ background: '#dc2626' }}>Eliminar</button>
+        </div>
+      </Modal>
     </div>
   )
 }

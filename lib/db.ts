@@ -360,7 +360,7 @@ export async function getEvolucionEgresos(
 ): Promise<{ mes: number; año: number; total: number }[]> {
   const { data, error } = await supabase
     .from('egresos_comunidad')
-    .select('mes, año, monto')
+    .select('*')
     .eq('edificioId', edificioId)
     .order('año',  { ascending: false })
     .order('mes',  { ascending: false })
@@ -369,7 +369,7 @@ export async function getEvolucionEgresos(
 
   // Agrupar por mes/año en JS
   const map = new Map<string, { mes: number; año: number; total: number }>()
-  for (const row of (data ?? []) as { mes: number; año: number; monto: number }[]) {
+  for (const row of (data ?? []) as EgresoComunidad[]) {
     const key = `${row.año}-${row.mes}`
     const existing = map.get(key)
     if (existing) existing.total += row.monto

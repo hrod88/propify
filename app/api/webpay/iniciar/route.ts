@@ -10,7 +10,7 @@
  *   - Producción: definir WEBPAY_COMMERCE_CODE y WEBPAY_API_KEY en variables de entorno Vercel
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { WebpayPlus, Environment, IntegrationCommerceCodes, IntegrationApiKeys } from 'transbank-sdk'
+import { WebpayPlus, IntegrationCommerceCodes, IntegrationApiKeys } from 'transbank-sdk'
 import { getGastoComunById, getUnidades } from '@/lib/db'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://propify-rust.vercel.app'
@@ -30,35 +30,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Este gasto ya está pagado' }, { status: 409 })
   }
 
-  const unidades   = await getUnidades(gasto.edificioId)
-  const unidad     = unidades.find(u => u.id === gasto.unidadId)
-  const unidadNum  = unidad?.numero ?? '?'
+  const unidades  = await getUnidades(gasto.edificioId)
+  const unidad    = unidades.find(u => u.id === gasto.unidadId)
+  const unidadNum = unidad?.numero ?? '?'
 
-  // ── Configurar Transbank ────────────────────────────────────
+  // ── Configurar Transbank usando static builders ─────────────
   const commerceCode = process.env.WEBPAY_COMMERCE_CODE
   const apiKey       = process.env.WEBPAY_API_KEY
 
-  let tx: WebpayPlus.Transaction
-
-  if (commerceCode && apiKey) {
-    // Producción
-    tx = new WebpayPlus.Transaction(
-      new WebpayPlus.Options(commerceCode, apiKey, Environment.Production),
-    )
-  } else {
-    // Integración (test)
-    tx = new WebpayPlus.Transaction(
-      new WebpayPlus.Options(
+  const tx = (commerceCode && apiKey)
+    ? WebpayPlus.Transaction.buildForProduction(commerceCode, apiKey)
+    : WebpayPlus.Transaction.buildForIntegration(
         IntegrationCommerceCodes.WEBPAY_PLUS,
         IntegrationApiKeys.WEBPAY,
-        Environment.Integration,
-      ),
-    )
-  }
+      )
 
-  const returnUrl  = `${BASE_URL}/api/webpay/retorno`
-  const sessionId  = `propify-${gastoId}-${Date.now()}`
-  const buyOrder   = `GC-${unidadNum}-${gasto.mes}-${gasto['año'] as number}`.slice(0, 26)
+  const returnUrl = `${BASE_URL}/api/webpay/retorno`
+  const sessionId = `propify-${gastoId}-${Date.now()}`
+  const buyOrder  = `GC-${unidadNum}-${gasto.mes}-${gasto['año'] as number}`.slice(0, 26)
 
   try {
     const response = await tx.create(buyOrder, sessionId, gasto.montoTotal, returnUrl)

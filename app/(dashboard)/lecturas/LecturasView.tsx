@@ -347,40 +347,34 @@ export default function LecturasView({ lecturas: initial, unidades, edificioId }
       </div>
 
       {/* Modal crear */}
-      {modalCrear && (
-        <Modal title="Nueva lectura" onClose={() => setModalCrear(false)}>
-          <FormLectura f={form} setF={setForm} errs={errores}
-            onOk={handleCrear} onCancel={() => setModalCrear(false)} label="Registrar" />
-        </Modal>
-      )}
+      <Modal abierto={modalCrear} onCerrar={() => setModalCrear(false)} titulo="Nueva lectura">
+        <FormLectura f={form} setF={setForm} errs={errores}
+          onOk={handleCrear} onCancel={() => setModalCrear(false)} label="Registrar" />
+      </Modal>
 
       {/* Modal editar */}
-      {editandoId && (
-        <Modal title="Editar lectura" onClose={() => setEditandoId(null)}>
-          <FormLectura f={formEdit} setF={setFormEdit} errs={erroresEdit}
-            onOk={handleEditar} onCancel={() => setEditandoId(null)} label="Guardar" />
-        </Modal>
-      )}
+      <Modal abierto={!!editandoId} onCerrar={() => setEditandoId(null)} titulo="Editar lectura">
+        <FormLectura f={formEdit} setF={setFormEdit} errs={erroresEdit}
+          onOk={handleEditar} onCancel={() => setEditandoId(null)} label="Guardar" />
+      </Modal>
 
       {/* Modal eliminar */}
-      {eliminarId && (
-        <Modal title="Eliminar lectura" onClose={() => setEliminarId(null)}>
-          <p className="text-sm text-gray-600 mb-5">
-            ¿Eliminar lectura de <strong>{lecturaPorEliminar?.servicio}</strong>
-            {lecturaPorEliminar?.unidadId
-              ? ` — ${unidades.find(u => u.id === lecturaPorEliminar.unidadId)?.numero ?? '?'}`
-              : ' (comunitario)'}?
-          </p>
-          <div className="flex gap-3">
-            <button onClick={() => setEliminarId(null)}
-              className="flex-1 py-2.5 rounded-xl border text-sm font-semibold text-gray-600 hover:bg-slate-50"
-              style={{ borderColor: '#e2e8f0' }}>Cancelar</button>
-            <button onClick={handleEliminar}
-              className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
-              style={{ background: '#dc2626' }}>Eliminar</button>
-          </div>
-        </Modal>
-      )}
+      <Modal abierto={!!eliminarId} onCerrar={() => setEliminarId(null)} titulo="Eliminar lectura" colorAccento="#dc2626">
+        <p className="text-sm text-gray-600 mb-5">
+          ¿Eliminar lectura de <strong>{lecturaPorEliminar?.servicio}</strong>
+          {lecturaPorEliminar?.unidadId
+            ? ` — ${unidades.find(u => u.id === lecturaPorEliminar.unidadId)?.numero ?? '?'}`
+            : ' (comunitario)'}?
+        </p>
+        <div className="flex gap-3">
+          <button onClick={() => setEliminarId(null)}
+            className="flex-1 py-2.5 rounded-xl border text-sm font-semibold text-gray-600 hover:bg-slate-50"
+            style={{ borderColor: '#e2e8f0' }}>Cancelar</button>
+          <button onClick={handleEliminar}
+            className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+            style={{ background: '#dc2626' }}>Eliminar</button>
+        </div>
+      </Modal>
     </div>
   )
 }
