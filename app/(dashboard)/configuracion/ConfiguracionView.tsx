@@ -449,8 +449,8 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
 
           <div className="bg-white rounded-2xl border shadow-sm p-6" style={{ borderColor: '#e2e8f0' }}>
             <h2 className="font-bold text-gray-900 mb-5">Datos de contacto</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
+            <div className="space-y-4">
+              <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1.5">Nombre del administrador</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -464,32 +464,34 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Teléfono administrador</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={fact.telefonoAdmin}
-                    onChange={e => setFact(f => ({ ...f, telefonoAdmin: e.target.value }))}
-                    placeholder="+56 9 3914 7492"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                    style={{ borderColor: '#e2e8f0' }}
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Teléfono administrador</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={fact.telefonoAdmin}
+                      onChange={e => setFact(f => ({ ...f, telefonoAdmin: e.target.value }))}
+                      placeholder="+56 9 3914 7492"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      style={{ borderColor: '#e2e8f0' }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Horario de atención</label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={fact.horarioAdmin}
-                    onChange={e => setFact(f => ({ ...f, horarioAdmin: e.target.value }))}
-                    placeholder="Lunes a Viernes 9:30 a 17:30 hrs"
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                    style={{ borderColor: '#e2e8f0' }}
-                  />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Horario de atención</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={fact.horarioAdmin}
+                      onChange={e => setFact(f => ({ ...f, horarioAdmin: e.target.value }))}
+                      placeholder="Lunes a Viernes 9:30 a 17:30 hrs"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      style={{ borderColor: '#e2e8f0' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
