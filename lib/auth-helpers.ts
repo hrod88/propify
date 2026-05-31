@@ -53,6 +53,7 @@ export async function getEdificioActual(): Promise<string> {
  * Fallback a 'mirador-sacramentinos' / 'Admin' si no hay sesión.
  */
 export async function getUsuarioActual(): Promise<{
+  id: string
   edificioId: string
   nombre: string
   apellido: string
@@ -60,22 +61,23 @@ export async function getUsuarioActual(): Promise<{
   try {
     const client = await createSupabaseServerClient()
     const { data: { user } } = await client.auth.getUser()
-    if (!user?.email) return { edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
+    if (!user?.email) return { id: '', edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
 
     const { data } = await supabase
       .from('usuarios')
-      .select('edificioId, nombre, apellido')
+      .select('id, edificioId, nombre, apellido')
       .eq('email', user.email)
       .single()
 
-    const u = data as { edificioId?: string; nombre?: string; apellido?: string } | null
+    const u = data as { id?: string; edificioId?: string; nombre?: string; apellido?: string } | null
     return {
+      id:         u?.id         ?? '',
       edificioId: u?.edificioId ?? 'mirador-sacramentinos',
       nombre:     u?.nombre    ?? 'Admin',
       apellido:   u?.apellido  ?? '',
     }
   } catch {
-    return { edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
+    return { id: '', edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
   }
 }
 

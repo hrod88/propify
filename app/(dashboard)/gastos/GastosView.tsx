@@ -1,8 +1,11 @@
-﻿'use client'
+'use client'
 
 /**
- * GastosView — Fase 21: CRUD admin de gastos comunes
- * Generar cobros mensuales (Create), Editar estado/monto, Liquidar (quick), Eliminar.
+ * GastosView — Gastos Comunes
+ * Mejoras v2:
+ *   - Filtro por período (mes/año) — vista por mes estilo Comunidad Feliz
+ *   - Cobro masivo con desglose completo (agua, electricidad, gas)
+ *   - vencimiento corregido: día 5 del mes siguiente
  */
 
 import { useState, useMemo, useCallback } from 'react'
@@ -10,6 +13,7 @@ import Link from 'next/link'
 import {
   DollarSign, TrendingUp, Clock, AlertTriangle,
   CheckCircle, XCircle, AlertCircle, Plus, Edit2, Trash2, X, Check, FileDown,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { formatCLP } from '@/lib/db'
 import { supabaseBrowser } from '@/lib/supabase-browser'
@@ -28,18 +32,18 @@ const pagoCfg: Record<EstadoPago, { Icon: React.ElementType; color: string; bg: 
 }
 
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_CORTO = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 function formatFecha(iso: string) {
   try { return new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) }
   catch { return iso }
 }
 
-/** Vencimiento: día 10 del mes 2 meses después del período (ej: mayo → 10 julio) */
+/** Vencimiento: día 5 del mes siguiente al período (ej: mayo → 5 junio) */
 function calcFechaVenc(mes: number, año: number): string {
-  const m2 = mes + 2
-  const m  = m2 > 12 ? m2 - 12 : m2
-  const y  = m2 > 12 ? año + 1  : año
-  return `${y}-${String(m).padStart(2,'0')}-10`
+  const m = mes === 12 ? 1  : mes + 1
+  const y = mes === 12 ? año + 1 : año
+  return `${y}-${String(m).padStart(2,'0')}-05`
 }
 
 // ─── Props ────────────────────────────────────────────────────
@@ -54,6 +58,9 @@ interface FormCrear {
   año:               number
   montoBase:         number
   montoFondoReserva: number
+  montoAgua:         number
+  montoElectricidad: number
+  montoGas:          number
 }
 
 interface FormEdit {
@@ -69,13 +76,44 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
   const [gastos,  setGastos]  = useState<GastoComun[]>(initial)
   const [filtro,  setFiltro]  = useState<EstadoFiltro>('todos')
 
+  // ── Período seleccionado ───────────────────────────────────
+  const hoy = new Date()
+  const [periodoSel, setPeriodoSel] = useState<{ mes: number; año: number }>(() => {
+    const first = initial[0]
+    if (!first) return { mes: hoy.getMonth() + 1, año: hoy.getFullYear() }
+    return { mes: first.mes, año: first.año }
+  })
+
+  // Lista de períodos únicos disponibles (ordenados más reciente primero)
+  const periodos = useMemo(() => {
+    const map = new Map<string, { mes: number; año: number }>()
+    gastos.forEach(g => {
+      const añoG = g.año
+      const key  = `${añoG}-${String(g.mes).padStart(2, '0')}`
+      if (!map.has(key)) map.set(key, { mes: g.mes, año: añoG })
+    })
+    return Array.from(map.values()).sort((a, b) => b.año - a.año || b.mes - a.mes)
+  }, [gastos])
+
+  // Índice del período seleccionado (para navegar prev/next)
+  const periodoIdx = periodos.findIndex(p => p.mes === periodoSel.mes && p.año === periodoSel.año)
+
+  // Gastos del período seleccionado
+  const gastosEnPeriodo = useMemo(
+    () => gastos.filter(g => g.mes === periodoSel.mes && g.año === periodoSel.año),
+    [gastos, periodoSel],
+  )
+
   // ── Modal: Generar cobro ───────────────────────────────────
   const [modalCrear, setModalCrear] = useState(false)
   const [formCrear,  setFormCrear]  = useState<FormCrear>({
-    mes:               new Date().getMonth() + 1,
-    año:               new Date().getFullYear(),
+    mes:               hoy.getMonth() + 1,
+    año:               hoy.getFullYear(),
     montoBase:         85_000,
     montoFondoReserva: 10_000,
+    montoAgua:         0,
+    montoElectricidad: 0,
+    montoGas:          0,
   })
   const [erroresCrear, setErroresCrear] = useState<Partial<Record<keyof FormCrear, string>>>({})
   const [generando,    setGenerando]    = useState(false)
@@ -90,25 +128,26 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
 
   // ── Computed ────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    if (filtro === 'todos') return gastos
-    return gastos.filter(g => g.estadoPago === filtro)
-  }, [gastos, filtro])
+    if (filtro === 'todos') return gastosEnPeriodo
+    return gastosEnPeriodo.filter(g => g.estadoPago === filtro)
+  }, [gastosEnPeriodo, filtro])
 
-  const totalCobrado   = gastos.reduce((s, g) => s + g.montoTotal, 0)
-  const recaudado      = gastos.filter(g => g.estadoPago === 'pagado').reduce((s, g) => s + g.montoTotal, 0)
-  const pendienteTotal = gastos.filter(g => g.estadoPago === 'pendiente').reduce((s, g) => s + g.montoTotal, 0)
-  const moroso         = gastos.filter(g => g.estadoPago === 'vencido' || g.estadoPago === 'parcial').reduce((s, g) => s + g.montoTotal, 0)
+  // Stats del período seleccionado
+  const totalCobrado   = gastosEnPeriodo.reduce((s, g) => s + g.montoTotal, 0)
+  const recaudado      = gastosEnPeriodo.filter(g => g.estadoPago === 'pagado').reduce((s, g) => s + g.montoTotal, 0)
+  const pendienteTotal = gastosEnPeriodo.filter(g => g.estadoPago === 'pendiente').reduce((s, g) => s + g.montoTotal, 0)
+  const moroso         = gastosEnPeriodo.filter(g => g.estadoPago === 'vencido' || g.estadoPago === 'parcial').reduce((s, g) => s + g.montoTotal, 0)
   const pctRecaudado   = totalCobrado > 0 ? Math.round(recaudado / totalCobrado * 100) : 0
 
   const conteos = {
-    todos:    gastos.length,
-    pagado:   gastos.filter(g => g.estadoPago === 'pagado').length,
-    pendiente:gastos.filter(g => g.estadoPago === 'pendiente').length,
-    vencido:  gastos.filter(g => g.estadoPago === 'vencido').length,
-    parcial:  gastos.filter(g => g.estadoPago === 'parcial').length,
+    todos:    gastosEnPeriodo.length,
+    pagado:   gastosEnPeriodo.filter(g => g.estadoPago === 'pagado').length,
+    pendiente:gastosEnPeriodo.filter(g => g.estadoPago === 'pendiente').length,
+    vencido:  gastosEnPeriodo.filter(g => g.estadoPago === 'vencido').length,
+    parcial:  gastosEnPeriodo.filter(g => g.estadoPago === 'parcial').length,
   }
 
-  /** Si ya existen cobros para el período seleccionado */
+  /** Si ya existen cobros para el período del form */
   const periodoExiste = useMemo(
     () => gastos.some(g => g.mes === formCrear.mes && g.año === formCrear.año),
     [gastos, formCrear.mes, formCrear.año],
@@ -123,8 +162,12 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     return u ? { nombre: `${u.nombre} ${u.apellido}`, rol: u.rol === 'arrendatario' ? 'Arr.' : 'Prop.' } : null
   }
 
-  const mesRef = gastos[0]?.mes ?? new Date().getMonth() + 1
-  const añoRef = gastos[0]?.año ?? new Date().getFullYear()
+  // Total por unidad (preview del form)
+  const montoTotalPorUnidad = formCrear.montoBase + formCrear.montoFondoReserva + formCrear.montoAgua + formCrear.montoElectricidad + formCrear.montoGas
+
+  // Mes/año de vencimiento para el modal
+  const mesVencLabel = formCrear.mes === 12 ? MESES[1]               : MESES[formCrear.mes + 1]
+  const añoVencLabel = formCrear.mes === 12 ? formCrear.año + 1       : formCrear.año
 
   // ── Acciones CRUD ──────────────────────────────────────────
 
@@ -143,24 +186,31 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
 
     setGenerando(true)
     const fechaVencimiento = calcFechaVenc(formCrear.mes, formCrear.año)
-    const montoTotal       = formCrear.montoBase + formCrear.montoFondoReserva
+    const montoTotal       = montoTotalPorUnidad
+
+    const añoForm = formCrear.año
 
     const nuevos: GastoComun[] = unidades.map(u => ({
-      id:               crypto.randomUUID(),
-      edificioId:       u.edificioId,
-      unidadId:         u.id,
-      mes:              formCrear.mes,
-      año:              formCrear.año,
-      montoBase:        formCrear.montoBase,
-      montoFondoReserva:formCrear.montoFondoReserva,
+      id:                crypto.randomUUID(),
+      edificioId:        u.edificioId,
+      unidadId:          u.id,
+      mes:               formCrear.mes,
+      año:               añoForm,
+      montoBase:         formCrear.montoBase,
+      montoFondoReserva: formCrear.montoFondoReserva,
+      ...(formCrear.montoAgua         > 0 ? { montoAgua:         formCrear.montoAgua }         : {}),
+      ...(formCrear.montoElectricidad > 0 ? { montoElectricidad: formCrear.montoElectricidad } : {}),
+      ...(formCrear.montoGas          > 0 ? { montoGas:          formCrear.montoGas }          : {}),
       montoTotal,
-      estadoPago:       'pendiente' as EstadoPago,
+      estadoPago:        'pendiente' as EstadoPago,
       fechaVencimiento,
-      diasMora:         0,
+      diasMora:          0,
     }))
 
-    // Optimistic
+    // Optimistic UI
     setGastos(prev => [...nuevos, ...prev])
+    // Cambiar al período recién generado
+    setPeriodoSel({ mes: formCrear.mes, año: añoForm })
     setModalCrear(false)
     setGenerando(false)
 
@@ -168,20 +218,33 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     supabaseBrowser
       .from('gastos_comunes')
       .insert(
-        nuevos.map(({ id, edificioId, unidadId, mes, año, montoBase, montoFondoReserva, montoTotal, estadoPago, fechaVencimiento, diasMora }) =>
-          ({ id, edificioId, unidadId, mes, año, montoBase, montoFondoReserva, montoTotal, estadoPago, fechaVencimiento, diasMora }),
-        ),
+        nuevos.map(n => ({
+          id:                n.id,
+          edificioId:        n.edificioId,
+          unidadId:          n.unidadId,
+          mes:               n.mes,
+          año:               n.año,
+          montoBase:         n.montoBase,
+          montoFondoReserva: n.montoFondoReserva,
+          ...(n.montoAgua         != null ? { montoAgua:         n.montoAgua }         : {}),
+          ...(n.montoElectricidad != null ? { montoElectricidad: n.montoElectricidad } : {}),
+          ...(n.montoGas          != null ? { montoGas:          n.montoGas }          : {}),
+          montoTotal:        n.montoTotal,
+          estadoPago:        n.estadoPago,
+          fechaVencimiento:  n.fechaVencimiento,
+          diasMora:          n.diasMora,
+        })),
       )
       .then(({ error }) => { if (error) console.warn('[Gastos] Error generando:', error.message) })
 
     agregarNotificacion(
       'pago',
       'Cobros generados',
-      `${nuevos.length} gastos comunes — ${MESES[formCrear.mes]} ${formCrear.año}`,
+      `${nuevos.length} unidades · ${MESES[formCrear.mes]} ${añoForm}`,
     )
-  }, [formCrear, unidades, periodoExiste, agregarNotificacion])
+  }, [formCrear, unidades, periodoExiste, montoTotalPorUnidad, agregarNotificacion])
 
-  /** Abre el modal de edición cargando los valores del gasto */
+  /** Abre el modal de edición */
   const abrirEditar = useCallback((g: GastoComun) => {
     setEditandoId(g.id)
     setFormEdit({
@@ -240,9 +303,6 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     agregarNotificacion('mora', 'Gasto eliminado', 'El registro fue removido correctamente')
   }, [eliminarId, agregarNotificacion])
 
-  const mesVencLabel = formCrear.mes === 12 ? MESES[1] : MESES[formCrear.mes + 1]
-  const añoVencLabel = formCrear.mes === 12 ? formCrear.año + 1 : formCrear.año
-
   // ── JSX ────────────────────────────────────────────────────
   return (
     <div className="space-y-5 animate-fade-in">
@@ -252,12 +312,12 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gastos Comunes</h1>
           <p className="text-gray-500 mt-1">
-            {MESES[mesRef]} {añoRef} · {gastos.length} unidades cobradas
+            {periodos.length} período{periodos.length !== 1 ? 's' : ''} · {unidades.length} unidades en el edificio
           </p>
         </div>
         <button
           onClick={() => {
-            setFormCrear(f => ({ ...f, mes: new Date().getMonth() + 1, año: new Date().getFullYear() }))
+            setFormCrear(f => ({ ...f, mes: hoy.getMonth() + 1, año: hoy.getFullYear() }))
             setErroresCrear({})
             setModalCrear(true)
           }}
@@ -265,14 +325,59 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
           style={{ background: '#2563ae' }}
         >
           <Plus className="w-4 h-4" />
-          Generar cobro
+          Generar cobros
         </button>
       </div>
 
-      {/* ── Stats ── */}
+      {/* ── Selector de período ── */}
+      <div className="bg-white rounded-2xl border shadow-sm p-4" style={{ borderColor: '#e2e8f0' }}>
+        <div className="flex items-center gap-3">
+          {/* Botón anterior */}
+          <button
+            onClick={() => periodoIdx < periodos.length - 1 && setPeriodoSel(periodos[periodoIdx + 1])}
+            disabled={periodoIdx >= periodos.length - 1}
+            className="p-2 rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-30"
+          >
+            <ChevronLeft className="w-4 h-4 text-gray-500" />
+          </button>
+
+          {/* Pills de períodos */}
+          <div className="flex items-center gap-1.5 flex-1 overflow-x-auto">
+            {periodos.length === 0 ? (
+              <p className="text-sm text-gray-400">Sin períodos generados aún</p>
+            ) : periodos.map(p => {
+              const activo = p.mes === periodoSel.mes && p.año === periodoSel.año
+              return (
+                <button
+                  key={`${p.año}-${p.mes}`}
+                  onClick={() => setPeriodoSel(p)}
+                  className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                  style={activo
+                    ? { background: '#1e3a5f', color: 'white' }
+                    : { background: '#f1f5f9', color: '#64748b' }
+                  }
+                >
+                  {MESES_CORTO[p.mes]} {p.año}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Botón siguiente */}
+          <button
+            onClick={() => periodoIdx > 0 && setPeriodoSel(periodos[periodoIdx - 1])}
+            disabled={periodoIdx <= 0}
+            className="p-2 rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-30"
+          >
+            <ChevronRight className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Stats del período seleccionado ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {[
-          { label: 'Total cobrado', value: formatCLP(totalCobrado),   Icon: DollarSign,    color: '#2563ae', bg: '#dbeafe', desc: `${gastos.length} unidades` },
+          { label: 'Total cobrado', value: formatCLP(totalCobrado),   Icon: DollarSign,    color: '#2563ae', bg: '#dbeafe', desc: `${gastosEnPeriodo.length} unidades` },
           { label: 'Recaudado',     value: formatCLP(recaudado),      Icon: TrendingUp,    color: '#16a34a', bg: '#dcfce7', desc: `${pctRecaudado}% del total` },
           { label: 'Por cobrar',    value: formatCLP(pendienteTotal), Icon: Clock,         color: '#d97706', bg: '#fef3c7', desc: `${conteos.pendiente} pendiente${conteos.pendiente !== 1 ? 's' : ''}` },
           { label: 'En mora',       value: formatCLP(moroso),         Icon: AlertTriangle, color: '#dc2626', bg: '#fee2e2', desc: `${conteos.vencido + conteos.parcial} unidades` },
@@ -335,9 +440,27 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {gastosEnPeriodo.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={7} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: '#f1f5f9' }}>
+                        <DollarSign className="w-6 h-6 text-gray-300" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-400">
+                          Sin cobros para {MESES[periodoSel.mes]} {periodoSel.año}
+                        </p>
+                        <p className="text-xs text-gray-300 mt-0.5">
+                          Haz clic en «Generar cobros» para crear los gastos de este período
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">
                     No hay gastos con este estado
                   </td>
                 </tr>
@@ -469,7 +592,7 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
             style={{ borderColor: '#f1f5f9' }}
           >
             <p className="text-xs text-gray-400">
-              Mostrando {filtered.length} de {gastos.length} gastos
+              {MESES[periodoSel.mes]} {periodoSel.año} · Mostrando {filtered.length} de {gastosEnPeriodo.length} gastos
             </p>
             <p className="text-xs font-semibold text-gray-600">
               Total filtrado: {formatCLP(filtered.reduce((s, g) => s + g.montoTotal, 0))}
@@ -488,12 +611,12 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
             onClick={() => setModalCrear(false)}
           />
           <div
-            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 overflow-y-auto max-h-[90vh]"
             style={{ border: '1px solid #e2e8f0' }}
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Generar Cobro Mensual</h2>
+                <h2 className="text-lg font-bold text-gray-900">Generar Cobros del Período</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
                   Crea un gasto por cada unidad del edificio ({unidades.length} unidades)
                 </p>
@@ -549,53 +672,109 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
                 </div>
               )}
 
-              {/* Montos */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Gasto común base (CLP)</label>
-                <input
-                  type="number"
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
-                  style={{ borderColor: erroresCrear.montoBase ? '#dc2626' : '#e2e8f0' }}
-                  value={formCrear.montoBase}
-                  onChange={e => setFormCrear(f => ({ ...f, montoBase: Number(e.target.value) }))}
-                />
-                {erroresCrear.montoBase && (
-                  <p className="text-xs text-red-500 mt-1">{erroresCrear.montoBase}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Fondo de reserva (CLP)</label>
-                <input
-                  type="number"
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
-                  style={{ borderColor: '#e2e8f0' }}
-                  value={formCrear.montoFondoReserva}
-                  onChange={e => setFormCrear(f => ({ ...f, montoFondoReserva: Number(e.target.value) }))}
-                />
+              {/* ── Cobros base ── */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cobros base</p>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Gasto común base (CLP)</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                    style={{ borderColor: erroresCrear.montoBase ? '#dc2626' : '#e2e8f0' }}
+                    value={formCrear.montoBase}
+                    onChange={e => setFormCrear(f => ({ ...f, montoBase: Number(e.target.value) }))}
+                  />
+                  {erroresCrear.montoBase && (
+                    <p className="text-xs text-red-500 mt-1">{erroresCrear.montoBase}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Fondo de reserva (CLP)</label>
+                  <input
+                    type="number"
+                    className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                    style={{ borderColor: '#e2e8f0' }}
+                    value={formCrear.montoFondoReserva}
+                    onChange={e => setFormCrear(f => ({ ...f, montoFondoReserva: Number(e.target.value) }))}
+                  />
+                </div>
               </div>
 
-              {/* Preview */}
+              {/* ── Cobros opcionales ── */}
+              <div className="space-y-3 pt-3 border-t" style={{ borderColor: '#f1f5f9' }}>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cobros adicionales <span className="font-normal normal-case text-gray-300">(dejar en 0 si no aplica)</span></p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">💧 Agua</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formCrear.montoAgua || ''}
+                      onChange={e => setFormCrear(f => ({ ...f, montoAgua: Number(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">⚡ Luz</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formCrear.montoElectricidad || ''}
+                      onChange={e => setFormCrear(f => ({ ...f, montoElectricidad: Number(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">🔥 Gas</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formCrear.montoGas || ''}
+                      onChange={e => setFormCrear(f => ({ ...f, montoGas: Number(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview total */}
               <div
-                className="flex items-center justify-between p-4 rounded-xl"
+                className="p-4 rounded-xl"
                 style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
               >
-                <div>
-                  <p className="text-xs text-gray-400">Total por unidad</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {formatCLP(formCrear.montoBase + formCrear.montoFondoReserva)}
-                  </p>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-xs text-gray-400">Total por unidad</p>
+                    <p className="text-xl font-bold text-gray-900">{formatCLP(montoTotalPorUnidad)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Total edificio ({unidades.length} uds.)</p>
+                    <p className="text-sm font-bold" style={{ color: '#2563ae' }}>
+                      {formatCLP(montoTotalPorUnidad * unidades.length)}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400">Total edificio ({unidades.length} unidades)</p>
-                  <p className="text-sm font-bold" style={{ color: '#2563ae' }}>
-                    {formatCLP((formCrear.montoBase + formCrear.montoFondoReserva) * unidades.length)}
-                  </p>
-                </div>
+                {/* Desglose mini */}
+                {[
+                  { label: 'Base',        monto: formCrear.montoBase },
+                  { label: 'Fdo. reserva',monto: formCrear.montoFondoReserva },
+                  { label: 'Agua',        monto: formCrear.montoAgua },
+                  { label: 'Electricidad',monto: formCrear.montoElectricidad },
+                  { label: 'Gas',         monto: formCrear.montoGas },
+                ].filter(c => c.monto > 0).map(c => (
+                  <div key={c.label} className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{c.label}</span>
+                    <span className="font-medium">{formatCLP(c.monto)}</span>
+                  </div>
+                ))}
               </div>
 
               {/* Vencimiento automático */}
               <p className="text-xs text-gray-400">
-                📅 Vencimiento automático: 5 de {mesVencLabel} {añoVencLabel}
+                📅 Vencimiento: 5 de {mesVencLabel} {añoVencLabel}
               </p>
             </div>
 
@@ -772,4 +951,3 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
     </div>
   )
 }
-

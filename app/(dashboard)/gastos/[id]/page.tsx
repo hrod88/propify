@@ -7,7 +7,8 @@ import {
   DollarSign, Home, User, Mail, Phone, Calendar, FileDown,
 } from 'lucide-react'
 import { getGastoComunById, getUnidades, getUsuarios, formatCLP } from '@/lib/db'
-import { getEdificioActual } from '@/lib/auth-helpers'
+import { getEdificioActual, getUsuarioActual } from '@/lib/auth-helpers'
+import RegistrarPagoButton from '@/components/gastos/RegistrarPagoButton'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -30,7 +31,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function GastoDetailPage({ params }: PageProps) {
   const { id } = await params
-  const edificioId = await getEdificioActual()
+  const [edificioId, usuarioActual] = await Promise.all([
+    getEdificioActual(),
+    getUsuarioActual(),
+  ])
   const [gasto, unidades, users] = await Promise.all([
     getGastoComunById(id),
     getUnidades(edificioId),
@@ -197,8 +201,25 @@ export default async function GastoDetailPage({ params }: PageProps) {
 
           {gasto.estadoPago !== 'pagado' && (
             <div className="space-y-2">
-              <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: '#2563ae' }}>Registrar pago</button>
-              <button className="w-full py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity" style={{ background: '#f1f5f9', color: '#1e3a5f' }}>Enviar recordatorio</button>
+              <RegistrarPagoButton
+                gastoId={gasto.id}
+                montoTotal={gasto.montoTotal}
+                unidadNumero={unidad?.numero ?? '?'}
+                mesNombre={MESES[gasto.mes]}
+                año={gasto['año'] as number}
+                mes={gasto.mes}
+                edificioId={edificioId}
+                unidadId={gasto.unidadId}
+                registradoPorId={usuarioActual.id}
+              />
+              <button
+                disabled
+                title="Próximamente: envío de email con Resend"
+                className="w-full py-2.5 rounded-xl text-sm font-semibold opacity-50 cursor-not-allowed"
+                style={{ background: '#f1f5f9', color: '#1e3a5f' }}
+              >
+                Enviar recordatorio por email
+              </button>
             </div>
           )}
         </div>
