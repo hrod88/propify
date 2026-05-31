@@ -17,6 +17,7 @@ import { LiquidacionPDF } from '@/components/pdf/LiquidacionPDF'
 import {
   getGastosComunes, getUnidades, getUsuarios,
   getEdificioById, getHistorialGastosUnidad, formatCLP,
+  getEgresosByPeriodo, getLecturasByPeriodo, getFondosByPeriodo, getEvolucionEgresos,
 } from '@/lib/db'
 
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -49,12 +50,17 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Cargar datos ──────────────────────────────────────────────
-  const [todosGastos, unidades, users, edificio] = await Promise.all([
-    getGastosComunes(edificioId),
-    getUnidades(edificioId),
-    getUsuarios(edificioId),
-    getEdificioById(edificioId),
-  ])
+  const [todosGastos, unidades, users, edificio, egresosGlobal, lecturasGlobal, fondosGlobal, evolucion] =
+    await Promise.all([
+      getGastosComunes(edificioId),
+      getUnidades(edificioId),
+      getUsuarios(edificioId),
+      getEdificioById(edificioId),
+      getEgresosByPeriodo(edificioId, mes, año),
+      getLecturasByPeriodo(edificioId, mes, año),
+      getFondosByPeriodo(edificioId, mes, año),
+      getEvolucionEgresos(edificioId, 12),
+    ])
 
   // Solo los del período seleccionado que estén pendientes o vencidos
   const gastosPeriodo = todosGastos.filter(
@@ -97,9 +103,20 @@ export async function POST(req: NextRequest) {
         })
       } catch { /* optional */ }
 
+      // Lecturas específicas de esta unidad + las comunitarias
+      const lecturasUnidad = lecturasGlobal.filter(
+        l => !l.unidadId || l.unidadId === gasto.unidadId,
+      )
+
       const element = createElement(
         LiquidacionPDF,
-        { gasto, unidad, edificio, residente, historial, qrDataUrl },
+        {
+          gasto, unidad, edificio, residente, historial, qrDataUrl,
+          egresos:   egresosGlobal,
+          lecturas:  lecturasUnidad,
+          fondos:    fondosGlobal,
+          evolucion,
+        },
       ) as unknown as ReactElement<DocumentProps>
 
       const pdfBuffer = await renderToBuffer(element)

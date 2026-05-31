@@ -32,6 +32,8 @@ import {
   BookMarked,
   NotebookPen,
   Sparkles,
+  Gauge,
+  PiggyBank,
 } from 'lucide-react'
 import { useRol }      from '@/context/rol-context'
 import { useEdificio }  from '@/context/edificio-context'
@@ -67,6 +69,8 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: '/gastos',         label: 'Gastos Comunes',   icon: Receipt },
       { href: '/egresos',        label: 'Egresos',          icon: TrendingDown },
+      { href: '/lecturas',       label: 'Lecturas',         icon: Gauge },
+      { href: '/fondos',         label: 'Fondos',           icon: PiggyBank },
       { href: '/proveedores',    label: 'Proveedores',      icon: Truck },
       { href: '/balance',        label: 'Balance',          icon: Scale },
       { href: '/presupuesto',    label: 'Presupuesto',      icon: Target },

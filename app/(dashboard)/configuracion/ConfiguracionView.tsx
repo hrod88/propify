@@ -208,6 +208,7 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
     emailPago:       edificio?.emailPago       ?? '',
     telefonoAdmin:   edificio?.telefonoAdmin   ?? '',
     horarioAdmin:    edificio?.horarioAdmin    ?? '',
+    nombreAdmin:     edificio?.nombreAdmin     ?? '',
   })
   const [factSaving,  setFactSaving]  = useState(false)
   const [factSaved,   setFactSaved]   = useState(false)
@@ -449,6 +450,20 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
           <div className="bg-white rounded-2xl border shadow-sm p-6" style={{ borderColor: '#e2e8f0' }}>
             <h2 className="font-bold text-gray-900 mb-5">Datos de contacto</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Nombre del administrador</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fact.nombreAdmin}
+                    onChange={e => setFact(f => ({ ...f, nombreAdmin: e.target.value }))}
+                    placeholder="ej: Juan Pérez González"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    style={{ borderColor: '#e2e8f0' }}
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1.5">Teléfono administrador</label>
                 <div className="relative">
@@ -509,6 +524,12 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
                   <div className="flex gap-3">
                     <span className="text-gray-400 w-28 shrink-0">Email pago</span>
                     <span className="font-semibold text-gray-900">{fact.emailPago}</span>
+                  </div>
+                )}
+                {fact.nombreAdmin && (
+                  <div className="flex gap-3">
+                    <span className="text-gray-400 w-28 shrink-0">Administrador</span>
+                    <span className="font-semibold text-gray-900">{fact.nombreAdmin}</span>
                   </div>
                 )}
                 {fact.telefonoAdmin && (

@@ -84,18 +84,19 @@ function DonutChart({ data }: { data: { label: string; value: number; color: str
 }
 
 // ─── Props & Form ─────────────────────────────────────────────
-interface Props { egresos: EgresoComunidad[]; edificioNombre: string }
+interface Props { egresos: EgresoComunidad[]; edificioNombre: string; edificioId: string }
 
 interface FormState {
   categoria:   CategoriaEgreso
   monto:       string
   proveedor:   string
   comprobante: string
+  fecha:       string
   descripcion: string
 }
 
 const FORM_EMPTY: FormState = {
-  categoria: 'Administración', monto: '', proveedor: '', comprobante: '', descripcion: '',
+  categoria: 'Administración', monto: '', proveedor: '', comprobante: '', fecha: '', descripcion: '',
 }
 
 type FormErrors = Partial<Record<keyof FormState, string>>
@@ -153,15 +154,26 @@ function FormEgreso({
         />
       </div>
 
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5">N° Comprobante / Factura</label>
-        <input
-          type="text" value={form.comprobante} onChange={upd('comprobante')}
-          placeholder="ej: FAC-2026-1234"
-          className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
-          style={{ borderColor: '#e2e8f0' }}
-          suppressHydrationWarning
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">N° Comprobante / Factura</label>
+          <input
+            type="text" value={form.comprobante} onChange={upd('comprobante')}
+            placeholder="ej: FAC-2026-1234"
+            className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+            style={{ borderColor: '#e2e8f0' }}
+            suppressHydrationWarning
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Fecha del documento</label>
+          <input
+            type="date" value={form.fecha} onChange={upd('fecha')}
+            className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+            style={{ borderColor: '#e2e8f0' }}
+            suppressHydrationWarning
+          />
+        </div>
       </div>
 
       <div>
@@ -195,7 +207,7 @@ function FormEgreso({
 }
 
 // ─── Componente principal ─────────────────────────────────────
-export default function EgresosView({ egresos: initial, edificioNombre }: Props) {
+export default function EgresosView({ egresos: initial, edificioNombre, edificioId }: Props) {
   const [lista,    setLista]    = useState<EgresoComunidad[]>(initial)
   const [toast,    setToast]    = useState<string | null>(null)
 
@@ -273,7 +285,7 @@ export default function EgresosView({ egresos: initial, edificioNombre }: Props)
 
     const nuevo: EgresoComunidad = {
       id:          crypto.randomUUID(),
-      edificioId:  'e1',
+      edificioId,
       mes:         filtroMes,
       año:         filtroAño,
       categoria:   form.categoria,
@@ -281,6 +293,7 @@ export default function EgresosView({ egresos: initial, edificioNombre }: Props)
       monto:       Number(form.monto),
       proveedor:   form.proveedor   || null,
       comprobante: form.comprobante || null,
+      fecha:       form.fecha       || null,
       creadoEn:    new Date().toISOString(),
     }
 
@@ -292,7 +305,7 @@ export default function EgresosView({ egresos: initial, edificioNombre }: Props)
     supabaseBrowser.from('egresos_comunidad').insert(nuevo)
       .then(({ error }) => { if (error) console.warn('[Egresos] insert:', error.message) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, filtroMes, filtroAño])
+  }, [form, filtroMes, filtroAño, edificioId])
 
   // ── Abrir editar ──
   const abrirEditar = useCallback((eg: EgresoComunidad) => {
@@ -302,6 +315,7 @@ export default function EgresosView({ egresos: initial, edificioNombre }: Props)
       monto:       String(eg.monto),
       proveedor:   eg.proveedor   ?? '',
       comprobante: eg.comprobante ?? '',
+      fecha:       eg.fecha       ?? '',
       descripcion: eg.descripcion ?? '',
     })
     setErroresEdit({})
@@ -319,6 +333,7 @@ export default function EgresosView({ egresos: initial, edificioNombre }: Props)
       monto:       Number(formEdit.monto),
       proveedor:   formEdit.proveedor   || null,
       comprobante: formEdit.comprobante || null,
+      fecha:       formEdit.fecha       || null,
       descripcion: formEdit.descripcion || null,
     }
 

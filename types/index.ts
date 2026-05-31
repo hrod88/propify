@@ -43,6 +43,7 @@ export interface Edificio {
   emailPago?: string       // Email donde enviar comprobante
   telefonoAdmin?: string   // Teléfono administrador (+56 9 3914 7492)
   horarioAdmin?: string    // Horario atención (Lunes a Viernes 9:30-17:30)
+  nombreAdmin?: string     // Nombre del administrador (Adan Jose Caicedo Herrera)
 }
 
 // ─── Unidad ───────────────────────────────────────────────────
@@ -331,10 +332,45 @@ export interface EgresoComunidad {
   categoria:         CategoriaEgreso | string
   descripcion?:      string | null
   monto:             number
-  comprobante?:      string | null
+  comprobante?:      string | null  // N° de documento / factura
+  nDoc?:             string | null  // alias visible en UI (igual que comprobante)
+  fecha?:            string | null  // fecha ISO de la boleta/factura
   proveedor?:        string | null
   registradoPorId?:  string | null
   creadoEn:          string
+}
+
+// ─── Lecturas de Medidores ────────────────────────────────────
+export interface Lectura {
+  id:                  string
+  edificioId:          string
+  unidadId?:           string | null   // null = registro comunitario (total)
+  mes:                 number
+  año:                 number
+  servicio:            string          // 'Agua Caliente' | 'Agua Fría' | 'Gas'
+  lecturaInicial?:     number | null
+  lecturaFinal?:       number | null
+  consumoM3?:          number | null
+  precioM3?:           number | null
+  porcentajeConsumo?:  number | null
+  total?:              number | null
+  observacion?:        string | null
+  creadoEn:            string
+}
+
+// ─── Fondos Comunidad ─────────────────────────────────────────
+export interface FondoComunidad {
+  id:           string
+  edificioId:   string
+  mes:          number
+  año:          number
+  nombre:       string
+  cobrado:      number
+  ingresos:     number
+  egresos:      number
+  saldoActual:  number
+  nota?:        string | null
+  creadoEn:     string
 }
 
 // ─── Proveedores ─────────────────────────────────────────────

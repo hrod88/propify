@@ -29,6 +29,8 @@ import type {
   Contrato,
   Acta,
   Novedad,
+  Lectura,
+  FondoComunidad,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -335,6 +337,120 @@ export async function getEgresos(edificioId = 'mirador-sacramentinos'): Promise<
     .order('categoria')
   if (error) { console.error('getEgresos:', error.message); return [] }
   return (data ?? []) as EgresoComunidad[]
+}
+
+export async function getEgresosByPeriodo(
+  edificioId: string, mes: number, año: number,
+): Promise<EgresoComunidad[]> {
+  const { data, error } = await supabase
+    .from('egresos_comunidad')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .eq('mes', mes)
+    .eq('año', año)
+    .order('categoria')
+    .order('monto', { ascending: false })
+  if (error) { console.error('getEgresosByPeriodo:', error.message); return [] }
+  return (data ?? []) as EgresoComunidad[]
+}
+
+/** Retorna los totales mensuales de egresos para el gráfico de evolución (últimos N meses). */
+export async function getEvolucionEgresos(
+  edificioId: string, meses = 12,
+): Promise<{ mes: number; año: number; total: number }[]> {
+  const { data, error } = await supabase
+    .from('egresos_comunidad')
+    .select('mes, año, monto')
+    .eq('edificioId', edificioId)
+    .order('año',  { ascending: false })
+    .order('mes',  { ascending: false })
+    .limit(meses * 50) // sobrecarga para agrupar en JS
+  if (error) { console.error('getEvolucionEgresos:', error.message); return [] }
+
+  // Agrupar por mes/año en JS
+  const map = new Map<string, { mes: number; año: number; total: number }>()
+  for (const row of (data ?? []) as { mes: number; año: number; monto: number }[]) {
+    const key = `${row.año}-${row.mes}`
+    const existing = map.get(key)
+    if (existing) existing.total += row.monto
+    else map.set(key, { mes: row.mes, año: row.año, total: row.monto })
+  }
+
+  // Ordenar cronológicamente y limitar
+  return Array.from(map.values())
+    .sort((a, b) => a.año !== b.año ? a.año - b.año : a.mes - b.mes)
+    .slice(-meses)
+}
+
+// ─── Lecturas de Medidores ────────────────────────────────────
+
+export async function getLecturas(edificioId = 'mirador-sacramentinos'): Promise<Lectura[]> {
+  const { data, error } = await supabase
+    .from('lecturas')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('año',  { ascending: false })
+    .order('mes',  { ascending: false })
+    .order('servicio')
+  if (error) { console.error('getLecturas:', error.message); return [] }
+  return (data ?? []) as Lectura[]
+}
+
+export async function getLecturasByPeriodo(
+  edificioId: string, mes: number, año: number,
+): Promise<Lectura[]> {
+  const { data, error } = await supabase
+    .from('lecturas')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .eq('mes', mes)
+    .eq('año', año)
+    .order('servicio')
+    .order('unidadId', { nullsFirst: true }) // comunitario primero
+  if (error) { console.error('getLecturasByPeriodo:', error.message); return [] }
+  return (data ?? []) as Lectura[]
+}
+
+export async function getLecturasByUnidad(
+  unidadId: string, mes: number, año: number,
+): Promise<Lectura[]> {
+  const { data, error } = await supabase
+    .from('lecturas')
+    .select('*')
+    .eq('unidadId', unidadId)
+    .eq('mes', mes)
+    .eq('año', año)
+    .order('servicio')
+  if (error) { console.error('getLecturasByUnidad:', error.message); return [] }
+  return (data ?? []) as Lectura[]
+}
+
+// ─── Fondos Comunidad ─────────────────────────────────────────
+
+export async function getFondos(edificioId = 'mirador-sacramentinos'): Promise<FondoComunidad[]> {
+  const { data, error } = await supabase
+    .from('fondos_comunidad')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('año',    { ascending: false })
+    .order('mes',    { ascending: false })
+    .order('nombre')
+  if (error) { console.error('getFondos:', error.message); return [] }
+  return (data ?? []) as FondoComunidad[]
+}
+
+export async function getFondosByPeriodo(
+  edificioId: string, mes: number, año: number,
+): Promise<FondoComunidad[]> {
+  const { data, error } = await supabase
+    .from('fondos_comunidad')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .eq('mes', mes)
+    .eq('año', año)
+    .order('nombre')
+  if (error) { console.error('getFondosByPeriodo:', error.message); return [] }
+  return (data ?? []) as FondoComunidad[]
 }
 
 // ─── Presupuestos ─────────────────────────────────────────────

@@ -15,6 +15,7 @@ export default async function EgresosPage() {
     <EgresosView
       egresos={egresos}
       edificioNombre={edificio?.nombre ?? 'Edificio'}
+      edificioId={edificioId}
     />
   )
 }

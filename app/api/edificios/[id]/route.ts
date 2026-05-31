@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> }
 // Campos permitidos para actualizar vía esta ruta
 const ALLOWED = new Set([
   'nombre', 'direccion', 'comuna', 'ciudad', 'rut',
-  'banco', 'cuentaCorriente', 'emailPago', 'telefonoAdmin', 'horarioAdmin',
+  'banco', 'cuentaCorriente', 'emailPago', 'telefonoAdmin', 'horarioAdmin', 'nombreAdmin',
   'totalUnidades', 'pisos', 'anoconstruccion',
 ])
 
