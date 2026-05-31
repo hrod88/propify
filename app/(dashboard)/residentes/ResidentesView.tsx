@@ -2,18 +2,20 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Plus, Mail, Phone, Home, Check, Pencil, Trash2 } from 'lucide-react'
+import { Search, Plus, Mail, Phone, Home, Check, Pencil, Trash2, Send, ShieldCheck } from 'lucide-react'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import { supabase } from '@/lib/supabase'
 import type { User, Unidad } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
-type TabFiltro = 'todos' | 'propietario' | 'arrendatario'
+type TabFiltro = 'todos' | 'propietario' | 'arrendatario' | 'conserje'
+type RolForm   = 'propietario' | 'arrendatario' | 'conserje'
 
 const rolCfg = {
   propietario:  { label: 'Propietario',  bg: '#dbeafe', color: '#2563ae', avatar: '#1e3a5f' },
   arrendatario: { label: 'Arrendatario', bg: '#f3e8ff', color: '#7c3aed', avatar: '#7c3aed' },
+  conserje:     { label: 'Conserje',     bg: '#dcfce7', color: '#16a34a', avatar: '#15803d' },
 } as const
 
 const tipoLabel: Record<string, string> = {
@@ -31,8 +33,9 @@ function getInitials(nombre: string, apellido: string) {
 
 // ─── Props ────────────────────────────────────────────────────
 interface Props {
-  residentes: User[]
-  unidades: Unidad[]
+  residentes:  User[]
+  unidades:    Unidad[]
+  edificioId:  string
 }
 
 // ─── Helpers de UI ────────────────────────────────────────────
@@ -47,7 +50,7 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
 }
 
 // ─── Componente ───────────────────────────────────────────────
-export default function ResidentesView({ residentes, unidades }: Props) {
+export default function ResidentesView({ residentes, unidades, edificioId }: Props) {
   const { agregarNotificacion }     = useNotificaciones()
   const [lista, setLista]           = useState<User[]>(residentes)
   const [tab, setTab]               = useState<TabFiltro>('todos')
@@ -58,10 +61,12 @@ export default function ResidentesView({ residentes, unidades }: Props) {
   // ─── Formulario crear ────────────────────────────────────────
   const [form, setForm] = useState({
     nombre: '', apellido: '', email: '', telefono: '',
-    rol: 'propietario' as 'propietario' | 'arrendatario',
+    rol: 'propietario' as RolForm,
     unidadId: '',
   })
-  const [errores, setErrores] = useState<Record<string, string>>({})
+  const [errores,  setErrores]  = useState<Record<string, string>>({})
+  const [enviando, setEnviando] = useState(false)
+  const [exitoInvite, setExitoInvite] = useState(false)
 
   // ─── Estado edición / eliminación ───────────────────────────
   const [editando, setEditando]     = useState<User | null>(null)
@@ -96,12 +101,13 @@ export default function ResidentesView({ residentes, unidades }: Props) {
     todos:        lista.length,
     propietario:  lista.filter(r => r.rol === 'propietario').length,
     arrendatario: lista.filter(r => r.rol === 'arrendatario').length,
+    conserje:     lista.filter(r => r.rol === 'conserje').length,
   }), [lista])
 
   const residenteAEliminar = lista.find(x => x.id === eliminarId)
 
-  // ─── Handler crear ──────────────────────────────────────────
-  function handleCrear() {
+  // ─── Handler crear + invitar ────────────────────────────────
+  async function handleCrear() {
     const e: Record<string, string> = {}
     if (!form.nombre.trim())   e.nombre   = 'El nombre es requerido'
     if (!form.apellido.trim()) e.apellido = 'El apellido es requerido'
@@ -110,25 +116,61 @@ export default function ResidentesView({ residentes, unidades }: Props) {
     setErrores(e)
     if (Object.keys(e).length > 0) return
 
-    const nuevo: User = {
-      id:         `u${Date.now()}`,
-      nombre:     form.nombre.trim(),
-      apellido:   form.apellido.trim(),
-      email:      form.email.trim().toLowerCase(),
-      telefono:   form.telefono.trim() || undefined,
-      rol:        form.rol,
-      edificioId: 'e1',
-      unidadId:   form.unidadId || undefined,
-      activo:     true,
-      creadoEn:   new Date().toISOString().split('T')[0],
+    setEnviando(true)
+    try {
+      const res  = await fetch('/api/invitar', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          nombre:     form.nombre.trim(),
+          apellido:   form.apellido.trim(),
+          email:      form.email.trim().toLowerCase(),
+          telefono:   form.telefono.trim() || undefined,
+          rol:        form.rol,
+          unidadId:   form.unidadId || undefined,
+          edificioId,
+        }),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+
+      if (!res.ok || !data.ok) {
+        setErrores({ email: data.error ?? 'Error al enviar la invitación' })
+        return
+      }
+
+      // Optimistic: agregar a lista local
+      const nuevo: User = {
+        id:         `u${Date.now()}`,
+        nombre:     form.nombre.trim(),
+        apellido:   form.apellido.trim(),
+        email:      form.email.trim().toLowerCase(),
+        telefono:   form.telefono.trim() || undefined,
+        rol:        form.rol,
+        edificioId,
+        unidadId:   form.unidadId || undefined,
+        activo:     false,   // aún no ha aceptado la invitación
+        creadoEn:   new Date().toISOString().split('T')[0],
+      }
+      setLista(prev => [nuevo, ...prev])
+      setExitoInvite(true)
+
+      const rolLabel = form.rol === 'propietario' ? 'Propietario'
+                     : form.rol === 'arrendatario' ? 'Arrendatario'
+                     : 'Conserje'
+      agregarNotificacion('residente', 'Invitación enviada', `${nuevo.nombre} ${nuevo.apellido} — ${rolLabel}`)
+
+    } catch {
+      setErrores({ email: 'Error de conexión. Intenta nuevamente.' })
+    } finally {
+      setEnviando(false)
     }
-    setLista(prev => [nuevo, ...prev])
+  }
+
+  function cerrarModalCrear() {
     setModalCrear(false)
-    setForm({ nombre: '', apellido: '', email: '', telefono: '', rol: 'propietario', unidadId: '' })
     setErrores({})
-    showToast('Residente registrado correctamente')
-    agregarNotificacion('residente', 'Nuevo residente registrado', `${nuevo.nombre} ${nuevo.apellido} — ${nuevo.rol === 'propietario' ? 'Propietario' : 'Arrendatario'}`)
-    supabase.from('usuarios').insert(nuevo).then(({ error }) => { if (error) console.error('insert residente:', error.message) })
+    setExitoInvite(false)
+    setForm({ nombre: '', apellido: '', email: '', telefono: '', rol: 'propietario', unidadId: '' })
   }
 
   // ─── Handler editar ─────────────────────────────────────────
@@ -188,6 +230,7 @@ export default function ResidentesView({ residentes, unidades }: Props) {
     { value: 'todos',        label: `Todos (${counts.todos})` },
     { value: 'propietario',  label: `Propietarios (${counts.propietario})` },
     { value: 'arrendatario', label: `Arrendatarios (${counts.arrendatario})` },
+    { value: 'conserje',     label: `Conserjes (${counts.conserje})` },
   ]
 
   // ─── Render ──────────────────────────────────────────────────
@@ -215,12 +258,12 @@ export default function ResidentesView({ residentes, unidades }: Props) {
           </p>
         </div>
         <button
-          onClick={() => { setModalCrear(true); setErrores({}) }}
+          onClick={() => { setModalCrear(true); setErrores({}); setExitoInvite(false) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
           style={{ background: '#2563ae' }}
         >
           <Plus className="w-4 h-4" />
-          Nuevo residente
+          Invitar usuario
         </button>
       </div>
 
@@ -384,105 +427,154 @@ export default function ResidentesView({ residentes, unidades }: Props) {
         </p>
       )}
 
-      {/* ─── Modal: Nuevo Residente ───────────────────────────── */}
+      {/* ─── Modal: Invitar usuario ───────────────────────────── */}
       <Modal
         abierto={modalCrear}
-        onCerrar={() => { setModalCrear(false); setErrores({}) }}
-        titulo="Nuevo residente"
-        subtitulo="Registra un propietario o arrendatario en el edificio"
+        onCerrar={cerrarModalCrear}
+        titulo="Invitar usuario"
+        subtitulo="Se enviará un email para que creen su contraseña"
         colorAccento="#2563ae"
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Nombre" error={errores.nombre}>
-              <input
-                type="text"
-                className={inp}
-                style={{ borderColor: errores.nombre ? '#dc2626' : '#e2e8f0' }}
-                placeholder="María"
-                value={form.nombre}
-                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              />
-            </Campo>
-            <Campo label="Apellido" error={errores.apellido}>
-              <input
-                type="text"
-                className={inp}
-                style={{ borderColor: errores.apellido ? '#dc2626' : '#e2e8f0' }}
-                placeholder="González"
-                value={form.apellido}
-                onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))}
-              />
-            </Campo>
-          </div>
-
-          <Campo label="Email" error={errores.email}>
-            <input
-              type="email"
-              className={inp}
-              style={{ borderColor: errores.email ? '#dc2626' : '#e2e8f0' }}
-              placeholder="residente@email.com"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            />
-          </Campo>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Teléfono (opcional)">
-              <input
-                type="tel"
-                className={inp}
-                style={{ borderColor: '#e2e8f0' }}
-                placeholder="+56 9 1234 5678"
-                value={form.telefono}
-                onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))}
-              />
-            </Campo>
-            <Campo label="Rol">
-              <select
-                className={inp}
-                style={{ borderColor: '#e2e8f0' }}
-                value={form.rol}
-                onChange={e => setForm(f => ({ ...f, rol: e.target.value as typeof form.rol }))}
-              >
-                <option value="propietario">Propietario</option>
-                <option value="arrendatario">Arrendatario</option>
-              </select>
-            </Campo>
-          </div>
-
-          <Campo label="Unidad asignada (opcional)">
-            <select
-              className={inp}
-              style={{ borderColor: '#e2e8f0' }}
-              value={form.unidadId}
-              onChange={e => setForm(f => ({ ...f, unidadId: e.target.value }))}
-            >
-              <option value="">— Sin asignar —</option>
-              {unidades.map(u => (
-                <option key={u.id} value={u.id}>
-                  Unidad {u.numero} · Piso {u.piso} ({tipoLabel[u.tipo] ?? u.tipo})
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <div className="flex gap-3 justify-end pt-2">
+        {exitoInvite ? (
+          /* ── Pantalla de éxito ── */
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                 style={{ background: '#dcfce7' }}>
+              <ShieldCheck className="w-8 h-8" style={{ color: '#16a34a' }} />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-lg">¡Invitación enviada!</p>
+              <p className="text-sm text-gray-500 mt-1">
+                <strong>{form.email}</strong> recibirá un email para crear su contraseña y acceder al portal.
+              </p>
+            </div>
+            <div className="w-full rounded-xl p-3 text-sm text-left space-y-1"
+                 style={{ background: '#f0fdf4', color: '#166534' }}>
+              <p>✓ Usuario creado en el sistema</p>
+              <p>✓ Email de invitación enviado</p>
+              <p>✓ Accederá con el rol: <strong>
+                {form.rol === 'propietario' ? 'Propietario'
+                  : form.rol === 'arrendatario' ? 'Arrendatario'
+                  : 'Conserje'}
+              </strong></p>
+            </div>
             <button
-              onClick={() => { setModalCrear(false); setErrores({}) }}
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleCrear}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+              onClick={cerrarModalCrear}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               style={{ background: '#2563ae' }}
             >
-              Registrar
+              Cerrar
             </button>
           </div>
-        </div>
+        ) : (
+          /* ── Formulario ── */
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Campo label="Nombre" error={errores.nombre}>
+                <input
+                  type="text"
+                  className={inp}
+                  style={{ borderColor: errores.nombre ? '#dc2626' : '#e2e8f0' }}
+                  placeholder="María"
+                  value={form.nombre}
+                  onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                />
+              </Campo>
+              <Campo label="Apellido" error={errores.apellido}>
+                <input
+                  type="text"
+                  className={inp}
+                  style={{ borderColor: errores.apellido ? '#dc2626' : '#e2e8f0' }}
+                  placeholder="González"
+                  value={form.apellido}
+                  onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))}
+                />
+              </Campo>
+            </div>
+
+            <Campo label="Email" error={errores.email}>
+              <input
+                type="email"
+                className={inp}
+                style={{ borderColor: errores.email ? '#dc2626' : '#e2e8f0' }}
+                placeholder="usuario@email.com"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              />
+            </Campo>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Campo label="Teléfono (opcional)">
+                <input
+                  type="tel"
+                  className={inp}
+                  style={{ borderColor: '#e2e8f0' }}
+                  placeholder="+56 9 1234 5678"
+                  value={form.telefono}
+                  onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))}
+                />
+              </Campo>
+              <Campo label="Rol">
+                <select
+                  className={inp}
+                  style={{ borderColor: '#e2e8f0' }}
+                  value={form.rol}
+                  onChange={e => setForm(f => ({ ...f, rol: e.target.value as RolForm }))}
+                >
+                  <option value="propietario">Propietario</option>
+                  <option value="arrendatario">Arrendatario</option>
+                  <option value="conserje">Conserje</option>
+                </select>
+              </Campo>
+            </div>
+
+            {form.rol !== 'conserje' && (
+              <Campo label="Unidad asignada (opcional)">
+                <select
+                  className={inp}
+                  style={{ borderColor: '#e2e8f0' }}
+                  value={form.unidadId}
+                  onChange={e => setForm(f => ({ ...f, unidadId: e.target.value }))}
+                >
+                  <option value="">— Sin asignar —</option>
+                  {unidades.map(u => (
+                    <option key={u.id} value={u.id}>
+                      Unidad {u.numero} · Piso {u.piso} ({tipoLabel[u.tipo] ?? u.tipo})
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+            )}
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={cerrarModalCrear}
+                disabled={enviando}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCrear}
+                disabled={enviando}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-60"
+                style={{ background: '#2563ae' }}
+              >
+                {enviando ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Enviando…
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Enviar invitación
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ─── Modal: Editar Residente ──────────────────────────── */}

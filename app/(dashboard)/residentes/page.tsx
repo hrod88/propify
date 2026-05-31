@@ -11,5 +11,5 @@ export default async function ResidentesPage() {
     getResidentes(edificioId),
     getUnidades(edificioId),
   ])
-  return <ResidentesView residentes={residentes} unidades={unidades} />
+  return <ResidentesView residentes={residentes} unidades={unidades} edificioId={edificioId} />
 }
