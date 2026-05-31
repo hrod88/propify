@@ -9,7 +9,7 @@ import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import {
   DollarSign, TrendingUp, Clock, AlertTriangle,
-  CheckCircle, XCircle, AlertCircle, Plus, Edit2, Trash2, X, Check,
+  CheckCircle, XCircle, AlertCircle, Plus, Edit2, Trash2, X, Check, FileDown,
 } from 'lucide-react'
 import { formatCLP } from '@/lib/db'
 import { supabaseBrowser } from '@/lib/supabase-browser'
@@ -399,6 +399,18 @@ export default function GastosView({ gastos: initial, unidades, users }: Props) 
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
+                        {/* Descargar PDF */}
+                        <a
+                          href={`/api/liquidacion/${g.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Descargar liquidación PDF"
+                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                          style={{ color: '#dc2626' }}
+                        >
+                          <FileDown className="w-3.5 h-3.5" />
+                        </a>
+
                         {/* Ver detalle */}
                         <Link
                           href={`/gastos/${g.id}`}

@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import {
   ArrowLeft, ChevronRight,
   CheckCircle, Clock, XCircle, AlertCircle,
-  DollarSign, Home, User, Mail, Phone, Calendar,
+  DollarSign, Home, User, Mail, Phone, Calendar, FileDown,
 } from 'lucide-react'
 import { getGastoComunById, getUnidades, getUsuarios, formatCLP } from '@/lib/db'
 import { getEdificioActual } from '@/lib/auth-helpers'
@@ -78,7 +78,17 @@ export default async function GastoDetailPage({ params }: PageProps) {
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400 mb-1">Total cobrado</p>
-            <p className="text-3xl font-bold text-gray-900">{formatCLP(gasto.montoTotal)}</p>
+            <p className="text-3xl font-bold text-gray-900 mb-3">{formatCLP(gasto.montoTotal)}</p>
+            <a
+              href={`/api/liquidacion/${gasto.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+              style={{ background: '#dc2626' }}
+            >
+              <FileDown className="w-4 h-4" />
+              Descargar PDF
+            </a>
           </div>
         </div>
       </div>
