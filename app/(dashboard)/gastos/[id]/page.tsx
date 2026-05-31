@@ -9,6 +9,7 @@ import {
 import { getGastoComunById, getUnidades, getUsuarios, formatCLP } from '@/lib/db'
 import { getEdificioActual, getUsuarioActual } from '@/lib/auth-helpers'
 import RegistrarPagoButton from '@/components/gastos/RegistrarPagoButton'
+import EnviarEmailButton   from '@/components/gastos/EnviarEmailButton'
 
 type PageProps = { params: Promise<{ id: string }> }
 
@@ -199,8 +200,8 @@ export default async function GastoDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          {gasto.estadoPago !== 'pagado' && (
-            <div className="space-y-2">
+          <div className="space-y-2">
+            {gasto.estadoPago !== 'pagado' && (
               <RegistrarPagoButton
                 gastoId={gasto.id}
                 montoTotal={gasto.montoTotal}
@@ -212,16 +213,14 @@ export default async function GastoDetailPage({ params }: PageProps) {
                 unidadId={gasto.unidadId}
                 registradoPorId={usuarioActual.id}
               />
-              <button
-                disabled
-                title="Próximamente: envío de email con Resend"
-                className="w-full py-2.5 rounded-xl text-sm font-semibold opacity-50 cursor-not-allowed"
-                style={{ background: '#f1f5f9', color: '#1e3a5f' }}
-              >
-                Enviar recordatorio por email
-              </button>
-            </div>
-          )}
+            )}
+            <EnviarEmailButton
+              gastoId={gasto.id}
+              residenteEmail={residente?.email}
+              residenteNombre={residente ? `${residente.nombre} ${residente.apellido}` : undefined}
+              unidadNumero={unidad?.numero ?? '?'}
+            />
+          </div>
         </div>
       </div>
     </div>

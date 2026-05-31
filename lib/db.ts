@@ -117,6 +117,29 @@ export async function getGastoComunById(id: string): Promise<GastoComun | null> 
   return data as GastoComun
 }
 
+/** Últimos N gastos de una unidad (excluye el actual), ordenados más reciente primero. */
+export async function getHistorialGastosUnidad(
+  unidadId: string,
+  excludeId: string,
+  limit = 3,
+): Promise<GastoComun[]> {
+  const { data, error } = await supabase
+    .from('gastos_comunes')
+    .select('*')
+    .eq('unidadId', unidadId)
+    .neq('id', excludeId)
+    .limit(limit + 4)
+  if (error) { console.error('getHistorialGastosUnidad:', error.message); return [] }
+  return ((data ?? []) as GastoComun[])
+    .sort((a, b) => {
+      const ay = a['año'] as number
+      const by = b['año'] as number
+      if (by !== ay) return by - ay
+      return b.mes - a.mes
+    })
+    .slice(0, limit)
+}
+
 // ─── Pagos ────────────────────────────────────────────────────
 
 export async function getPagos(edificioId = 'mirador-sacramentinos'): Promise<Pago[]> {
