@@ -1,13 +1,10 @@
 import {
   Building2,
-  Users,
   AlertTriangle,
   Wrench,
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Package,
-  Calendar,
   Clock,
   ArrowRight,
   CheckCircle,
@@ -97,9 +94,9 @@ function GraficoBarras({
   const max     = Math.max(...datos.map(d => d.valor), 1)
   const W       = 320
   const H       = 148
-  const PAD_T   = 28   // espacio para la etiqueta de valor
-  const PAD_B   = 22   // espacio para la etiqueta del mes
-  const PAD_H   = 10   // padding horizontal total
+  const PAD_T   = 28
+  const PAD_B   = 22
+  const PAD_H   = 10
   const chartW  = W - PAD_H * 2
   const chartH  = H - PAD_T - PAD_B
   const n       = datos.length
@@ -110,39 +107,28 @@ function GraficoBarras({
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-      {/* Línea base */}
       <line
         x1={PAD_H} y1={PAD_T + chartH}
         x2={W - PAD_H} y2={PAD_T + chartH}
         stroke="#e2e8f0" strokeWidth={1}
       />
-
       {datos.map((d, i) => {
         const barH  = (d.valor / max) * chartH
         const x     = PAD_H + i * (barW + gap)
         const y     = PAD_T + chartH - barH
         const color = COLORES[i] ?? COLORES[COLORES.length - 1]
-
         return (
           <g key={i}>
-            {/* Barra */}
             <rect x={x} y={y} width={barW} height={barH} rx={5} fill={color} />
-            {/* Valor encima */}
             <text
               x={x + barW / 2} y={y - 5}
-              textAnchor="middle"
-              fontSize={9}
-              fontWeight="700"
-              fill="#374151"
+              textAnchor="middle" fontSize={9} fontWeight="700" fill="#374151"
             >
               {formatCLP(d.valor)}
             </text>
-            {/* Etiqueta mes */}
             <text
               x={x + barW / 2} y={H - 4}
-              textAnchor="middle"
-              fontSize={9}
-              fill="#94a3b8"
+              textAnchor="middle" fontSize={9} fill="#94a3b8"
             >
               {d.label}
             </text>
@@ -164,13 +150,12 @@ function GraficoDonut({
   size?: number
 }) {
   const total = segmentos.reduce((s, x) => s + x.valor, 0)
-  const r     = size * 0.367   // ~44 para size=120
+  const r     = size * 0.367
   const cx    = size / 2
   const cy    = size / 2
   const circ  = 2 * Math.PI * r
-  const sw    = size * 0.117   // ~14 para size=120
+  const sw    = size * 0.117
 
-  // Pre-calcular posición de cada segmento
   let acum = 0
   const segs = segmentos.map(seg => {
     const len        = total > 0 ? (seg.valor / total) * circ : 0
@@ -179,24 +164,12 @@ function GraficoDonut({
     return { ...seg, len, dashoffset }
   })
 
-  const fontSize1 = size * 0.108   // ~13 para size=120
-  const fontSize2 = size * 0.067   // ~8 para size=120
+  const fontSize1 = size * 0.108
+  const fontSize2 = size * 0.067
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      style={{ flexShrink: 0 }}
-    >
-      {/* Anillo de fondo */}
-      <circle
-        cx={cx} cy={cy} r={r}
-        fill="none"
-        stroke="#f1f5f9"
-        strokeWidth={sw}
-      />
-
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth={sw} />
       {segs.map((seg, i) => (
         <circle
           key={i}
@@ -209,25 +182,12 @@ function GraficoDonut({
           transform={`rotate(-90 ${cx} ${cy})`}
         />
       ))}
-
-      {/* Texto central */}
       {centro && (
         <>
-          <text
-            x={cx} y={cy - fontSize1 * 0.3}
-            textAnchor="middle"
-            fontSize={fontSize1}
-            fontWeight="700"
-            fill="#1e293b"
-          >
+          <text x={cx} y={cy - fontSize1 * 0.3} textAnchor="middle" fontSize={fontSize1} fontWeight="700" fill="#1e293b">
             {centro.linea1}
           </text>
-          <text
-            x={cx} y={cy + fontSize1 * 0.9}
-            textAnchor="middle"
-            fontSize={fontSize2}
-            fill="#94a3b8"
-          >
+          <text x={cx} y={cy + fontSize1 * 0.9} textAnchor="middle" fontSize={fontSize2} fill="#94a3b8">
             {centro.linea2}
           </text>
         </>
@@ -236,7 +196,7 @@ function GraficoDonut({
   )
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────
+// ─── KPI Card principal (compacta) ───────────────────────────
 function KPICard({
   titulo, valor, subtitulo, icon: Icon, color, bg, tendencia, tendenciaValor,
 }: {
@@ -251,35 +211,53 @@ function KPICard({
 }) {
   return (
     <div
-      className="bg-white rounded-2xl p-5 border shadow-sm hover:shadow-md transition-shadow"
+      className="bg-white rounded-xl p-4 border hover:shadow-md transition-shadow"
       style={{ borderColor: '#e2e8f0' }}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-2.5">
         <div
-          className="flex items-center justify-center w-11 h-11 rounded-xl"
+          className="flex items-center justify-center w-9 h-9 rounded-lg"
           style={{ background: bg }}
         >
-          <Icon className="w-5 h-5" style={{ color }} />
+          <Icon className="w-4 h-4" style={{ color }} />
         </div>
         {tendencia && tendenciaValor && (
           <div
             className="flex items-center gap-1 text-xs font-medium"
             style={{
               color:
-                tendencia === 'up'
-                  ? '#16a34a'
-                  : tendencia === 'down'
-                  ? '#dc2626'
-                  : '#64748b',
+                tendencia === 'up'   ? '#16a34a' :
+                tendencia === 'down' ? '#dc2626' : '#64748b',
             }}
           >
-            {tendencia === 'up'   && <TrendingUp   className="w-3.5 h-3.5" />}
-            {tendencia === 'down' && <TrendingDown  className="w-3.5 h-3.5" />}
+            {tendencia === 'up'   && <TrendingUp   className="w-3 h-3" />}
+            {tendencia === 'down' && <TrendingDown  className="w-3 h-3" />}
             <span>{tendenciaValor}</span>
           </div>
         )}
       </div>
-      <p className="text-2xl font-bold text-gray-900 leading-none">{valor}</p>
+      <p className="text-xl font-bold text-gray-900 leading-none">{valor}</p>
+      <p className="text-sm font-medium text-gray-600 mt-1">{titulo}</p>
+      {subtitulo && <p className="text-xs text-gray-400 mt-0.5">{subtitulo}</p>}
+    </div>
+  )
+}
+
+// ─── KPI Mini card (fila secundaria) ─────────────────────────
+function KPICardMini({
+  titulo, valor, subtitulo, color,
+}: {
+  titulo: string
+  valor: string
+  subtitulo?: string
+  color: string
+}) {
+  return (
+    <div
+      className="bg-white rounded-xl p-3.5 border"
+      style={{ borderColor: '#e2e8f0', borderTop: `3px solid ${color}` }}
+    >
+      <p className="text-lg font-bold text-gray-900 leading-none">{valor}</p>
       <p className="text-sm font-medium text-gray-600 mt-1">{titulo}</p>
       {subtitulo && <p className="text-xs text-gray-400 mt-0.5">{subtitulo}</p>}
     </div>
@@ -290,9 +268,9 @@ function KPICard({
 function ActividadItem({ item }: { item: ActividadReciente }) {
   const cfg = tipoActividadConfig[item.tipo]
   return (
-    <div className="flex items-start gap-3 py-3">
+    <div className="flex items-start gap-3 py-2.5">
       <span
-        className="flex items-center justify-center w-9 h-9 rounded-xl text-base shrink-0"
+        className="flex items-center justify-center w-8 h-8 rounded-lg text-sm shrink-0"
         style={{ background: cfg.bg }}
       >
         {cfg.emoji}
@@ -310,7 +288,7 @@ function ActividadItem({ item }: { item: ActividadReciente }) {
           )}
         </div>
         <p className="text-xs text-gray-500 truncate mt-0.5">{item.descripcion}</p>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-0.5">
           {item.unidad && (
             <span
               className="text-xs px-1.5 py-0.5 rounded-md font-medium"
@@ -333,17 +311,17 @@ const MESES_CORTO  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct
 
 // ─── Página principal ─────────────────────────────────────────
 export default async function DashboardPage() {
-  const { edificioId, nombre: nombreUsuario } = await getUsuarioActual()
+  const { edificioId } = await getUsuarioActual()
   const { kpis: kpi, actividad, gastos, pagos, solicitudes: sols, espacios, edificio } =
     await getDashboardData(edificioId)
 
-  // ── Fecha y hora dinámica (Chile ≈ UTC-4 en invierno) ──────
+  // ── Fecha dinámica (Chile ≈ UTC-4 en invierno) ─────────────
   const ahora        = new Date()
   const horaChile    = (ahora.getUTCHours() - 4 + 24) % 24
   const saludo       = horaChile < 12 ? 'Buenos días' : horaChile < 19 ? 'Buenas tardes' : 'Buenas noches'
   const emojiSaludo  = horaChile < 12 ? '👋' : horaChile < 19 ? '☀️' : '🌙'
   const diaNum       = ahora.getUTCDate()
-  const mesActual    = ahora.getUTCMonth() + 1   // 1-12
+  const mesActual    = ahora.getUTCMonth() + 1
   const añoActual    = ahora.getUTCFullYear()
   const diaSemana    = DIAS_SEMANA[ahora.getUTCDay()]
   const mesNombre    = MESES_LARGO[mesActual - 1]
@@ -351,14 +329,12 @@ export default async function DashboardPage() {
   const fechaLarga   = `${diaSemana}, ${diaNum} de ${mesNombre} de ${añoActual}`
   const fechaCorta   = `${diaNum.toString().padStart(2,'0')}/${mesActual.toString().padStart(2,'0')}`
 
-  // Nombre del edificio desde Supabase
   const nombreEdificio = edificio?.nombre ?? 'Edificio'
 
-  // ── KPIs básicos ────────────────────────────────────────────
+  // ── KPIs ────────────────────────────────────────────────────
   const ocupacion  = kpi.totalUnidades > 0 ? Math.round((kpi.unidadesOcupadas / kpi.totalUnidades) * 100) : 0
   const pagadosPct = kpi.totalUnidades > 0 ? Math.round(((kpi.totalUnidades - kpi.morosos) / kpi.totalUnidades) * 100) : 0
 
-  // Estado gastos comunes para mini-reporte (lado derecho)
   const gcPorEstado = {
     pagado:    gastos.filter(g => g.estadoPago === 'pagado').length,
     pendiente: gastos.filter(g => g.estadoPago === 'pendiente').length,
@@ -366,13 +342,11 @@ export default async function DashboardPage() {
     parcial:   gastos.filter(g => g.estadoPago === 'parcial').length,
   }
 
-  // Solicitudes urgentes activas (real)
   const solsUrgentes = sols.filter(
     s => (s.prioridad === 'urgente' || s.prioridad === 'alta') && s.estado !== 'resuelto',
   )
 
-  // ── Analítica: últimos 3 meses dinámicos ──────────────────
-  // Soporta cruce de año (p. ej. nov/dic/ene)
+  // ── Analítica: últimos 3 meses ─────────────────────────────
   const ultimosMeses = [-2, -1, 0].map(offset => {
     let mes = mesActual + offset
     let año = añoActual
@@ -380,7 +354,6 @@ export default async function DashboardPage() {
     return { mes, año, label: MESES_CORTO[mes - 1] }
   })
 
-  // Ingresos por mes (últimos 3 meses)
   const ingresosMensuales = ultimosMeses.map(({ mes, año, label }) => ({
     label,
     valor: pagos
@@ -388,7 +361,6 @@ export default async function DashboardPage() {
       .reduce((s, p) => s + p.monto, 0),
   }))
 
-  // Recaudación del mes actual
   const totalEsperado     = gastos.reduce((s, g) => s + g.montoTotal, 0)
   const totalCobradoMes   = pagos
     .filter(p => p.mes === mesActual && p.año === añoActual)
@@ -398,38 +370,26 @@ export default async function DashboardPage() {
     ? Math.round((totalCobradoMes / totalEsperado) * 100)
     : 0
 
-  // Acumulado últimos 3 meses
   const totalUltimos3 = ingresosMensuales.reduce((s, m) => s + m.valor, 0)
+  const ingMesAnt     = ingresosMensuales[1].valor
+  const ingMesAct     = ingresosMensuales[2].valor
+  const varMes        = ingMesAct - ingMesAnt
+  const varMesPct     = ingMesAnt > 0 ? Math.round((varMes / ingMesAnt) * 100) : 0
+  const labelPeriodo  = `${ultimosMeses[0].label}–${ultimosMeses[2].label}`
 
-  // Variación mes a mes (mes actual vs mes anterior)
-  const ingMesAnt = ingresosMensuales[1].valor
-  const ingMesAct = ingresosMensuales[2].valor
-  const varMes    = ingMesAct - ingMesAnt
-  const varMesPct = ingMesAnt > 0
-    ? Math.round((varMes / ingMesAnt) * 100)
-    : 0
-
-  // Label del periodo
-  const labelPeriodo = `${ultimosMeses[0].label}–${ultimosMeses[2].label}`
-
-  // Solicitudes por estado
   const solPorEstado = [
     { label: 'Pendiente',   valor: sols.filter(s => s.estado === 'pendiente').length,   color: '#f59e0b' },
     { label: 'En progreso', valor: sols.filter(s => s.estado === 'en_progreso').length, color: '#3b82f6' },
     { label: 'Resuelto',    valor: sols.filter(s => s.estado === 'resuelto').length,    color: '#10b981' },
   ]
 
-  // Solicitudes por categoría
   const catMap: Record<string, number> = {}
-  sols.forEach(s => {
-    catMap[s.categoria] = (catMap[s.categoria] ?? 0) + 1
-  })
+  sols.forEach(s => { catMap[s.categoria] = (catMap[s.categoria] ?? 0) + 1 })
   const solPorCategoria = Object.entries(catMap)
     .map(([label, valor]) => ({ label, valor }))
     .sort((a, b) => b.valor - a.valor)
   const maxSolCat = Math.max(...solPorCategoria.map(s => s.valor), 1)
 
-  // Espacios comunes por estado
   const espaciosEstado = {
     disponible: espacios.filter(e => e.estado === 'disponible').length,
     reservado:  espacios.filter(e => e.estado === 'reservado').length,
@@ -437,32 +397,69 @@ export default async function DashboardPage() {
     fuera:      espacios.filter(e => e.estado === 'fuera_servicio').length,
   }
 
-  return (
-    <div className="space-y-6 animate-fade-in">
+  // Color de la barra de recaudación según porcentaje
+  const barColor = pctCobrado >= 80 ? '#4ade80' : pctCobrado >= 50 ? '#fbbf24' : '#f87171'
 
-      {/* ── Encabezado ── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {saludo}, {nombreEdificio} {emojiSaludo}
-          </h1>
-          <p className="text-gray-500 mt-1">
-            {fechaLarga}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+  return (
+    <div className="space-y-4 animate-fade-in">
+
+      {/* ── Header con gradiente de marca ── */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #0f2341 0%, #1e3a5f 50%, #2563ae 100%)' }}
+      >
+        {/* Fila superior: saludo + badge */}
+        <div className="flex items-start justify-between px-6 pt-5 pb-4">
+          <div>
+            <h1 className="text-xl font-bold text-white">
+              {saludo}, {nombreEdificio} {emojiSaludo}
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: '#93c5fd' }}>
+              {fechaLarga}
+            </p>
+          </div>
           <span
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ background: '#dcfce7', color: '#16a34a' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#bbf7d0' }}
           >
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             Sistema operativo
           </span>
         </div>
+
+        {/* Barra de recaudación */}
+        <div
+          className="px-6 pb-5"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <div className="flex items-center justify-between pt-3 mb-2">
+            <span className="text-xs font-medium" style={{ color: '#93c5fd' }}>
+              Recaudación {mesCapital} {añoActual}
+            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-bold text-white">{formatCLP(totalCobradoMes)}</span>
+              <span className="text-xs" style={{ color: '#93c5fd' }}>
+                de {formatCLP(totalEsperado)}
+              </span>
+              <span className="text-sm font-bold" style={{ color: barColor }}>
+                {pctCobrado}%
+              </span>
+            </div>
+          </div>
+          <div
+            className="w-full h-2 rounded-full overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.15)' }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${pctCobrado}%`, background: barColor }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* ── KPI Cards fila 1 ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── KPI Cards principales (fila 1) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard
           titulo="Total Unidades"
           valor={`${kpi.unidadesOcupadas}/${kpi.totalUnidades}`}
@@ -479,7 +476,7 @@ export default async function DashboardPage() {
           color="#16a34a"
           bg="#dcfce7"
           tendencia={varMes >= 0 ? 'up' : 'down'}
-          tendenciaValor={`${varMes >= 0 ? '+' : ''}${varMesPct}% vs mes ant.`}
+          tendenciaValor={`${varMes >= 0 ? '+' : ''}${varMesPct}% vs ant.`}
         />
         <KPICard
           titulo="Morosos"
@@ -490,7 +487,7 @@ export default async function DashboardPage() {
           bg="#fee2e2"
         />
         <KPICard
-          titulo="Mantenciones Pendientes"
+          titulo="Mantenciones"
           valor={String(kpi.solicitudesPendientes)}
           subtitulo={`${solsUrgentes.length} urgente${solsUrgentes.length !== 1 ? 's' : ''}`}
           icon={Wrench}
@@ -499,58 +496,50 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── KPI Cards fila 2 ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
+      {/* ── KPI Mini cards (fila 2 — estadísticas secundarias) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KPICardMini
           titulo="Fondo de Reserva"
           valor={formatCLP(kpi.fondoReserva)}
-          subtitulo={`Actualizado al ${fechaCorta}`}
-          icon={TrendingUp}
+          subtitulo={`Al ${fechaCorta}`}
           color="#059669"
-          bg="#ecfdf5"
         />
-        <KPICard
+        <KPICardMini
           titulo="Visitas Hoy"
           valor={String(kpi.visitasHoy)}
-          subtitulo={kpi.visitasHoy > 0 ? `${kpi.visitasHoy} registro${kpi.visitasHoy !== 1 ? 's' : ''} de entrada` : 'Sin visitas registradas'}
-          icon={Users}
+          subtitulo={kpi.visitasHoy > 0 ? `${kpi.visitasHoy} registro${kpi.visitasHoy !== 1 ? 's' : ''}` : 'Sin visitas'}
           color="#7c3aed"
-          bg="#f3e8ff"
         />
-        <KPICard
+        <KPICardMini
           titulo="Paquetes Pendientes"
           valor={String(kpi.paquetesPendientes)}
-          subtitulo="Por retirar en conserjería"
-          icon={Package}
+          subtitulo="Por retirar"
           color="#db2777"
-          bg="#fce7f3"
         />
-        <KPICard
+        <KPICardMini
           titulo="Reservas Hoy"
           valor={String(kpi.reservasHoy)}
-          subtitulo={kpi.reservasHoy > 0 ? `${kpi.reservasHoy} espacio${kpi.reservasHoy !== 1 ? 's' : ''} reservado${kpi.reservasHoy !== 1 ? 's' : ''}` : 'Sin reservas hoy'}
-          icon={Calendar}
+          subtitulo={kpi.reservasHoy > 0 ? `${kpi.reservasHoy} espacio${kpi.reservasHoy !== 1 ? 's' : ''}` : 'Sin reservas'}
           color="#0891b2"
-          bg="#cffafe"
         />
       </div>
 
       {/* ══════════════════════════════════════════════════════ */}
-      {/* ── FASE 10: Analítica del Mes ──────────────────────── */}
+      {/* ── Analítica del Mes ─────────────────────────────── */}
       {/* ══════════════════════════════════════════════════════ */}
-      <div className="space-y-4">
+      <div className="space-y-3">
 
-        {/* Título de sección */}
-        <div className="flex items-center gap-2.5">
+        {/* Título sección */}
+        <div className="flex items-center gap-2">
           <div
-            className="flex items-center justify-center w-7 h-7 rounded-lg"
+            className="flex items-center justify-center w-6 h-6 rounded-md"
             style={{ background: '#dbeafe' }}
           >
-            <Activity className="w-4 h-4" style={{ color: '#2563ae' }} />
+            <Activity className="w-3.5 h-3.5" style={{ color: '#2563ae' }} />
           </div>
-          <h2 className="font-bold text-gray-900">Analítica del Mes</h2>
+          <h2 className="font-bold text-gray-900 text-sm">Analítica del Mes</h2>
           <span
-            className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+            className="text-xs px-2 py-0.5 rounded-full font-semibold"
             style={{ background: '#dbeafe', color: '#2563ae' }}
           >
             {mesCapital} {añoActual}
@@ -558,16 +547,16 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Fila A: Ingresos + Donut recaudación ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
 
-          {/* Gráfico de barras: ingresos mensuales */}
+          {/* Gráfico de barras */}
           <div
-            className="xl:col-span-2 bg-white rounded-2xl border shadow-sm p-5"
+            className="xl:col-span-2 bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
             <div className="flex items-center justify-between mb-1">
               <div>
-                <h3 className="font-semibold text-gray-900">Ingresos Mensuales</h3>
+                <h3 className="font-semibold text-gray-900 text-sm">Ingresos Mensuales</h3>
                 <p className="text-xs text-gray-400 mt-0.5">Últimos 3 meses · Pagos completados</p>
               </div>
               <BarChart3 className="w-4 h-4" style={{ color: '#cbd5e1' }} />
@@ -576,7 +565,7 @@ export default async function DashboardPage() {
             <GraficoBarras datos={ingresosMensuales} />
 
             <div
-              className="flex items-center justify-between mt-2 pt-3 border-t"
+              className="flex items-center justify-between mt-2 pt-2.5 border-t"
               style={{ borderColor: '#f1f5f9' }}
             >
               <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -586,10 +575,7 @@ export default async function DashboardPage() {
                 }
                 <span>
                   {ultimosMeses[2].label} vs {ultimosMeses[1].label}:{' '}
-                  <span
-                    className="font-semibold"
-                    style={{ color: varMes >= 0 ? '#16a34a' : '#dc2626' }}
-                  >
+                  <span className="font-semibold" style={{ color: varMes >= 0 ? '#16a34a' : '#dc2626' }}>
                     {varMes >= 0 ? '+' : ''}{varMesPct}%
                   </span>
                 </span>
@@ -601,14 +587,14 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Donut: recaudación del mes */}
+          {/* Donut recaudación */}
           <div
-            className="bg-white rounded-2xl border shadow-sm p-5"
+            className="bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="font-semibold text-gray-900">Recaudación</h3>
+                <h3 className="font-semibold text-gray-900 text-sm">Recaudación</h3>
                 <p className="text-xs text-gray-400 mt-0.5">Gastos comunes {mesNombre}</p>
               </div>
               <PieChart className="w-4 h-4" style={{ color: '#cbd5e1' }} />
@@ -616,7 +602,7 @@ export default async function DashboardPage() {
 
             <div className="flex items-center gap-4">
               <GraficoDonut
-                size={110}
+                size={96}
                 segmentos={[
                   { label: 'Cobrado',   valor: totalCobradoMes,   color: '#10b981' },
                   { label: 'Pendiente', valor: totalPendienteMes, color: '#f1f5f9' },
@@ -624,7 +610,7 @@ export default async function DashboardPage() {
                 centro={{ linea1: `${pctCobrado}%`, linea2: 'cobrado' }}
               />
 
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 space-y-2.5">
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="w-2 h-2 rounded-full" style={{ background: '#10b981' }} />
@@ -643,10 +629,7 @@ export default async function DashboardPage() {
                     {formatCLP(totalPendienteMes)}
                   </p>
                 </div>
-                <div
-                  className="pt-2 border-t"
-                  style={{ borderColor: '#f1f5f9' }}
-                >
+                <div className="pt-2 border-t" style={{ borderColor: '#f1f5f9' }}>
                   <p className="text-xs text-gray-400">Esperado total</p>
                   <p className="text-xs font-semibold text-gray-700">{formatCLP(totalEsperado)}</p>
                 </div>
@@ -655,50 +638,42 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Fila B: Operacional ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* ── Fila B: Estado solicitudes + Categorías + Espacios ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 
-          {/* Donut: solicitudes por estado */}
+          {/* Donut solicitudes */}
           <div
-            className="bg-white rounded-2xl border shadow-sm p-5"
+            className="bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <h3 className="font-semibold text-gray-900 mb-4">Estado de Solicitudes</h3>
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">Estado de Solicitudes</h3>
             <div className="flex items-center gap-4">
               <GraficoDonut
-                size={96}
+                size={88}
                 segmentos={solPorEstado}
-                centro={{
-                  linea1: String(sols.length),
-                  linea2: 'total',
-                }}
+                centro={{ linea1: String(sols.length), linea2: 'total' }}
               />
-              <div className="flex-1 space-y-2.5">
+              <div className="flex-1 space-y-2">
                 {solPorEstado.map(s => (
                   <div key={s.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: s.color }}
-                      />
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
                       <span className="text-xs text-gray-600">{s.label}</span>
                     </div>
-                    <span className="text-xs font-bold" style={{ color: s.color }}>
-                      {s.valor}
-                    </span>
+                    <span className="text-xs font-bold" style={{ color: s.color }}>{s.valor}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Barras horizontales: solicitudes por categoría */}
+          {/* Barras categorías */}
           <div
-            className="bg-white rounded-2xl border shadow-sm p-5"
+            className="bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <h3 className="font-semibold text-gray-900 mb-4">Solicitudes por Categoría</h3>
-            <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">Solicitudes por Categoría</h3>
+            <div className="space-y-2.5">
               {solPorCategoria.map(s => (
                 <BarraH
                   key={s.label}
@@ -709,21 +684,18 @@ export default async function DashboardPage() {
                 />
               ))}
             </div>
-            <p
-              className="text-xs text-gray-400 mt-4 pt-3 border-t"
-              style={{ borderColor: '#f1f5f9' }}
-            >
+            <p className="text-xs text-gray-400 mt-3 pt-2.5 border-t" style={{ borderColor: '#f1f5f9' }}>
               {sols.length} solicitudes · {solPorCategoria.length} categorías
             </p>
           </div>
 
           {/* Espacios comunes */}
           <div
-            className="bg-white rounded-2xl border shadow-sm p-5"
+            className="bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <h3 className="font-semibold text-gray-900 mb-4">Espacios Comunes</h3>
-            <div className="space-y-2.5">
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">Espacios Comunes</h3>
+            <div className="space-y-2">
               {[
                 { label: 'Disponibles',    valor: espaciosEstado.disponible, color: '#10b981', bg: '#d1fae5' },
                 { label: 'Ocupados',       valor: espaciosEstado.ocupado,    color: '#2563ae', bg: '#dbeafe' },
@@ -732,47 +704,41 @@ export default async function DashboardPage() {
               ].map(e => (
                 <div
                   key={e.label}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                  className="flex items-center justify-between px-3 py-2 rounded-lg"
                   style={{ background: e.bg }}
                 >
-                  <span className="text-xs font-medium" style={{ color: e.color }}>
-                    {e.label}
-                  </span>
-                  <span className="text-sm font-bold" style={{ color: e.color }}>
-                    {e.valor}
-                  </span>
+                  <span className="text-xs font-medium" style={{ color: e.color }}>{e.label}</span>
+                  <span className="text-sm font-bold" style={{ color: e.color }}>{e.valor}</span>
                 </div>
               ))}
             </div>
-            <p
-              className="text-xs text-gray-400 mt-3 pt-3 border-t"
-              style={{ borderColor: '#f1f5f9' }}
-            >
-              Total: {espacios.length} espacios del edificio
+            <p className="text-xs text-gray-400 mt-3 pt-2.5 border-t" style={{ borderColor: '#f1f5f9' }}>
+              Total: {espacios.length} espacios
             </p>
           </div>
         </div>
       </div>
-      {/* ══════════════════════════════════════════════════════ */}
 
-      {/* ── Contenido principal: actividad + panel derecho ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* ══════════════════════════════════════════════════════ */}
+      {/* ── Actividad + Panel derecho ─────────────────────── */}
+      {/* ══════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {/* Actividad reciente (2/3) */}
         <div
-          className="xl:col-span-2 bg-white rounded-2xl border shadow-sm"
+          className="xl:col-span-2 bg-white rounded-xl border"
           style={{ borderColor: '#e2e8f0' }}
         >
           <div
-            className="flex items-center justify-between px-5 pt-5 pb-4 border-b"
+            className="flex items-center justify-between px-5 pt-4 pb-3 border-b"
             style={{ borderColor: '#f1f5f9' }}
           >
-            <h2 className="font-bold text-gray-900">Actividad Reciente</h2>
+            <h2 className="font-bold text-gray-900 text-sm">Actividad Reciente</h2>
             <button
-              className="flex items-center gap-1 text-sm font-medium hover:opacity-70 transition-opacity"
+              className="flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-opacity"
               style={{ color: '#2563ae' }}
             >
-              Ver todo <ArrowRight className="w-3.5 h-3.5" />
+              Ver todo <ArrowRight className="w-3 h-3" />
             </button>
           </div>
           <div className="px-5 divide-y" style={{ borderColor: '#f8fafc' }}>
@@ -783,16 +749,18 @@ export default async function DashboardPage() {
         </div>
 
         {/* Panel derecho (1/3) */}
-        <div className="space-y-4">
+        <div className="space-y-3">
 
-          {/* Estado gastos comunes del mes */}
+          {/* Estado gastos comunes */}
           <div
-            className="bg-white rounded-2xl border shadow-sm p-5"
+            className="bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Gastos Comunes</h2>
-              <span className="text-xs text-gray-400 font-medium">Mayo 2026</span>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-gray-900 text-sm">Gastos Comunes</h2>
+              <span className="text-xs text-gray-400 font-medium">
+                {mesCapital} {añoActual}
+              </span>
             </div>
 
             <div className="space-y-2.5">
@@ -804,7 +772,7 @@ export default async function DashboardPage() {
                   return (
                     <div key={estado} className="flex items-center gap-3">
                       <div
-                        className="flex items-center justify-center w-7 h-7 rounded-lg"
+                        className="flex items-center justify-center w-7 h-7 rounded-lg shrink-0"
                         style={{ background: cfg.bg }}
                       >
                         <Icon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
@@ -828,7 +796,7 @@ export default async function DashboardPage() {
             </div>
 
             <button
-              className="w-full mt-4 py-2 rounded-xl text-sm font-semibold transition-colors hover:opacity-90"
+              className="w-full mt-3 py-2 rounded-lg text-xs font-semibold transition-colors hover:opacity-90"
               style={{ background: '#f1f5f9', color: '#1e3a5f' }}
             >
               Ver detalle completo
@@ -837,11 +805,11 @@ export default async function DashboardPage() {
 
           {/* Solicitudes urgentes */}
           <div
-            className="bg-white rounded-2xl border shadow-sm p-5"
+            className="bg-white rounded-xl border p-4"
             style={{ borderColor: '#e2e8f0' }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Solicitudes Urgentes</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-gray-900 text-sm">Solicitudes Urgentes</h2>
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-semibold"
                 style={{ background: '#fee2e2', color: '#dc2626' }}
@@ -850,45 +818,41 @@ export default async function DashboardPage() {
               </span>
             </div>
 
-            <div className="space-y-3">
-              {solsUrgentes
-                .slice(0, 3)
-                .map(s => (
+            <div className="space-y-2.5">
+              {solsUrgentes.slice(0, 3).map(s => (
+                <div
+                  key={s.id}
+                  className="flex items-start gap-2.5 p-2.5 rounded-lg"
+                  style={{ background: s.prioridad === 'urgente' ? '#fff7ed' : '#f8fafc' }}
+                >
                   <div
-                    key={s.id}
-                    className="flex items-start gap-3 p-3 rounded-xl"
-                    style={{ background: s.prioridad === 'urgente' ? '#fff7ed' : '#f8fafc' }}
-                  >
-                    <div
-                      className="flex items-center justify-center w-2 h-2 rounded-full mt-1.5 shrink-0"
-                      style={{
-                        background: s.prioridad === 'urgente' ? '#dc2626' : '#d97706',
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{s.titulo}</p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{s.descripcion}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span
-                          className="text-xs px-1.5 py-0.5 rounded-md font-medium capitalize"
-                          style={{
-                            background: s.prioridad === 'urgente' ? '#fee2e2' : '#fef3c7',
-                            color:      s.prioridad === 'urgente' ? '#dc2626' : '#d97706',
-                          }}
-                        >
-                          {s.prioridad}
-                        </span>
-                        <span className="text-xs" style={{ color: '#94a3b8' }}>
-                          {s.estado === 'en_progreso' ? '🔄 En progreso' : '⏳ Pendiente'}
-                        </span>
-                      </div>
+                    className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                    style={{ background: s.prioridad === 'urgente' ? '#dc2626' : '#d97706' }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-900 truncate">{s.titulo}</p>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{s.descripcion}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className="text-xs px-1.5 py-0.5 rounded-md font-medium capitalize"
+                        style={{
+                          background: s.prioridad === 'urgente' ? '#fee2e2' : '#fef3c7',
+                          color:      s.prioridad === 'urgente' ? '#dc2626' : '#d97706',
+                        }}
+                      >
+                        {s.prioridad}
+                      </span>
+                      <span className="text-xs" style={{ color: '#94a3b8' }}>
+                        {s.estado === 'en_progreso' ? '🔄 En progreso' : '⏳ Pendiente'}
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
 
             <button
-              className="w-full mt-3 py-2 rounded-xl text-sm font-semibold transition-colors hover:opacity-90"
+              className="w-full mt-3 py-2 rounded-lg text-xs font-semibold transition-colors hover:opacity-90"
               style={{ background: '#f1f5f9', color: '#1e3a5f' }}
             >
               Ver todas las solicitudes
