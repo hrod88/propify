@@ -6,7 +6,7 @@ import {
   AlertTriangle, XCircle, AlertCircle,
   Mail, Phone, Clock, Send, Home,
 } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import type { GastoComun, Unidad, User } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────

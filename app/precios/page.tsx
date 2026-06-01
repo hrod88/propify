@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Building2, Check, Shield, Zap, Crown } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 
 // ─── Datos de planes (espejo del seed SQL) ────────────────────
 const PLANES = [

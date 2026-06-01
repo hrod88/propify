@@ -15,7 +15,7 @@ import {
   Building2, Clock, Edit2, Trash2, Eye,
 } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase-browser'
-import { formatCLP }       from '@/lib/db'
+import { formatCLP }       from '@/lib/format'
 import type { Contrato, User as UserType, Unidad } from '@/types'
 
 // ─── Constantes ───────────────────────────────────────────────

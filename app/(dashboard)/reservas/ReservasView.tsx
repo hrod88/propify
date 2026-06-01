@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Calendar, Clock, Users, DollarSign } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import type { EspacioComun, Reserva, Unidad, User } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────

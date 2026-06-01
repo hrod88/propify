@@ -14,7 +14,7 @@ import {
   Filter, X,
 } from 'lucide-react'
 import Modal from '@/components/modal'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import type { Pago, Unidad, User, GastoComun } from '@/types'
 

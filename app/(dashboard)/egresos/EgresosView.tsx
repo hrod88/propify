@@ -5,7 +5,7 @@ import {
   Plus, Pencil, Trash2, TrendingDown, BarChart3,
   ChevronLeft, ChevronRight, FileDown,
 } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import Modal from '@/components/modal'
 import type { EgresoComunidad, CategoriaEgreso } from '@/types'

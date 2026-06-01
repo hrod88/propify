@@ -16,7 +16,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Plus, Edit2, Trash2, X, Check, FileDown,
   ChevronLeft, ChevronRight, Send, Mail,
 } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import type { GastoComun, Unidad, User, EstadoPago } from '@/types'

@@ -9,7 +9,7 @@ import {
 import Link from 'next/link'
 import { useRol } from '@/context/rol-context'
 import { supabaseBrowser } from '@/lib/supabase-browser'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import type {
   GastoComun, Pago, SolicitudMantencion, Paquete, Reserva,
   EspacioComun, Comunicacion, EstadoPago,

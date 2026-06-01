@@ -8,6 +8,7 @@
  * Solo llamar desde Server Components (page.tsx) y Route Handlers.
  */
 import { createSupabaseServerClient } from './supabase-server'
+import { formatCLP } from './format'
 import type {
   User,
   Edificio,
@@ -39,8 +40,8 @@ import type {
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
-export const formatCLP = (monto: number): string =>
-  new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(monto)
+// formatCLP importado desde lib/format.ts y re-exportado para compatibilidad
+export { formatCLP }
 
 // ─── Edificios ────────────────────────────────────────────────
 

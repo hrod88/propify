@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Bot, X, Send, Minus, Sparkles } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useEdificio } from '@/context/edificio-context'
 import type { GastoComun, SolicitudMantencion, Paquete, Visita, Unidad, Comunicacion, EspacioComun, Reserva, Edificio } from '@/types'

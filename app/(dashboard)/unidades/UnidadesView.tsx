@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, Plus, SlidersHorizontal, ChevronDown } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import type { Unidad, User } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────

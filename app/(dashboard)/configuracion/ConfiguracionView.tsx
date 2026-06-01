@@ -12,7 +12,7 @@ import {
   requestPushPermission, disablePush,
 } from '@/lib/push-notifications'
 import Link from 'next/link'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import type { Edificio, Unidad, User as UserType, Suscripcion } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────

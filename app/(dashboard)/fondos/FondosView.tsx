@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Plus, Pencil, Trash2, PiggyBank, ChevronLeft, ChevronRight } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import Modal from '@/components/modal'
 import type { FondoComunidad } from '@/types'

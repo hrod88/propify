@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Download, TrendingUp, DollarSign, AlertTriangle, Wrench, Home, ChevronDown, Printer, FileDown } from 'lucide-react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 import type { GastoComun, Pago, SolicitudMantencion, Unidad } from '@/types'
 
 // ─── Tipos ────────────────────────────────────────────────────

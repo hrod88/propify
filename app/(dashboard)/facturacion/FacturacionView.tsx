@@ -16,7 +16,7 @@ import {
   Receipt,
 } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase-browser'
-import { formatCLP }       from '@/lib/db'
+import { formatCLP }       from '@/lib/format'
 import type { ConfigFacturacion, GeneracionFacturacion, Unidad } from '@/types'
 
 // ─── Props ────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
  * Llama a /api/webpay/iniciar, recibe {url, token} y hace POST form a Transbank.
  */
 import { useState } from 'react'
-import { formatCLP } from '@/lib/db'
+import { formatCLP } from '@/lib/format'
 
 interface Props {
   gastoId: string
