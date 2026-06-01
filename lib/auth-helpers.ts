@@ -8,7 +8,6 @@
  */
 import { cookies }                    from 'next/headers'
 import { createSupabaseServerClient } from './supabase-server'
-import { supabase }                   from './supabase'
 
 /**
  * Retorna el edificioId del usuario autenticado actualmente.
@@ -26,7 +25,7 @@ export async function getEdificioActual(): Promise<string> {
       return cookieStore.get('propify_edificio_activo')?.value ?? 'mirador-sacramentinos'
     }
 
-    const { data } = await supabase
+    const { data } = await client
       .from('usuarios')
       .select('edificioId, rol')
       .eq('email', user.email)
@@ -63,7 +62,7 @@ export async function getUsuarioActual(): Promise<{
     const { data: { user } } = await client.auth.getUser()
     if (!user?.email) return { id: '', edificioId: 'mirador-sacramentinos', nombre: 'Admin', apellido: '' }
 
-    const { data } = await supabase
+    const { data } = await client
       .from('usuarios')
       .select('id, edificioId, nombre, apellido')
       .eq('email', user.email)
