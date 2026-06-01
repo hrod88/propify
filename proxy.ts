@@ -27,6 +27,19 @@ const RUTAS_PROTEGIDAS = [
   '/reportes',
   '/configuracion',
   '/mi-unidad',
+  // ── Módulos nuevos ──────────────────────────────────────────
+  '/personal',
+  '/novedades',
+  '/contratos',
+  '/actas',
+  '/amenidades',
+  '/egresos',
+  '/proveedores',
+  '/presupuesto',
+  '/balance',
+  '/facturacion',
+  '/lecturas',
+  '/fondos',
 ]
 
 function esRutaProtegida(pathname: string): boolean {

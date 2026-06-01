@@ -1,6 +1,7 @@
 /**
  * POST /api/onboarding
- * Crea el edificio y el usuario administrador en la DB después del signUp.
+ * Crea el edificio, el usuario administrador, y opcionalmente
+ * configura datos financieros en la DB después del signUp.
  * Usa getSupabaseAdmin() (service_role) para bypassear RLS.
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -13,30 +14,40 @@ export async function POST(req: NextRequest) {
       nombre, apellido, email,
       edificioNombre, direccion, comuna, ciudad, rut,
       pisos, totalUnidades,
+      // Datos financieros (step 3 — opcionales)
+      banco, cuentaCorriente, emailPago,
+      nombreAdmin, telefonoAdmin, horarioAdmin,
     } = body
 
     if (!nombre || !apellido || !email || !edificioNombre || !direccion || !comuna || !ciudad) {
       return NextResponse.json({ error: 'Faltan campos obligatorios.' }, { status: 400 })
     }
 
-    const db      = getSupabaseAdmin()
+    const db         = getSupabaseAdmin()
     const edificioId = crypto.randomUUID()
     const adminId    = crypto.randomUUID()
     const ahora      = new Date().toISOString()
 
-    // 1. Crear edificio
+    // 1. Crear edificio (con datos financieros si vienen)
     const { error: errEdificio } = await db.from('edificios').insert({
       id:              edificioId,
       nombre:          edificioNombre,
       direccion,
       comuna,
       ciudad,
-      rut:             rut || null,
-      pisos:           Number(pisos) || 1,
-      totalUnidades:   Number(totalUnidades) || 0,
-      administradorId: adminId,
-      activo:          true,
-      creadoEn:        ahora,
+      rut:               rut             || null,
+      pisos:             Number(pisos)   || 1,
+      totalUnidades:     Number(totalUnidades) || 0,
+      administradorId:   adminId,
+      activo:            true,
+      creadoEn:          ahora,
+      // Financiero
+      banco:             banco           || null,
+      cuentaCorriente:   cuentaCorriente || null,
+      emailPago:         emailPago       || null,
+      nombreAdmin:       nombreAdmin     || `${nombre} ${apellido}`,
+      telefonoAdmin:     telefonoAdmin   || null,
+      horarioAdmin:      horarioAdmin    || null,
     })
 
     if (errEdificio) {
