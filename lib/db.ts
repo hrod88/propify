@@ -31,6 +31,7 @@ import type {
   Novedad,
   Lectura,
   FondoComunidad,
+  PersonalEdificio,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -537,5 +538,18 @@ export async function getNovedades(edificioId = 'mirador-sacramentinos'): Promis
     .order('creadoEn', { ascending: false })
   if (error) { console.error('getNovedades:', error.message); return [] }
   return (data ?? []) as Novedad[]
+}
+
+// ─── Personal del Edificio (RRHH) ────────────────────────────
+
+export async function getPersonal(edificioId = 'mirador-sacramentinos'): Promise<PersonalEdificio[]> {
+  const { data, error } = await supabase
+    .from('personal_edificio')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('tipoContrato')
+    .order('apellido')
+  if (error) { console.error('getPersonal:', error.message); return [] }
+  return (data ?? []) as PersonalEdificio[]
 }
 

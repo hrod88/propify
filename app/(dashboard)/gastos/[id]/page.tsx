@@ -137,6 +137,18 @@ export default async function GastoDetailPage({ params }: PageProps) {
                   <p className="text-xs text-gray-400">Estado</p>
                   <p className="text-sm font-bold mt-0.5" style={{ color: cfg.color }}>{cfg.label}</p>
                 </div>
+                {gasto.folioUltimoPago && (
+                  <div className="p-3 rounded-xl col-span-2" style={{ background: '#f8fafc' }}>
+                    <p className="text-xs text-gray-400">N° comprobante pago</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5 font-mono">{gasto.folioUltimoPago}</p>
+                  </div>
+                )}
+                {gasto.folioBoleta && (
+                  <div className="p-3 rounded-xl col-span-2" style={{ background: '#f8fafc' }}>
+                    <p className="text-xs text-gray-400">N° folio boleta emitida</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5 font-mono">{gasto.folioBoleta}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

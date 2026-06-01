@@ -14,9 +14,9 @@ import type { EgresoComunidad, CategoriaEgreso } from '@/types'
 const CATEGORIAS: CategoriaEgreso[] = [
   'Administración', 'Portería', 'Electricidad', 'Gas / Calefacción',
   'Mantenimiento', 'Limpieza', 'Seguros', 'Ascensores',
-  'Reparaciones', 'Jardín', 'Extintores', 'Agua Fría',
+  'Reparaciones', 'Jardín', 'Extintores', 'Agua Fría', 'Agua Caliente',
   'Contabilidad', 'Comunicaciones', 'Aseo Exterior', 'Control de Plagas',
-  'Fondo Reserva', 'Otros',
+  'Fondo Reserva', 'Personal Part-Time', 'Caja Menor', 'Otros',
 ]
 
 const CAT_COLOR: Record<string, string> = {
@@ -32,11 +32,14 @@ const CAT_COLOR: Record<string, string> = {
   'Jardín':            '#84cc16',
   'Extintores':        '#64748b',
   'Agua Fría':         '#0ea5e9',
+  'Agua Caliente':     '#0284c7',
   'Contabilidad':      '#7c3aed',
   'Comunicaciones':    '#db2777',
   'Aseo Exterior':     '#059669',
   'Control de Plagas': '#92400e',
   'Fondo Reserva':     '#1d4ed8',
+  'Personal Part-Time':'#0891b2',
+  'Caja Menor':        '#78716c',
   'Otros':             '#94a3b8',
 }
 

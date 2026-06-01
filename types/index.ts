@@ -44,6 +44,7 @@ export interface Edificio {
   telefonoAdmin?: string   // Teléfono administrador (+56 9 3914 7492)
   horarioAdmin?: string    // Horario atención (Lunes a Viernes 9:30-17:30)
   nombreAdmin?: string     // Nombre del administrador (Adan Jose Caicedo Herrera)
+  emailAdmin?:  string     // Email directo del administrador (ej: adm@solintegral.cl)
 }
 
 // ─── Unidad ───────────────────────────────────────────────────
@@ -94,6 +95,8 @@ export interface GastoComun {
   fechaVencimiento: string
   fechaPago?: string
   diasMora?: number
+  folioBoleta?: string | null     // N° de boleta/factura del cobro emitido
+  folioUltimoPago?: string | null // N° de comprobante del último pago recibido
 }
 
 // ─── Solicitud de Mantención ──────────────────────────────────
@@ -311,6 +314,7 @@ export type CategoriaEgreso =
   | 'Electricidad'
   | 'Gas / Calefacción'
   | 'Agua Fría'
+  | 'Agua Caliente'
   | 'Limpieza'
   | 'Portería'
   | 'Ascensores'
@@ -324,6 +328,8 @@ export type CategoriaEgreso =
   | 'Aseo Exterior'
   | 'Control de Plagas'
   | 'Fondo Reserva'
+  | 'Personal Part-Time'
+  | 'Caja Menor'
   | 'Otros'
 
 export interface EgresoComunidad {
@@ -482,6 +488,25 @@ export interface Novedad {
   reportadoPorId?: string | null
   creadoEn:        string
   cerradoEn?:      string | null
+}
+
+// ─── Personal del Edificio (RRHH) ────────────────────────────
+export type TipoContratoPersonal = 'planta' | 'part-time' | 'honorario' | 'finiquitado'
+
+export interface PersonalEdificio {
+  id:              string
+  edificioId:      string
+  nombre:          string
+  apellido:        string
+  cargo:           string
+  tipoContrato:    TipoContratoPersonal
+  rut?:            string | null
+  fechaIngreso?:   string | null
+  fechaFiniquito?: string | null
+  sueldo?:         number | null
+  activo:          boolean
+  nota?:           string | null
+  creadoEn:        string
 }
 
 // ─── Actividad Reciente ───────────────────────────────────────

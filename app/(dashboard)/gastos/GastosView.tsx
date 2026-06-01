@@ -79,6 +79,8 @@ interface FormEdit {
   fechaVencimiento: string
   montoMultas:      number
   notaMultas:       string
+  folioBoleta:      string
+  folioUltimoPago:  string
   _montoBase:       number   // suma de componentes fijos (sólo para recalcular total)
 }
 
@@ -133,7 +135,7 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
 
   // ── Modal: Editar ──────────────────────────────────────────
   const [editandoId,  setEditandoId]  = useState<string | null>(null)
-  const [formEdit,    setFormEdit]    = useState<FormEdit>({ estadoPago: 'pendiente', montoTotal: 0, fechaVencimiento: '', montoMultas: 0, notaMultas: '', _montoBase: 0 })
+  const [formEdit,    setFormEdit]    = useState<FormEdit>({ estadoPago: 'pendiente', montoTotal: 0, fechaVencimiento: '', montoMultas: 0, notaMultas: '', folioBoleta: '', folioUltimoPago: '', _montoBase: 0 })
   const [erroresEdit, setErroresEdit] = useState<Partial<Record<keyof FormEdit, string>>>({})
 
   // ── Confirmar eliminar ─────────────────────────────────────
@@ -279,8 +281,10 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
       estadoPago:       g.estadoPago,
       montoTotal:       g.montoTotal,
       fechaVencimiento: g.fechaVencimiento.slice(0, 10),
-      montoMultas:      g.montoMultas ?? 0,
-      notaMultas:       g.notaMultas  ?? '',
+      montoMultas:      g.montoMultas      ?? 0,
+      notaMultas:       g.notaMultas       ?? '',
+      folioBoleta:      g.folioBoleta      ?? '',
+      folioUltimoPago:  g.folioUltimoPago  ?? '',
       _montoBase:       baseComponents,
     })
     setErroresEdit({})
@@ -314,8 +318,10 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
         estadoPago:       formEdit.estadoPago,
         montoTotal:       formEdit.montoTotal,
         fechaVencimiento: formEdit.fechaVencimiento,
-        montoMultas:      formEdit.montoMultas > 0 ? formEdit.montoMultas : null,
-        notaMultas:       formEdit.notaMultas  || null,
+        montoMultas:      formEdit.montoMultas     > 0  ? formEdit.montoMultas    : null,
+        notaMultas:       formEdit.notaMultas      || null,
+        folioBoleta:      formEdit.folioBoleta     || null,
+        folioUltimoPago:  formEdit.folioUltimoPago || null,
       })
       .eq('id', id)
       .then(({ error }) => { if (error) console.warn('[Gastos] Error editando:', error.message) })
@@ -1056,6 +1062,35 @@ export default function GastosView({ gastos: initial, unidades, users, edificioI
                       ⚠ Total actualizado: base {formatCLP(formEdit._montoBase)} + cargos {formatCLP(formEdit.montoMultas)} = <strong>{formatCLP(formEdit.montoTotal)}</strong>
                     </p>
                   )}
+                </div>
+
+                {/* ── Folios / comprobantes ── */}
+                <div className="pt-3 border-t space-y-3" style={{ borderColor: '#f1f5f9' }}>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Comprobantes <span className="font-normal normal-case text-gray-300">(opcional)</span>
+                  </p>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">N° folio de boleta emitida</label>
+                    <input
+                      type="text"
+                      placeholder="ej: 00123456"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formEdit.folioBoleta}
+                      onChange={e => setFormEdit(f => ({ ...f, folioBoleta: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">N° comprobante último pago</label>
+                    <input
+                      type="text"
+                      placeholder="ej: TRF-2026-04781"
+                      className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                      style={{ borderColor: '#e2e8f0' }}
+                      value={formEdit.folioUltimoPago}
+                      onChange={e => setFormEdit(f => ({ ...f, folioUltimoPago: e.target.value }))}
+                    />
+                  </div>
                 </div>
               </div>
 

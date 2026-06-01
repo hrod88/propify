@@ -85,6 +85,7 @@ const NAV_ADMIN: NavGroup[] = [
   {
     title: 'Operaciones',
     items: [
+      { href: '/personal',        label: 'Personal',         icon: Users },
       { href: '/mantenciones',   label: 'Mantenciones',     icon: Wrench,        badge: 4 },
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
       { href: '/visitas',        label: 'Visitas',          icon: ClipboardList },

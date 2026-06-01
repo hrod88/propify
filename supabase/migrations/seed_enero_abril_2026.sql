@@ -305,38 +305,38 @@ BEGIN
      "porcentajeConsumo", total, observacion, "creadoEn")
   VALUES
     -- Comunidad total enero 2026
-    (gen_random_uuid()::text, v_eid, NULL, 1, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, NULL, 1, 2026, 'Agua Caliente',
      NULL, NULL, 364.23, 16388.11, NULL, 5969043,
      'Total comunidad: Aguas Andinas + Metrogas. 364.23 m3 a $16.388,11/m3', NOW()),
     -- Unidad 0804 enero 2026
-    (gen_random_uuid()::text, v_eid, v_u0804, 1, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, v_u0804::uuid, 1, 2026, 'Agua Caliente',
      389.0, 393.0, 4.0, 16388.11, 1.098, 65553,
      'Lectura inicial 389 m3 → final 393 m3', NOW()),
 
     -- Comunidad total febrero 2026
-    (gen_random_uuid()::text, v_eid, NULL, 2, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, NULL, 2, 2026, 'Agua Caliente',
      NULL, NULL, 347.97, 18326.25, NULL, 6376984,
      'Total comunidad: Aguas Andinas + Metrogas. 347.97 m3 a $18.326,25/m3', NOW()),
     -- Unidad 0804 febrero 2026
-    (gen_random_uuid()::text, v_eid, v_u0804, 2, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, v_u0804::uuid, 2, 2026, 'Agua Caliente',
      393.0, 396.0, 3.0, 18326.25, 0.862, 54979,
      'Lectura inicial 393 m3 → final 396 m3', NOW()),
 
     -- Comunidad total marzo 2026
-    (gen_random_uuid()::text, v_eid, NULL, 3, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, NULL, 3, 2026, 'Agua Caliente',
      NULL, NULL, 489.392, 13297.84, NULL, 6507857,
      'Total comunidad: Aguas Andinas + Metrogas. 489.392 m3 a $13.297,84/m3', NOW()),
     -- Unidad 0804 marzo 2026
-    (gen_random_uuid()::text, v_eid, v_u0804, 3, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, v_u0804::uuid, 3, 2026, 'Agua Caliente',
      396.0, 400.0, 4.0, 13297.84, 0.817, 53191,
      'Lectura inicial 396 m3 → final 400 m3', NOW()),
 
     -- Comunidad total abril 2026
-    (gen_random_uuid()::text, v_eid, NULL, 4, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, NULL, 4, 2026, 'Agua Caliente',
      NULL, NULL, 563.06, 14271.51, NULL, 8035714,
      'Total comunidad: Aguas Andinas + Metrogas. 563.06 m3 a $14.271,51/m3', NOW()),
     -- Unidad 0804 abril 2026
-    (gen_random_uuid()::text, v_eid, v_u0804, 4, 2026, 'Agua Caliente',
+    (gen_random_uuid(), v_eid, v_u0804::uuid, 4, 2026, 'Agua Caliente',
      400.0, 404.68, 4.68, 14271.51, 0.831, 66791,
      'Lectura inicial 400 m3 → final 404.68 m3', NOW());
 
@@ -352,33 +352,33 @@ BEGIN
     (id, "edificioId", mes, año, nombre, cobrado, ingresos, egresos, "saldoActual", nota, "creadoEn")
   VALUES
     -- Enero 2026
-    (gen_random_uuid()::text, v_eid, 1, 2026, 'Fondo de reserva',
+    (gen_random_uuid(), v_eid, 1, 2026, 'Fondo de reserva',
       1515892, 402, 7821191, -26283064, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 1, 2026, 'Fondo Mudanza y Uso sala Multiuso',
+    (gen_random_uuid(), v_eid, 1, 2026, 'Fondo Mudanza y Uso sala Multiuso',
       79481, 79397, 0, 6214039, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 1, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
+    (gen_random_uuid(), v_eid, 1, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
       202206, 0, 0, 1924539, NULL, NOW()),
 
     -- Febrero 2026
-    (gen_random_uuid()::text, v_eid, 2, 2026, 'Fondo de reserva',
+    (gen_random_uuid(), v_eid, 2, 2026, 'Fondo de reserva',
       1664494, 291, 9684465, -34748870, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 2, 2026, 'Fondo Mudanza y Uso sala Multiuso',
+    (gen_random_uuid(), v_eid, 2, 2026, 'Fondo Mudanza y Uso sala Multiuso',
       39819, 79400, 0, 6372920, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 2, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
+    (gen_random_uuid(), v_eid, 2, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
       20000, 0, 0, 2086745, NULL, NOW()),
 
     -- Marzo 2026
-    (gen_random_uuid()::text, v_eid, 3, 2026, 'Fondo de reserva',
+    (gen_random_uuid(), v_eid, 3, 2026, 'Fondo de reserva',
       1500688, 0, 2796200, -35942275, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 3, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
+    (gen_random_uuid(), v_eid, 3, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
       78000, 0, 0, 2126745, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 3, 2026, 'Fondo Ingreso por Multas',
+    (gen_random_uuid(), v_eid, 3, 2026, 'Fondo Ingreso por Multas',
       239448, 0, 0, 645899, NULL, NOW()),
 
     -- Abril 2026
-    (gen_random_uuid()::text, v_eid, 4, 2026, 'Fondo de reserva',
+    (gen_random_uuid(), v_eid, 4, 2026, 'Fondo de reserva',
       1561600, 0, 3798592, -38158199, NULL, NOW()),
-    (gen_random_uuid()::text, v_eid, 4, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
+    (gen_random_uuid(), v_eid, 4, 2026, 'Fondo Cobro sobre tiempo Estacionamientos',
       180000, 268, 0, 2190013, NULL, NOW());
 
   -- ════════════════════════════════════════════════════════════

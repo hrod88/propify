@@ -209,6 +209,7 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
     telefonoAdmin:   edificio?.telefonoAdmin   ?? '',
     horarioAdmin:    edificio?.horarioAdmin    ?? '',
     nombreAdmin:     edificio?.nombreAdmin     ?? '',
+    emailAdmin:      edificio?.emailAdmin      ?? '',
   })
   const [factSaving,  setFactSaving]  = useState(false)
   const [factSaved,   setFactSaved]   = useState(false)
@@ -488,6 +489,20 @@ export default function ConfiguracionView({ edificio, users, unidades }: Props) 
                       value={fact.horarioAdmin}
                       onChange={e => setFact(f => ({ ...f, horarioAdmin: e.target.value }))}
                       placeholder="Lunes a Viernes 9:30 a 17:30 hrs"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      style={{ borderColor: '#e2e8f0' }}
+                    />
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Email del administrador</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="email"
+                      value={fact.emailAdmin}
+                      onChange={e => setFact(f => ({ ...f, emailAdmin: e.target.value }))}
+                      placeholder="ej: adm@solintegral.cl"
                       className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                       style={{ borderColor: '#e2e8f0' }}
                     />
