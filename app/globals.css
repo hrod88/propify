@@ -43,13 +43,8 @@
 
 /* ─── Base Styles ───────────────────────────────────────────── */
 :root {
-  --background: #0d1117;
-  --foreground: #f1f5f9;
-  --card-bg:    rgba(30, 41, 59, 0.7);
-  --card-border: rgba(51, 65, 85, 0.8);
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 * {
@@ -68,29 +63,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Scrollbar dark ─────────────────────────────────────────── */
+/* ─── Scrollbar personalizado ───────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* ─── Glass card utility ─────────────────────────────────────── */
-.glass-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
+  background: #94a3b8;
 }
 
 /* ─── Animaciones ───────────────────────────────────────────── */

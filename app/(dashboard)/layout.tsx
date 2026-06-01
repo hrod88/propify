@@ -17,7 +17,7 @@ export default function DashboardLayout({
     <RolProvider>
     <EdificioProvider>
     <NotificacionesProvider>
-      <div className="flex h-screen overflow-hidden" style={{ background: '#0d1117' }}>
+      <div className="flex h-screen overflow-hidden" style={{ background: '#f8fafc' }}>
         {/* Sidebar fijo */}
         <Sidebar />
 
