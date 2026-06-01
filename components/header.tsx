@@ -241,16 +241,25 @@ export default function Header() {
     solicitud: { bg: '#fef3c7', color: '#d97706' },
   }
 
+  // Estilos reutilizables dark mode
+  const PANEL_DARK = {
+    background:  '#0f172a',
+    border:      '1px solid rgba(51,65,85,0.8)',
+    borderColor: 'rgba(51,65,85,0.8)',
+  }
+  const DIVIDER_DARK = { borderColor: 'rgba(51,65,85,0.6)' }
+  const ROW_HOVER    = 'rgba(255,255,255,0.05)'
+
   return (
     <header
-      className="flex items-center justify-between px-6 py-3 border-b bg-white"
-      style={{ borderColor: '#e2e8f0', height: 64 }}
+      className="flex items-center justify-between px-6 py-3 border-b"
+      style={{ background: '#0a0f1a', borderColor: 'rgba(51,65,85,0.8)', height: 64 }}
     >
 
       {/* ── Búsqueda global ─────────────────────────────────── */}
       <div className="flex-1 max-w-md relative" ref={searchRef}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#475569' }} />
           <input
             type="text"
             value={searchValue}
@@ -262,17 +271,18 @@ export default function Header() {
             placeholder="Buscar residente, unidad, solicitud..."
             className="w-full pl-10 pr-4 py-2 rounded-xl border text-sm outline-none transition-all"
             style={{
-              borderColor: searchFocus ? '#2563ae' : '#e2e8f0',
-              background:  searchFocus ? 'white' : '#f8fafc',
-              color:       '#0f172a',
-              boxShadow:   searchFocus ? '0 0 0 3px rgba(37,99,174,0.08)' : 'none',
+              borderColor: searchFocus ? '#3b82f6' : 'rgba(51,65,85,0.8)',
+              background:  'rgba(30,41,59,0.8)',
+              color:       '#f1f5f9',
+              boxShadow:   searchFocus ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
             }}
             suppressHydrationWarning
           />
           {searchValue && (
             <button
               onClick={() => { setSearchValue(''); setSearchFocus(false) }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-medium"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium transition-opacity hover:opacity-70"
+              style={{ color: '#64748b' }}
             >
               ✕
             </button>
@@ -282,22 +292,22 @@ export default function Header() {
         {/* Dropdown de resultados */}
         {showResults && (
           <div
-            className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden"
-            style={{ borderColor: '#e2e8f0' }}
+            className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-2xl z-50 overflow-hidden"
+            style={{ ...PANEL_DARK, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
           >
             {resultados.length === 0 ? (
               <div className="px-4 py-6 text-center">
-                <p className="text-sm text-gray-400">Sin resultados para «{searchValue}»</p>
-                <p className="text-xs text-gray-300 mt-1">Intenta con otro nombre, número o categoría</p>
+                <p className="text-sm" style={{ color: '#94a3b8' }}>Sin resultados para «{searchValue}»</p>
+                <p className="text-xs mt-1" style={{ color: '#475569' }}>Intenta con otro nombre, número o categoría</p>
               </div>
             ) : (
               <>
-                <div className="px-4 py-2 border-b" style={{ borderColor: '#f1f5f9' }}>
-                  <p className="text-xs text-gray-400 font-medium">
+                <div className="px-4 py-2 border-b" style={DIVIDER_DARK}>
+                  <p className="text-xs font-medium" style={{ color: '#64748b' }}>
                     {resultados.length} resultado{resultados.length !== 1 ? 's' : ''} para «{searchValue}»
                   </p>
                 </div>
-                <div className="max-h-72 overflow-y-auto divide-y" style={{ borderColor: '#f8fafc' }}>
+                <div className="max-h-72 overflow-y-auto">
                   {resultados.map(r => {
                     const Icon  = tipoIcon[r.tipo]
                     const badge = tipoBadgeStyle[r.tipo]
@@ -306,21 +316,24 @@ export default function Header() {
                         key={r.id + r.tipo}
                         href={r.href}
                         onClick={() => { setSearchFocus(false); setSearchValue('') }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 transition-colors border-b"
+                        style={{ borderColor: 'rgba(51,65,85,0.4)' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = ROW_HOVER)}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
                         <div
                           className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
-                          style={{ background: badge.bg }}
+                          style={{ background: `${badge.color}20` }}
                         >
                           <Icon className="w-4 h-4" style={{ color: badge.color }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{r.titulo}</p>
-                          <p className="text-xs text-gray-400 truncate capitalize mt-0.5">{r.subtitulo}</p>
+                          <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>{r.titulo}</p>
+                          <p className="text-xs truncate capitalize mt-0.5" style={{ color: '#64748b' }}>{r.subtitulo}</p>
                         </div>
                         <span
                           className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                          style={{ background: badge.bg, color: badge.color }}
+                          style={{ background: `${badge.color}20`, color: badge.color }}
                         >
                           {tipoLabel[r.tipo]}
                         </span>
@@ -328,10 +341,10 @@ export default function Header() {
                     )
                   })}
                 </div>
-                <div className="px-4 py-2 border-t text-center" style={{ borderColor: '#f1f5f9' }}>
-                  <p className="text-xs text-gray-400">
+                <div className="px-4 py-2 border-t text-center" style={DIVIDER_DARK}>
+                  <p className="text-xs" style={{ color: '#475569' }}>
                     Presiona{' '}
-                    <kbd className="px-1.5 py-0.5 rounded bg-gray-100 text-xs font-mono">ESC</kbd>
+                    <kbd className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>ESC</kbd>
                     {' '}para cerrar
                   </p>
                 </div>
@@ -348,9 +361,12 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => { setShowNotif(!showNotif); setShowUser(false); setSearchFocus(false) }}
-            className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors"
+            className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors"
+            style={{ background: showNotif ? 'rgba(255,255,255,0.08)' : 'transparent' }}
+            onMouseEnter={e => { if (!showNotif) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+            onMouseLeave={e => { if (!showNotif) e.currentTarget.style.background = 'transparent' }}
           >
-            <Bell className="w-5 h-5 text-gray-500" />
+            <Bell className="w-5 h-5" style={{ color: '#94a3b8' }} />
             {noLeidas > 0 && (
               <span
                 className="absolute top-1 right-1 flex items-center justify-center text-white text-[10px] font-bold rounded-full"
@@ -363,63 +379,49 @@ export default function Header() {
 
           {showNotif && (
             <div
-              className="absolute right-0 top-12 w-96 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden"
-              style={{ borderColor: '#e2e8f0' }}
+              className="absolute right-0 top-12 w-96 rounded-2xl z-50 overflow-hidden"
+              style={{ ...PANEL_DARK, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
             >
-              {/* Header del panel */}
-              <div
-                className="flex items-center justify-between px-4 py-3 border-b"
-                style={{ borderColor: '#f1f5f9' }}
-              >
-                <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={DIVIDER_DARK}>
+                <h3 className="font-semibold" style={{ color: '#f1f5f9' }}>Notificaciones</h3>
                 {noLeidas > 0 && (
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full text-white font-medium"
-                    style={{ background: '#2563ae' }}
-                  >
+                  <span className="text-xs px-2 py-0.5 rounded-full text-white font-medium" style={{ background: '#2563ae' }}>
                     {noLeidas} nuevas
                   </span>
                 )}
               </div>
 
-              {/* Lista */}
-              <div className="max-h-96 overflow-y-auto divide-y" style={{ borderColor: '#f8fafc' }}>
+              <div className="max-h-96 overflow-y-auto">
                 {notificaciones.length === 0 ? (
                   <div className="px-4 py-10 text-center">
-                    <Bell className="w-8 h-8 mx-auto mb-2 text-gray-200" />
-                    <p className="text-sm text-gray-400">Sin notificaciones</p>
+                    <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: '#334155' }} />
+                    <p className="text-sm" style={{ color: '#64748b' }}>Sin notificaciones</p>
                   </div>
                 ) : (
                   notificaciones.map(n => {
-                    const c = tipoColores[n.tipo as keyof typeof tipoColores]
-                      ?? tipoColores.solicitud
+                    const c = tipoColores[n.tipo as keyof typeof tipoColores] ?? tipoColores.solicitud
                     return (
                       <div
                         key={n.id}
                         onClick={() => marcarLeida(n.id)}
-                        className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
-                        style={{ background: n.leida ? 'white' : '#f0f7ff' }}
+                        className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors border-b"
+                        style={{
+                          borderColor: 'rgba(51,65,85,0.4)',
+                          background: n.leida ? 'transparent' : 'rgba(37,99,174,0.08)',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = ROW_HOVER)}
+                        onMouseLeave={e => (e.currentTarget.style.background = n.leida ? 'transparent' : 'rgba(37,99,174,0.08)')}
                       >
-                        <span
-                          className="flex items-center justify-center w-9 h-9 rounded-xl text-lg shrink-0"
-                          style={{ background: c.bg }}
-                        >
+                        <span className="flex items-center justify-center w-9 h-9 rounded-xl text-lg shrink-0" style={{ background: `${c.text}18` }}>
                           {c.emoji}
                         </span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {n.titulo}
-                            </p>
-                            {!n.leida && (
-                              <div
-                                className="w-2 h-2 rounded-full shrink-0 animate-pulse"
-                                style={{ background: '#2563ae' }}
-                              />
-                            )}
+                            <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>{n.titulo}</p>
+                            {!n.leida && <div className="w-2 h-2 rounded-full shrink-0 animate-pulse" style={{ background: '#3b82f6' }} />}
                           </div>
-                          <p className="text-xs text-gray-500 truncate mt-0.5">{n.descripcion}</p>
-                          <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>{n.tiempo}</p>
+                          <p className="text-xs truncate mt-0.5" style={{ color: '#94a3b8' }}>{n.descripcion}</p>
+                          <p className="text-xs mt-1" style={{ color: '#475569' }}>{n.tiempo}</p>
                         </div>
                       </div>
                     )
@@ -427,22 +429,11 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Footer del panel */}
-              <div
-                className="px-4 py-3 border-t flex items-center justify-between"
-                style={{ borderColor: '#f1f5f9' }}
-              >
-                <button
-                  onClick={marcarTodasLeidas}
-                  className="text-sm font-medium hover:opacity-70 transition-opacity"
-                  style={{ color: '#2563ae' }}
-                >
+              <div className="px-4 py-3 border-t flex items-center justify-between" style={DIVIDER_DARK}>
+                <button onClick={marcarTodasLeidas} className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#60a5fa' }}>
                   Marcar todas como leídas
                 </button>
-                <button
-                  onClick={limpiarTodas}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition-colors"
-                >
+                <button onClick={limpiarTodas} className="flex items-center gap-1 text-xs transition-colors hover:opacity-70" style={{ color: '#64748b' }}>
                   <Trash2 className="w-3.5 h-3.5" />
                   Limpiar
                 </button>
@@ -452,20 +443,26 @@ export default function Header() {
         </div>
 
         {/* Ayuda */}
-        <button className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors">
-          <HelpCircle className="w-5 h-5 text-gray-500" />
+        <button
+          className="flex items-center justify-center w-9 h-9 rounded-xl transition-colors"
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <HelpCircle className="w-5 h-5" style={{ color: '#94a3b8' }} />
         </button>
 
         {/* Divider */}
-        <div className="w-px h-6 mx-1" style={{ background: '#e2e8f0' }} />
+        <div className="w-px h-6 mx-1" style={{ background: 'rgba(51,65,85,0.8)' }} />
 
         {/* Usuario */}
         <div className="relative">
           <button
             onClick={() => { setShowUser(!showUser); setShowNotif(false); setSearchFocus(false) }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors"
+            style={{ background: showUser ? 'rgba(255,255,255,0.08)' : 'transparent' }}
+            onMouseEnter={e => { if (!showUser) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+            onMouseLeave={e => { if (!showUser) e.currentTarget.style.background = 'transparent' }}
           >
-            {/* Avatar con iniciales */}
             <div
               className="flex items-center justify-center rounded-full text-white text-sm font-bold shrink-0"
               style={{ width: 32, height: 32, background: '#1e3a5f' }}
@@ -473,31 +470,25 @@ export default function Header() {
               {displayInitials}
             </div>
             <div className="text-left hidden sm:block">
-              <p className="text-sm font-semibold text-gray-900 leading-none">{displayName}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{displayRol}</p>
+              <p className="text-sm font-semibold leading-none" style={{ color: '#f1f5f9' }}>{displayName}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#64748b' }}>{displayRol}</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
+            <ChevronDown className="w-4 h-4 hidden sm:block" style={{ color: '#64748b' }} />
           </button>
 
           {showUser && (
             <div
-              className="absolute right-0 top-12 w-56 rounded-2xl shadow-2xl border bg-white z-50 overflow-hidden"
-              style={{ borderColor: '#e2e8f0' }}
+              className="absolute right-0 top-12 w-56 rounded-2xl z-50 overflow-hidden"
+              style={{ ...PANEL_DARK, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
             >
-              {/* Info del usuario */}
-              <div className="px-4 py-3 border-b" style={{ borderColor: '#f1f5f9' }}>
-                <p className="font-semibold text-gray-900 truncate">{displayName}</p>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">{displayEmail}</p>
+              <div className="px-4 py-3 border-b" style={DIVIDER_DARK}>
+                <p className="font-semibold truncate" style={{ color: '#f1f5f9' }}>{displayName}</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: '#64748b' }}>{displayEmail}</p>
               </div>
 
-              {/* Menú */}
               <div className="py-1">
                 {[
-                  {
-                    icon:  User,
-                    label: 'Mi perfil',
-                    href:  usuario ? `/residentes/${usuario.id}` : '/residentes',
-                  },
+                  { icon: User,       label: 'Mi perfil',       href: usuario ? `/residentes/${usuario.id}` : '/residentes' },
                   { icon: Settings,   label: 'Configuración',   href: '/configuracion' },
                   { icon: HelpCircle, label: 'Ayuda y soporte', href: '#' },
                 ].map(item => (
@@ -505,39 +496,45 @@ export default function Header() {
                     key={item.label}
                     href={item.href}
                     onClick={() => setShowUser(false)}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors"
+                    style={{ color: '#cbd5e1' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = ROW_HOVER)}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <item.icon className="w-4 h-4 text-gray-400" />
+                    <item.icon className="w-4 h-4" style={{ color: '#64748b' }} />
                     {item.label}
                   </Link>
                 ))}
               </div>
 
-              {/* Simular rol — solo visible para admin */}
               {(rol === 'administrador' || rol === 'super_admin') && (
-                <div className="py-1 border-t" style={{ borderColor: '#f1f5f9' }}>
-                  <p className="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                <div className="py-1 border-t" style={DIVIDER_DARK}>
+                  <p className="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: '#475569' }}>
                     Vista previa como…
                   </p>
                   {(['propietario', 'arrendatario', 'conserje'] as const).map(r => (
                     <button
                       key={r}
                       onClick={() => { simularRol(r); setShowUser(false) }}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 transition-colors"
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors"
+                      style={{ color: '#cbd5e1' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.1)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <Eye className="w-4 h-4" style={{ color: '#6366f1' }} />
+                      <Eye className="w-4 h-4" style={{ color: '#818cf8' }} />
                       {ROL_LABELS[r]}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Logout */}
-              <div className="py-1 border-t" style={{ borderColor: '#f1f5f9' }}>
+              <div className="py-1 border-t" style={DIVIDER_DARK}>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-red-50 transition-colors"
-                  style={{ color: '#ef4444' }}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors"
+                  style={{ color: '#f87171' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <LogOut className="w-4 h-4" />
                   Cerrar sesión
@@ -548,15 +545,15 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Banner flotante — visible solo cuando se simula un rol no-admin */}
+      {/* Banner flotante — vista previa de rol */}
       {isPreview && rol !== 'administrador' && rol !== 'super_admin' && (
         <div
           className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl"
-          style={{ background: '#1e3a5f', color: 'white', border: '1px solid rgba(255,255,255,0.12)' }}
+          style={{ background: '#0f172a', color: 'white', border: '1px solid rgba(99,102,241,0.4)' }}
         >
-          <Eye className="w-4 h-4 shrink-0" style={{ color: '#93c5fd' }} />
-          <span className="text-sm font-medium">
-            Vista previa: <span style={{ color: '#93c5fd' }}>{ROL_LABELS[rol] ?? rol}</span>
+          <Eye className="w-4 h-4 shrink-0" style={{ color: '#818cf8' }} />
+          <span className="text-sm font-medium" style={{ color: '#e2e8f0' }}>
+            Vista previa: <span style={{ color: '#818cf8' }}>{ROL_LABELS[rol] ?? rol}</span>
           </span>
           <button
             onClick={volverAlAdmin}
@@ -569,12 +566,9 @@ export default function Header() {
         </div>
       )}
 
-      {/* Overlay para cerrar paneles */}
+      {/* Overlay */}
       {(showNotif || showUser) && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => { setShowNotif(false); setShowUser(false) }}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => { setShowNotif(false); setShowUser(false) }} />
       )}
     </header>
   )
