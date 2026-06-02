@@ -27,6 +27,13 @@ const CSS = `
   /* Progress bar de scroll */
   .scroll-bar { position:fixed; top:0; left:0; height:3px; background:linear-gradient(90deg,#2563ae,#4ade80); z-index:9998; pointer-events:none; transition:width .08s linear; }
 
+  /* Ambient bg tint (overlay multiply) */
+  .bg-tint { position:fixed; inset:0; z-index:2; pointer-events:none; mix-blend-mode:multiply; opacity:.06; transition:background-color 1.6s ease; }
+
+  /* Morph word */
+  .morph-word { display:inline-block; transition:opacity .32s ease, transform .32s ease; }
+  .morph-out  { opacity:0 !important; transform:translateY(-10px) !important; }
+
   /* Clip-path reveal (para títulos de sección) */
   [data-animate="reveal"] { opacity:1 !important; transform:none !important;
     clip-path:inset(0 102% 0 0);
@@ -306,6 +313,57 @@ const TILT = {
   },
 }
 
+// ─── Palabras del hero (morphing) ─────────────────────────────
+const MORPH_WORDS = ['edificio', 'comunidad', 'futuro']
+
+// ─── Typewriter: texto que se escribe al entrar en viewport ───
+function TypewriterText({ text, style }: { text: string; style?: React.CSSProperties }) {
+  const [shown, setShown] = useState('')
+  const ref   = useRef<HTMLParagraphElement>(null)
+  const done  = useRef(false)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || done.current) return
+      done.current = true
+      let i = 0
+      const id = setInterval(() => { i++; setShown(text.slice(0, i)); if (i >= text.length) clearInterval(id) }, 26)
+    }, { threshold: 0.6 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [text])
+  return (
+    <p ref={ref} style={style}>
+      {shown}
+      <span style={{ opacity: shown.length < text.length ? 1 : 0, transition: 'opacity .1s' }}>|</span>
+    </p>
+  )
+}
+
+// ─── SVG check animado (path drawing) ─────────────────────────
+function SvgCheck() {
+  const [drawn, setDrawn] = useState(false)
+  const ref = useRef<SVGSVGElement>(null)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setDrawn(true)
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return (
+    <svg ref={ref} width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ margin: '0 auto 28px', display: 'block' }}>
+      <circle cx="32" cy="32" r="30" stroke="rgba(255,255,255,.25)" strokeWidth="2" />
+      <path
+        d="M20 32 L28 40 L44 24"
+        stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+        style={{ strokeDasharray: 44, strokeDashoffset: drawn ? 0 : 44, transition: 'stroke-dashoffset 1.1s cubic-bezier(.16,1,.3,1)' }}
+      />
+    </svg>
+  )
+}
+
 // ─── Exit Intent Popup ─────────────────────────────────────────
 function ExitPopup({ onClose }: { onClose: () => void }) {
   const [form, setForm]     = useState({ nombre: '', email: '', edificio: '', interes: 'demo' as 'demo' | 'pago' })
@@ -413,6 +471,9 @@ export default function LandingPage() {
   const [showPopup,      setShowPopup]      = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [parallaxY,      setParallaxY]      = useState(0)
+  const [morphIdx,       setMorphIdx]       = useState(0)
+  const [morphVisible,   setMorphVisible]   = useState(true)
+  const [bgTint,         setBgTint]         = useState('#dbeafe')
 
   // Scroll animations (bidireccionales — también al subir)
   useEffect(() => {
@@ -424,17 +485,37 @@ export default function LandingPage() {
     return () => obs.disconnect()
   }, [])
 
-  // Scroll unificado: navbar + progress bar + parallax
+  // Scroll unificado: navbar + progress bar + parallax + bg tint
   useEffect(() => {
     const fn = () => {
-      const sy = window.scrollY
+      const sy  = window.scrollY
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      const sp  = max > 0 ? (sy / max) * 100 : 0
       setScrolled(sy > 60)
       setParallaxY(sy)
-      const max = document.documentElement.scrollHeight - window.innerHeight
-      setScrollProgress(max > 0 ? (sy / max) * 100 : 0)
+      setScrollProgress(sp)
+      setBgTint(
+        sp < 15 ? '#dbeafe' :   // azul — hero / stats
+        sp < 38 ? '#dcfce7' :   // verde — features
+        sp < 60 ? '#ede9fe' :   // violeta — cómo funciona / módulos
+        sp < 80 ? '#fef3c7' :   // amarillo — precios
+                  '#dbeafe'     // azul — CTA / footer
+      )
     }
     window.addEventListener('scroll', fn, { passive: true })
     return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  // Morphing de texto en el hero (cicla cada 2.5 s)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setMorphVisible(false)
+      setTimeout(() => {
+        setMorphIdx(i => (i + 1) % MORPH_WORDS.length)
+        setMorphVisible(true)
+      }, 350)
+    }, 2500)
+    return () => clearInterval(id)
   }, [])
 
   // Exit intent (solo la primera vez por sesión)
@@ -451,8 +532,9 @@ export default function LandingPage() {
   }, [])
 
   // ── Colores helpers ────────────────────────────────────────
-  const brand = 'linear-gradient(135deg,#0f2341 0%,#1e3a5f 55%,#2563ae 100%)'
-  const navColor = (dark: string, light: string) => scrolled ? dark : light
+  const brand     = 'linear-gradient(135deg,#0f2341 0%,#1e3a5f 55%,#2563ae 100%)'
+  const navColor  = (dark: string, light: string) => scrolled ? dark : light
+  const heroScale = Math.max(1, 1.06 - (parallaxY / 300) * 0.06)
 
   return (
     <>
@@ -460,6 +542,9 @@ export default function LandingPage() {
 
       {/* Progress bar de scroll */}
       <div className="scroll-bar" style={{ width: `${scrollProgress}%` }} />
+
+      {/* Ambient tint que cambia de color al scrollear */}
+      <div className="bg-tint" style={{ backgroundColor: bgTint }} />
 
       {/* ════════════════════════ NAVBAR ════════════════════════ */}
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, transition: 'background .3s, box-shadow .3s', background: scrolled ? 'rgba(255,255,255,.96)' : 'transparent', backdropFilter: scrolled ? 'blur(14px)' : 'none', boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,.07)' : 'none' }}>
@@ -516,7 +601,7 @@ export default function LandingPage() {
         <div style={{ position: 'absolute', top: '18%', right: '12%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle,rgba(37,99,174,.35) 0%,transparent 70%)', pointerEvents: 'none', transform: `translateY(${parallaxY * 0.22}px)` }} />
         <div style={{ position: 'absolute', bottom: '8%', left: '8%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle,rgba(16,163,127,.2) 0%,transparent 70%)', pointerEvents: 'none', transform: `translateY(${parallaxY * -0.14}px)` }} />
 
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '88px 24px' }} className="hero-grid">
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '88px 24px', transform: `scale(${heroScale})`, transformOrigin: 'center top' }} className="hero-grid">
 
           {/* Texto izquierda */}
           <div>
@@ -526,7 +611,13 @@ export default function LandingPage() {
             </div>
 
             <h1 data-animate="up" style={{ fontSize: 'clamp(34px,5vw,62px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-.03em', marginBottom: 22 }}>
-              La gestión de tu edificio,{' '}
+              La gestión de tu{' '}
+              <span
+                className={'morph-word' + (morphVisible ? '' : ' morph-out')}
+                style={{ background: 'linear-gradient(90deg,#60a5fa,#4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+              >
+                {MORPH_WORDS[morphIdx]}
+              </span>,{' '}
               <span style={{ background: 'linear-gradient(90deg,#60a5fa,#4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 simplificada.
               </span>
@@ -777,12 +868,14 @@ export default function LandingPage() {
       <section style={{ background: brand, padding: '108px 24px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px)', backgroundSize: '48px 48px', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center', position: 'relative' }} data-animate="zoom">
+          <SvgCheck />
           <h2 style={{ fontSize: 'clamp(30px,4vw,52px)', fontWeight: 900, color: 'white', lineHeight: 1.15, letterSpacing: '-.03em', marginBottom: 18 }}>
             Únete a la nueva generación de edificios inteligentes
           </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,.7)', lineHeight: 1.75, marginBottom: 42 }}>
-            Propify es la plataforma más completa de Chile para administrar edificios. Empieza hoy, sin compromiso.
-          </p>
+          <TypewriterText
+            text="Propify es la plataforma más completa de Chile para administrar edificios. Empieza hoy, sin compromiso."
+            style={{ fontSize: 18, color: 'rgba(255,255,255,.7)', lineHeight: 1.75, marginBottom: 42 }}
+          />
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/registro" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 34px', borderRadius: 12, background: 'white', color: '#0f2341', fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 32px rgba(0,0,0,.25)' }}>
               Empezar gratis <ArrowRight size={18} />
