@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import {
   Building2, Check, X, Menu, ArrowRight, ChevronRight,
@@ -23,6 +23,16 @@ const CSS = `
   [data-animate="down"]   { opacity:0; transform:translateY(-36px); }
   [data-animate="zoom"]   { opacity:0; transform:scale(.91);        }
   [data-animate].in-view  { opacity:1; transform:none;              }
+
+  /* Progress bar de scroll */
+  .scroll-bar { position:fixed; top:0; left:0; height:3px; background:linear-gradient(90deg,#2563ae,#4ade80); z-index:9998; pointer-events:none; transition:width .08s linear; }
+
+  /* Clip-path reveal (para títulos de sección) */
+  [data-animate="reveal"] { opacity:1 !important; transform:none !important;
+    clip-path:inset(0 102% 0 0);
+    transition: clip-path .9s cubic-bezier(.16,1,.3,1) !important;
+  }
+  [data-animate="reveal"].in-view { clip-path:inset(0 0% 0 0); }
 
   /* Pop-in para el popup */
   @keyframes popIn {
@@ -235,6 +245,67 @@ function MockupComunicaciones() {
   )
 }
 
+// ─── Contador animado (stats) ─────────────────────────────────
+function AnimatedCounter({ value, color }: { value: string; color: string }) {
+  const [display, setDisplay] = useState(() => {
+    const m = value.match(/^([^\d]*)(\d+)([^\d]*)$/)
+    return m ? m[1] + '0' + m[3] : value
+  })
+  const ref = useRef<HTMLDivElement>(null)
+  const started = useRef(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const m = value.match(/^([^\d]*)(\d+)([^\d]*)$/)
+    if (!m) { setDisplay(value); return }
+    const [, pre, numStr, suf] = m
+    const target = parseInt(numStr)
+
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || started.current) return
+      started.current = true
+      const duration = 1600
+      const t0 = performance.now()
+      const tick = (now: number) => {
+        const p = Math.min((now - t0) / duration, 1)
+        const eased = 1 - Math.pow(1 - p, 3)
+        setDisplay(pre + Math.round(eased * target) + suf)
+        if (p < 1) requestAnimationFrame(tick)
+        else setDisplay(value)
+      }
+      requestAnimationFrame(tick)
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [value])
+
+  return (
+    <div ref={ref} style={{ fontSize: 44, fontWeight: 900, color, letterSpacing: '-.03em', lineHeight: 1 }}>
+      {display}
+    </div>
+  )
+}
+
+// ─── Handlers 3-D tilt (hover) ────────────────────────────────
+const TILT = {
+  onMouseEnter(e: React.MouseEvent<HTMLDivElement>) {
+    e.currentTarget.style.transition = 'transform .2s ease, box-shadow .2s ease'
+  },
+  onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const r = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - r.left) / r.width - .5
+    const y = (e.clientY - r.top) / r.height - .5
+    e.currentTarget.style.transform = `perspective(520px) rotateX(${-y * 10}deg) rotateY(${x * 10}deg) scale(1.03)`
+    e.currentTarget.style.boxShadow = '0 22px 60px rgba(0,0,0,.16)'
+  },
+  onMouseLeave(e: React.MouseEvent<HTMLDivElement>) {
+    e.currentTarget.style.transition = 'transform .35s ease, box-shadow .35s ease'
+    e.currentTarget.style.transform = ''
+    e.currentTarget.style.boxShadow = ''
+  },
+}
+
 // ─── Exit Intent Popup ─────────────────────────────────────────
 function ExitPopup({ onClose }: { onClose: () => void }) {
   const [form, setForm]     = useState({ nombre: '', email: '', edificio: '', interes: 'demo' as 'demo' | 'pago' })
@@ -337,9 +408,11 @@ function ExitPopup({ onClose }: { onClose: () => void }) {
 
 // ─── Página principal ──────────────────────────────────────────
 export default function LandingPage() {
-  const [scrolled,    setScrolled]    = useState(false)
-  const [mobileMenu,  setMobileMenu]  = useState(false)
-  const [showPopup,   setShowPopup]   = useState(false)
+  const [scrolled,       setScrolled]       = useState(false)
+  const [mobileMenu,     setMobileMenu]     = useState(false)
+  const [showPopup,      setShowPopup]      = useState(false)
+  const [scrollProgress, setScrollProgress] = useState(0)
+  const [parallaxY,      setParallaxY]      = useState(0)
 
   // Scroll animations (bidireccionales — también al subir)
   useEffect(() => {
@@ -351,10 +424,16 @@ export default function LandingPage() {
     return () => obs.disconnect()
   }, [])
 
-  // Navbar transparente → blanca al hacer scroll
+  // Scroll unificado: navbar + progress bar + parallax
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 60)
-    window.addEventListener('scroll', fn)
+    const fn = () => {
+      const sy = window.scrollY
+      setScrolled(sy > 60)
+      setParallaxY(sy)
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      setScrollProgress(max > 0 ? (sy / max) * 100 : 0)
+    }
+    window.addEventListener('scroll', fn, { passive: true })
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
@@ -378,6 +457,9 @@ export default function LandingPage() {
   return (
     <>
       <style>{CSS}</style>
+
+      {/* Progress bar de scroll */}
+      <div className="scroll-bar" style={{ width: `${scrollProgress}%` }} />
 
       {/* ════════════════════════ NAVBAR ════════════════════════ */}
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, transition: 'background .3s, box-shadow .3s', background: scrolled ? 'rgba(255,255,255,.96)' : 'transparent', backdropFilter: scrolled ? 'blur(14px)' : 'none', boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,.07)' : 'none' }}>
@@ -430,9 +512,9 @@ export default function LandingPage() {
       <section style={{ minHeight: '100vh', background: brand, display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden', paddingTop: 64 }}>
         {/* Grid sutil de fondo */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px)', backgroundSize: '48px 48px', pointerEvents: 'none' }} />
-        {/* Orbes de luz */}
-        <div style={{ position: 'absolute', top: '18%', right: '12%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle,rgba(37,99,174,.35) 0%,transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '8%',  left: '8%',  width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle,rgba(16,163,127,.2) 0%,transparent 70%)',  pointerEvents: 'none' }} />
+        {/* Orbes de luz — parallax */}
+        <div style={{ position: 'absolute', top: '18%', right: '12%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle,rgba(37,99,174,.35) 0%,transparent 70%)', pointerEvents: 'none', transform: `translateY(${parallaxY * 0.22}px)` }} />
+        <div style={{ position: 'absolute', bottom: '8%', left: '8%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle,rgba(16,163,127,.2) 0%,transparent 70%)', pointerEvents: 'none', transform: `translateY(${parallaxY * -0.14}px)` }} />
 
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '88px 24px' }} className="hero-grid">
 
@@ -493,7 +575,7 @@ export default function LandingPage() {
             { v: '$0',    l: 'Para empezar',          c: '#d97706' },
           ].map((s, i) => (
             <div key={i} data-animate="up" style={{ transitionDelay: `${i * .09}s` }}>
-              <div style={{ fontSize: 44, fontWeight: 900, color: s.c, letterSpacing: '-.03em', lineHeight: 1 }}>{s.v}</div>
+              <AnimatedCounter value={s.v} color={s.c} />
               <div style={{ fontSize: 14, color: '#64748b', marginTop: 6, fontWeight: 500 }}>{s.l}</div>
             </div>
           ))}
@@ -523,14 +605,14 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div data-animate="right"><MockupGastos /></div>
+            <div data-animate="right" style={{ position: 'sticky', top: 120 }}><MockupGastos /></div>
           </div>
         </section>
 
         {/* Feature 2 — Mantenciones (mockup izq, texto der) */}
         <section style={{ background: 'white', padding: '108px 24px' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto' }} className="feat-grid feat-reverse">
-            <div data-animate="left"><MockupMantenciones /></div>
+            <div data-animate="left" style={{ position: 'sticky', top: 120 }}><MockupMantenciones /></div>
             <div data-animate="right">
               <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '.1em' }}>Mantenciones</span>
               <h2 style={{ fontSize: 'clamp(28px,3.5vw,42px)', fontWeight: 800, color: '#0f2341', lineHeight: 1.2, marginTop: 8, marginBottom: 18, letterSpacing: '-.02em' }}>
@@ -571,7 +653,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div data-animate="right"><MockupComunicaciones /></div>
+            <div data-animate="right" style={{ position: 'sticky', top: 120 }}><MockupComunicaciones /></div>
           </div>
         </section>
       </div>
@@ -620,12 +702,14 @@ export default function LandingPage() {
               { Icon: Package,    c: '#db2777', bg: '#fce7f3', t: 'Paquetes',         d: 'Gestión de correspondencia y encomiendas.' },
               { Icon: Calendar,   c: '#0891b2', bg: '#cffafe', t: 'Reservas',         d: 'Espacios comunes disponibles para reservar 24/7.' },
             ].map((m, i) => (
-              <div key={i} data-animate="up" style={{ background: 'white', borderRadius: 18, padding: 24, border: '1px solid #e2e8f0', transitionDelay: `${i * .07}s`, cursor: 'default' }}>
-                <div style={{ width: 46, height: 46, borderRadius: 12, background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <m.Icon size={20} color={m.c} />
+              <div key={i} data-animate="up" style={{ transitionDelay: `${i * .07}s` }}>
+                <div {...TILT} style={{ background: 'white', borderRadius: 18, padding: 24, border: '1px solid #e2e8f0', cursor: 'default', height: '100%' }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 12, background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                    <m.Icon size={20} color={m.c} />
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f2341', marginBottom: 8 }}>{m.t}</h3>
+                  <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.65 }}>{m.d}</p>
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f2341', marginBottom: 8 }}>{m.t}</h3>
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.65 }}>{m.d}</p>
               </div>
             ))}
           </div>
@@ -650,7 +734,11 @@ export default function LandingPage() {
               { nombre: 'Pro',      precio: '$59.990', period: '/mes', Icon: Crown,  c: '#7c3aed', bg: '#faf5ff', bord: '#c4b5fd', popular: false,
                 features: ['Unidades ilimitadas','Todo del Básico','Reportes avanzados','API + integraciones','Soporte 24/7'] },
             ].map((plan, i) => (
-              <div key={i} data-animate="up" style={{ borderRadius: 22, padding: 28, border: `2px solid ${plan.popular ? plan.bord : '#e2e8f0'}`, background: plan.popular ? plan.bg : 'white', position: 'relative', transitionDelay: `${i * .1}s`, boxShadow: plan.popular ? '0 10px 36px rgba(37,99,174,.13)' : 'none' }}>
+              <div key={i} data-animate="up" style={{ borderRadius: 22, padding: 28, border: `2px solid ${plan.popular ? plan.bord : '#e2e8f0'}`, background: plan.popular ? plan.bg : 'white', position: 'relative', transitionDelay: `${i * .1}s`, boxShadow: plan.popular ? '0 10px 36px rgba(37,99,174,.13)' : 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.transition = 'transform .2s ease, box-shadow .2s ease' }}
+                onMouseMove={e => { const r=e.currentTarget.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width-.5; const y=(e.clientY-r.top)/r.height-.5; e.currentTarget.style.transform=`perspective(520px) rotateX(${-y*8}deg) rotateY(${x*8}deg) scale(1.02)`; e.currentTarget.style.boxShadow='0 22px 60px rgba(0,0,0,.18)' }}
+                onMouseLeave={e => { e.currentTarget.style.transition='transform .35s ease, box-shadow .35s ease'; e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='' }}
+              >
                 {plan.popular && (
                   <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: brand, color: 'white', fontSize: 10, fontWeight: 800, padding: '3px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>
                     MÁS POPULAR
