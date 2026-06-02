@@ -34,31 +34,6 @@ const CSS = `
   .morph-word { display:inline-block; transition:opacity .32s ease, transform .32s ease; }
   .morph-out  { opacity:0 !important; transform:translateY(-10px) !important; }
 
-  /* Grain / noise sobre el hero */
-  @keyframes grain {
-    0%,100%{transform:translate(0,0)}  10%{transform:translate(-2%,-3%)}
-    20%{transform:translate(3%,2%)}    30%{transform:translate(-1%,4%)}
-    40%{transform:translate(4%,-1%)}   50%{transform:translate(-3%,3%)}
-    60%{transform:translate(2%,-4%)}   70%{transform:translate(-4%,2%)}
-    80%{transform:translate(3%,1%)}    90%{transform:translate(-2%,4%)}
-  }
-  .grain {
-    position:absolute; inset:-50%; width:200%; height:200%;
-    opacity:.055; pointer-events:none; z-index:1;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    animation:grain .8s steps(1) infinite;
-  }
-
-  /* Floating labels sobre el mockup */
-  @keyframes floatA { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-9px)} }
-  @keyframes floatB { 0%,100%{transform:translateY(-5px)} 50%{transform:translateY(5px)}  }
-  @keyframes floatC { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-7px)} }
-  .float-badge {
-    position:absolute; background:white; border-radius:14px; padding:8px 14px;
-    box-shadow:0 8px 32px rgba(0,0,0,.22); font-size:12px; font-weight:700;
-    color:#1e293b; display:flex; align-items:center; gap:7px; white-space:nowrap; z-index:10;
-  }
-
   /* Clip-path reveal (para títulos de sección) */
   [data-animate="reveal"] { opacity:1 !important; transform:none !important;
     clip-path:inset(0 102% 0 0);
@@ -389,32 +364,6 @@ function SvgCheck() {
   )
 }
 
-// ─── Magnetic button wrapper ──────────────────────────────────
-function MagneticWrapper({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = ref.current; if (!el) return
-    const onMove = (e: MouseEvent) => {
-      const r  = el.getBoundingClientRect()
-      const cx = r.left + r.width  / 2
-      const cy = r.top  + r.height / 2
-      const dist = Math.hypot(e.clientX - cx, e.clientY - cy)
-      if (dist < 90) {
-        const x = (e.clientX - cx) * 0.35
-        const y = (e.clientY - cy) * 0.35
-        el.style.transform  = `translate(${x}px,${y}px)`
-        el.style.transition = 'transform .1s ease'
-      } else {
-        el.style.transform  = ''
-        el.style.transition = 'transform .5s cubic-bezier(.16,1,.3,1)'
-      }
-    }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [])
-  return <div ref={ref} style={{ display: 'inline-block' }}>{children}</div>
-}
-
 // ─── Exit Intent Popup ─────────────────────────────────────────
 function ExitPopup({ onClose }: { onClose: () => void }) {
   const [form, setForm]     = useState({ nombre: '', email: '', edificio: '', interes: 'demo' as 'demo' | 'pago' })
@@ -525,7 +474,6 @@ export default function LandingPage() {
   const [morphIdx,       setMorphIdx]       = useState(0)
   const [morphVisible,   setMorphVisible]   = useState(true)
   const [bgTint,         setBgTint]         = useState('#dbeafe')
-  const [activeSection,  setActiveSection]  = useState(0)
 
   // Scroll animations (bidireccionales — también al subir)
   useEffect(() => {
@@ -570,20 +518,6 @@ export default function LandingPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Section counter — observa qué sección está en el centro del viewport
-  useEffect(() => {
-    const els = document.querySelectorAll('[data-section]')
-    const obs = new IntersectionObserver(
-      entries => entries.forEach(e => {
-        if (e.isIntersecting)
-          setActiveSection(Number(e.target.getAttribute('data-section')))
-      }),
-      { threshold: 0, rootMargin: '-40% 0px -40% 0px' }
-    )
-    els.forEach(el => obs.observe(el))
-    return () => obs.disconnect()
-  }, [])
-
   // Exit intent (solo la primera vez por sesión)
   useEffect(() => {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('propify_exit')) return
@@ -611,16 +545,6 @@ export default function LandingPage() {
 
       {/* Ambient tint que cambia de color al scrollear */}
       <div className="bg-tint" style={{ backgroundColor: bgTint }} />
-
-      {/* Section counter — lateral derecho */}
-      <div style={{ position: 'fixed', right: 20, top: '50%', transform: 'translateY(-50%)', zIndex: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: scrolled ? 'rgba(15,35,65,.07)' : 'rgba(255,255,255,.1)', backdropFilter: 'blur(10px)', borderRadius: 20, padding: '12px 7px' }}>
-        {[0,1,2,3,4,5].map(i => (
-          <div key={i} style={{ width: 5, height: i === activeSection ? 22 : 5, borderRadius: 3, background: i === activeSection ? (scrolled ? '#2563ae' : 'white') : (scrolled ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.35)'), transition: 'all .35s cubic-bezier(.16,1,.3,1)' }} />
-        ))}
-        <div style={{ fontSize: 9, fontWeight: 700, marginTop: 4, color: scrolled ? '#64748b' : 'rgba(255,255,255,.6)', letterSpacing: '.05em' }}>
-          {String(activeSection + 1).padStart(2,'0')}/06
-        </div>
-      </div>
 
       {/* ════════════════════════ NAVBAR ════════════════════════ */}
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, transition: 'background .3s, box-shadow .3s', background: scrolled ? 'rgba(255,255,255,.96)' : 'transparent', backdropFilter: scrolled ? 'blur(14px)' : 'none', boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,.07)' : 'none' }}>
@@ -670,11 +594,9 @@ export default function LandingPage() {
       </header>
 
       {/* ═════════════════════════ HERO ═════════════════════════ */}
-      <section data-section="0" style={{ minHeight: '100vh', background: brand, display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden', paddingTop: 64 }}>
+      <section style={{ minHeight: '100vh', background: brand, display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden', paddingTop: 64 }}>
         {/* Grid sutil de fondo */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px)', backgroundSize: '48px 48px', pointerEvents: 'none' }} />
-        {/* Grain / noise premium */}
-        <div className="grain" />
         {/* Orbes de luz — parallax */}
         <div style={{ position: 'absolute', top: '18%', right: '12%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle,rgba(37,99,174,.35) 0%,transparent 70%)', pointerEvents: 'none', transform: `translateY(${parallaxY * 0.22}px)` }} />
         <div style={{ position: 'absolute', bottom: '8%', left: '8%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle,rgba(16,163,127,.2) 0%,transparent 70%)', pointerEvents: 'none', transform: `translateY(${parallaxY * -0.14}px)` }} />
@@ -706,11 +628,9 @@ export default function LandingPage() {
             </p>
 
             <div data-animate="up" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', transitionDelay: '.2s' }}>
-              <MagneticWrapper>
-                <Link href="/registro" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', borderRadius: 12, background: 'white', color: '#0f2341', fontWeight: 800, fontSize: 15, textDecoration: 'none', boxShadow: '0 8px 28px rgba(0,0,0,.22)' }}>
-                  Empezar gratis <ArrowRight size={16} />
-                </Link>
-              </MagneticWrapper>
+              <Link href="/registro" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', borderRadius: 12, background: 'white', color: '#0f2341', fontWeight: 800, fontSize: 15, textDecoration: 'none', boxShadow: '0 8px 28px rgba(0,0,0,.22)' }}>
+                Empezar gratis <ArrowRight size={16} />
+              </Link>
               <Link href="/precios" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', borderRadius: 12, background: 'rgba(255,255,255,.1)', color: 'white', fontWeight: 700, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,.22)', backdropFilter: 'blur(8px)' }}>
                 Ver planes
               </Link>
@@ -729,27 +649,15 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Mockup derecha + floating labels */}
-          <div data-animate="right" style={{ position: 'relative' }}>
-            <div className="float-badge" style={{ top: -18, right: -10, animation: 'floatA 3s ease-in-out infinite' }}>
-              <span style={{ fontSize: 16 }}>💳</span>
-              <div><div style={{ fontSize: 11, color: '#16a34a', fontWeight: 800 }}>Pago recibido</div><div style={{ fontSize: 10, color: '#64748b' }}>+$75.000</div></div>
-            </div>
-            <div className="float-badge" style={{ bottom: 60, left: -28, animation: 'floatB 3.5s ease-in-out infinite' }}>
-              <span style={{ fontSize: 16 }}>✅</span>
-              <div><div style={{ fontSize: 11, color: '#2563ae', fontWeight: 800 }}>78% cobrado</div><div style={{ fontSize: 10, color: '#64748b' }}>Junio 2026</div></div>
-            </div>
-            <div className="float-badge" style={{ bottom: -14, right: 24, animation: 'floatC 4s ease-in-out infinite' }}>
-              <span style={{ fontSize: 16 }}>🔔</span>
-              <div><div style={{ fontSize: 11, color: '#d97706', fontWeight: 800 }}>Nueva mantención</div><div style={{ fontSize: 10, color: '#64748b' }}>Dpto 108 — Urgente</div></div>
-            </div>
+          {/* Mockup derecha */}
+          <div data-animate="right">
             <DashboardMockup />
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════ STATS ══════════════════════════ */}
-      <section data-section="1" style={{ background: 'white', borderBottom: '1px solid #f1f5f9' }}>
+      <section style={{ background: 'white', borderBottom: '1px solid #f1f5f9' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '52px 24px' }} className="stats-grid">
           {[
             { v: '500+',  l: 'Unidades gestionadas', c: '#2563ae' },
@@ -766,7 +674,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════ FEATURES ═══════════════════════════ */}
-      <div id="features" data-section="2">
+      <div id="features">
 
         {/* Feature 1 — Gastos Comunes (texto izq, mockup der) */}
         <section style={{ background: '#f8fafc', padding: '108px 24px' }}>
@@ -842,7 +750,7 @@ export default function LandingPage() {
       </div>
 
       {/* ══════════════════ CÓMO FUNCIONA ═══════════════════════ */}
-      <section data-section="3" style={{ background: 'white', padding: '108px 24px' }}>
+      <section style={{ background: 'white', padding: '108px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }} data-animate="up">
             <span style={{ fontSize: 11, fontWeight: 700, color: '#2563ae', textTransform: 'uppercase', letterSpacing: '.1em' }}>Proceso</span>
@@ -868,7 +776,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════ MÓDULOS ═════════════════════════ */}
-      <section data-section="4" style={{ background: '#f8fafc', padding: '108px 24px' }}>
+      <section style={{ background: '#f8fafc', padding: '108px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }} data-animate="up">
             <span style={{ fontSize: 11, fontWeight: 700, color: '#2563ae', textTransform: 'uppercase', letterSpacing: '.1em' }}>Módulos</span>
@@ -900,7 +808,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════ PRECIOS ════════════════════════ */}
-      <section data-section="5" style={{ background: 'white', padding: '108px 24px' }}>
+      <section style={{ background: 'white', padding: '108px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }} data-animate="up">
             <span style={{ fontSize: 11, fontWeight: 700, color: '#2563ae', textTransform: 'uppercase', letterSpacing: '.1em' }}>Precios</span>
@@ -969,16 +877,12 @@ export default function LandingPage() {
             style={{ fontSize: 18, color: 'rgba(255,255,255,.7)', lineHeight: 1.75, marginBottom: 42 }}
           />
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <MagneticWrapper>
-              <Link href="/registro" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 34px', borderRadius: 12, background: 'white', color: '#0f2341', fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 32px rgba(0,0,0,.25)' }}>
-                Empezar gratis <ArrowRight size={18} />
-              </Link>
-            </MagneticWrapper>
-            <MagneticWrapper>
-              <button onClick={() => setShowPopup(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 34px', borderRadius: 12, background: 'rgba(255,255,255,.12)', color: 'white', fontWeight: 700, fontSize: 16, border: '1px solid rgba(255,255,255,.22)', cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
-                Solicitar demo
-              </button>
-            </MagneticWrapper>
+            <Link href="/registro" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 34px', borderRadius: 12, background: 'white', color: '#0f2341', fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 32px rgba(0,0,0,.25)' }}>
+              Empezar gratis <ArrowRight size={18} />
+            </Link>
+            <button onClick={() => setShowPopup(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 34px', borderRadius: 12, background: 'rgba(255,255,255,.12)', color: 'white', fontWeight: 700, fontSize: 16, border: '1px solid rgba(255,255,255,.22)', cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
+              Solicitar demo
+            </button>
           </div>
         </div>
       </section>
