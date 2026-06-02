@@ -95,13 +95,6 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Con sesión visitando la landing (/) → /dashboard directo
-  if (pathname === '/' && user) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
   return res
 }
 
