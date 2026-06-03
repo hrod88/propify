@@ -248,7 +248,7 @@ export default function RegistroPage() {
           <div className="absolute top-20 left-20 w-96 h-96 rounded-full bg-white blur-3xl" />
           <div className="absolute bottom-20 right-20 w-64 h-64 rounded-full bg-blue-300 blur-3xl" />
         </div>
-        <div className="relative flex items-center gap-3">
+        <Link href="/" className="relative flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm">
             <Building2 className="w-7 h-7 text-white" />
           </div>
@@ -256,7 +256,7 @@ export default function RegistroPage() {
             <h1 className="text-2xl font-bold text-white tracking-tight">Propify</h1>
             <p className="text-blue-200 text-sm">Administración de Edificios</p>
           </div>
-        </div>
+        </Link>
         <div className="relative space-y-6">
           <h2 className="text-4xl font-bold text-white leading-tight">
             Registra tu<br />
@@ -289,15 +289,21 @@ export default function RegistroPage() {
       {/* ── Panel derecho: wizard ─────────────────────────────── */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white overflow-y-auto">
 
-        {/* Logo móvil */}
-        <div className="flex lg:hidden items-center gap-2 mb-8">
+        {/* Logo móvil — vuelve a la landing */}
+        <Link href="/" className="flex lg:hidden items-center gap-2 mb-8 hover:opacity-70 transition-opacity">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: '#1e3a5f' }}>
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold" style={{ color: '#1e3a5f' }}>Propify</span>
-        </div>
+        </Link>
 
         <div className="w-full max-w-md">
+
+          {step !== 4 && (
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors mb-4">
+              ← Volver al inicio
+            </Link>
+          )}
 
           {/* ── Paso 4: Pantalla de éxito ─────────────────────── */}
           {step === 4 && (

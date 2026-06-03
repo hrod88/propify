@@ -70,8 +70,8 @@ export default function LoginPage() {
           <div className="absolute bottom-20 right-20 w-64 h-64 rounded-full bg-blue-300 blur-3xl" />
         </div>
 
-        {/* Logo */}
-        <div className="relative flex items-center gap-3">
+        {/* Logo — vuelve a la landing */}
+        <Link href="/" className="relative flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm">
             <Building2 className="w-7 h-7 text-white" />
           </div>
@@ -79,7 +79,7 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold text-white tracking-tight">Propify</h1>
             <p className="text-blue-200 text-sm">Administración de Edificios</p>
           </div>
-        </div>
+        </Link>
 
         {/* Contenido central */}
         <div className="relative space-y-6">
@@ -119,15 +119,18 @@ export default function LoginPage() {
 
       {/* ── Panel derecho: formulario ── */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white">
-        {/* Logo móvil */}
-        <div className="flex lg:hidden items-center gap-2 mb-8">
+        {/* Logo móvil — vuelve a la landing */}
+        <Link href="/" className="flex lg:hidden items-center gap-2 mb-8 hover:opacity-70 transition-opacity">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: '#1e3a5f' }}>
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold" style={{ color: '#1e3a5f' }}>Propify</span>
-        </div>
+        </Link>
 
         <div className="w-full max-w-md">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors mb-6">
+            ← Volver al inicio
+          </Link>
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Iniciar sesión</h2>
             <p className="text-gray-500 mt-2">Bienvenido de vuelta 👋</p>
