@@ -44,6 +44,7 @@ import {
   ShoppingBag,
   BanknoteIcon,
   Vote,
+  HelpCircle,
 } from 'lucide-react'
 import { useRol }      from '@/context/rol-context'
 import { useEdificio }  from '@/context/edificio-context'
@@ -131,6 +132,7 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: '/reportes',       label: 'Reportes',         icon: BarChart3 },
       { href: '/configuracion',  label: 'Configuración',    icon: Settings },
+      { href: '/ayuda',          label: 'Ayuda',            icon: HelpCircle },
     ],
   },
 ]
@@ -159,6 +161,12 @@ const NAV_CONSERJE: NavGroup[] = [
     title: 'Comunidad',
     items: [
       { href: '/muro',           label: 'Muro',             icon: Megaphone },
+    ],
+  },
+  {
+    title: 'Soporte',
+    items: [
+      { href: '/ayuda',          label: 'Ayuda',            icon: HelpCircle },
     ],
   },
 ]
@@ -202,6 +210,12 @@ const NAV_PROPIETARIO: NavGroup[] = [
       { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
     ],
   },
+  {
+    title: 'Soporte',
+    items: [
+      { href: '/ayuda',          label: 'Ayuda',            icon: HelpCircle },
+    ],
+  },
 ]
 
 const NAV_ARRENDATARIO: NavGroup[] = [
@@ -235,6 +249,12 @@ const NAV_ARRENDATARIO: NavGroup[] = [
     items: [
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
       { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
+    ],
+  },
+  {
+    title: 'Soporte',
+    items: [
+      { href: '/ayuda',          label: 'Ayuda',            icon: HelpCircle },
     ],
   },
 ]

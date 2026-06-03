@@ -136,6 +136,7 @@ export default function RegistroPage() {
   const [email,           setEmail]           = useState('')
   const [password,        setPassword]        = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [aceptoTerminos,  setAceptoTerminos]  = useState(false)
 
   // ── Paso 2 — Edificio ────────────────────────────────────
   const [edificioNombre,  setEdificioNombre]  = useState('')
@@ -167,6 +168,10 @@ export default function RegistroPage() {
     }
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.')
+      return
+    }
+    if (!aceptoTerminos) {
+      setError('Debes aceptar los Términos de Uso y la Política de Privacidad.')
       return
     }
     setStep(2)
@@ -391,8 +396,30 @@ export default function RegistroPage() {
                       </button>
                     </div>
                   </div>
+                  {/* Checkbox términos */}
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={aceptoTerminos}
+                      onChange={e => setAceptoTerminos(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-blue-600 shrink-0"
+                    />
+                    <span className="text-xs text-gray-500 leading-relaxed">
+                      He leído y acepto los{' '}
+                      <Link href="/terminos" target="_blank" className="text-blue-600 hover:underline font-medium">
+                        Términos de Uso
+                      </Link>{' '}
+                      y la{' '}
+                      <Link href="/privacidad" target="_blank" className="text-blue-600 hover:underline font-medium">
+                        Política de Privacidad
+                      </Link>{' '}
+                      de Propify.
+                    </span>
+                  </label>
+
                   <button type="submit"
-                    className="w-full py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl text-white font-semibold transition-all hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={!aceptoTerminos}
                     style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563ae)' }}>
                     Continuar <ChevronRight className="w-4 h-4" />
                   </button>

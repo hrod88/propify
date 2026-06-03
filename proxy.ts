@@ -52,6 +52,7 @@ const RUTAS_PROTEGIDAS = [
   '/multas',
   '/votaciones',
   '/conciliacion',
+  '/ayuda',
 ]
 
 function esRutaProtegida(pathname: string): boolean {
