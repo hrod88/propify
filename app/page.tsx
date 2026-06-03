@@ -370,7 +370,7 @@ function ExitPopup({ onClose }: { onClose: () => void }) {
   const [loading, setLoad]  = useState(false)
   const [sent, setSent]     = useState(false)
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoad(true)
     try {
@@ -469,7 +469,6 @@ export default function LandingPage() {
   const [scrolled,       setScrolled]       = useState(false)
   const [mobileMenu,     setMobileMenu]     = useState(false)
   const [showPopup,      setShowPopup]      = useState(false)
-  const exitTriggered = useRef(false)   // se resetea sola con cada F5/refresh
   const [scrollProgress, setScrollProgress] = useState(0)
   const [parallaxY,      setParallaxY]      = useState(0)
   const [morphIdx,       setMorphIdx]       = useState(0)
@@ -519,11 +518,11 @@ export default function LandingPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Exit intent — una vez por carga de página; se resetea con F5/refresh
+  // Exit intent — una vez por sesión (F5 no lo reactiva; se resetea al cerrar la pestaña)
   useEffect(() => {
     const fn = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !exitTriggered.current) {
-        exitTriggered.current = true
+      if (e.clientY <= 0 && !sessionStorage.getItem('propify_exit')) {
+        sessionStorage.setItem('propify_exit', '1')
         setShowPopup(true)
       }
     }
