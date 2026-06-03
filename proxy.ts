@@ -27,7 +27,7 @@ const RUTAS_PROTEGIDAS = [
   '/reportes',
   '/configuracion',
   '/mi-unidad',
-  // ── Módulos nuevos ──────────────────────────────────────────
+  // ── Módulos fase 31-34 ──────────────────────────────────────
   '/personal',
   '/novedades',
   '/contratos',
@@ -40,6 +40,18 @@ const RUTAS_PROTEGIDAS = [
   '/facturacion',
   '/lecturas',
   '/fondos',
+  // ── Módulos fase B/C/D (nuevos) ─────────────────────────────
+  '/bodegas',
+  '/directorio',
+  '/comite',
+  '/calculadora',
+  '/muro',
+  '/encuestas',
+  '/marketplace',
+  '/mudanzas',
+  '/multas',
+  '/votaciones',
+  '/conciliacion',
 ]
 
 function esRutaProtegida(pathname: string): boolean {

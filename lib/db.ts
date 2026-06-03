@@ -37,6 +37,17 @@ import type {
   Lectura,
   FondoComunidad,
   PersonalEdificio,
+  Bodega,
+  ComiteMiembro,
+  ComiteDocumento,
+  MuroPost,
+  Encuesta,
+  MarketplaceItem,
+  ReservaMudanza,
+  ReglaMulta,
+  Multa,
+  Votacion,
+  ConciliacionMovimiento,
 } from '@/types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -590,4 +601,146 @@ export async function getPersonal(edificioId = 'mirador-sacramentinos'): Promise
     .order('apellido')
   if (error) { console.error('getPersonal:', error.message); return [] }
   return (data ?? []) as PersonalEdificio[]
+}
+
+// ─── Bodegas ─────────────────────────────────────────────────
+
+export async function getBodegas(edificioId = 'mirador-sacramentinos'): Promise<Bodega[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('bodegas')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('numero')
+  if (error) { console.error('getBodegas:', error.message); return [] }
+  return (data ?? []) as Bodega[]
+}
+
+// ─── Comité ───────────────────────────────────────────────────
+
+export async function getComiteMiembros(edificioId = 'mirador-sacramentinos'): Promise<ComiteMiembro[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('comite_miembros')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('creadoEn')
+  if (error) { console.error('getComiteMiembros:', error.message); return [] }
+  return (data ?? []) as ComiteMiembro[]
+}
+
+export async function getComiteDocumentos(edificioId = 'mirador-sacramentinos'): Promise<ComiteDocumento[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('comite_documentos')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('creadoEn', { ascending: false })
+  if (error) { console.error('getComiteDocumentos:', error.message); return [] }
+  return (data ?? []) as ComiteDocumento[]
+}
+
+// ─── Muro Comunitario ─────────────────────────────────────────
+
+export async function getMuroPosts(edificioId = 'mirador-sacramentinos'): Promise<MuroPost[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('muro_posts')
+    .select('*, comentarios:muro_comentarios(*)')
+    .eq('edificioId', edificioId)
+    .order('fijado',   { ascending: false })
+    .order('creadoEn', { ascending: false })
+    .limit(50)
+  if (error) { console.error('getMuroPosts:', error.message); return [] }
+  return (data ?? []) as MuroPost[]
+}
+
+// ─── Encuestas ────────────────────────────────────────────────
+
+export async function getEncuestas(edificioId = 'mirador-sacramentinos'): Promise<Encuesta[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('encuestas')
+    .select('*, opciones:encuesta_opciones(*)')
+    .eq('edificioId', edificioId)
+    .order('creadoEn', { ascending: false })
+  if (error) { console.error('getEncuestas:', error.message); return [] }
+  return (data ?? []) as Encuesta[]
+}
+
+// ─── Marketplace ──────────────────────────────────────────────
+
+export async function getMarketplaceItems(edificioId = 'mirador-sacramentinos'): Promise<MarketplaceItem[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('marketplace_items')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('creadoEn', { ascending: false })
+  if (error) { console.error('getMarketplaceItems:', error.message); return [] }
+  return (data ?? []) as MarketplaceItem[]
+}
+
+// ─── Reservas Mudanza ─────────────────────────────────────────
+
+export async function getReservasMudanza(edificioId = 'mirador-sacramentinos'): Promise<ReservaMudanza[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('reservas_mudanza')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('fecha', { ascending: false })
+  if (error) { console.error('getReservasMudanza:', error.message); return [] }
+  return (data ?? []) as ReservaMudanza[]
+}
+
+// ─── Multas ───────────────────────────────────────────────────
+
+export async function getReglasMulta(edificioId = 'mirador-sacramentinos'): Promise<ReglaMulta[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('reglas_multa')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('nombre')
+  if (error) { console.error('getReglasMulta:', error.message); return [] }
+  return (data ?? []) as ReglaMulta[]
+}
+
+export async function getMultas(edificioId = 'mirador-sacramentinos'): Promise<Multa[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('multas')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('fecha', { ascending: false })
+  if (error) { console.error('getMultas:', error.message); return [] }
+  return (data ?? []) as Multa[]
+}
+
+// ─── Votaciones ───────────────────────────────────────────────
+
+export async function getVotaciones(edificioId = 'mirador-sacramentinos'): Promise<Votacion[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('votaciones')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('fechaInicio', { ascending: false })
+  if (error) { console.error('getVotaciones:', error.message); return [] }
+  return (data ?? []) as Votacion[]
+}
+
+// ─── Conciliación Bancaria ────────────────────────────────────
+
+export async function getConciliacionMovimientos(edificioId = 'mirador-sacramentinos'): Promise<ConciliacionMovimiento[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('conciliacion_movimientos')
+    .select('*')
+    .eq('edificioId', edificioId)
+    .order('fecha', { ascending: false })
+    .limit(200)
+  if (error) { console.error('getConciliacionMovimientos:', error.message); return [] }
+  return (data ?? []) as ConciliacionMovimiento[]
 }

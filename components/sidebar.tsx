@@ -35,6 +35,15 @@ import {
   Gauge,
   PiggyBank,
   PlusCircle,
+  Warehouse,
+  BookUser,
+  Crown,
+  Calculator,
+  Megaphone,
+  BarChart2,
+  ShoppingBag,
+  BanknoteIcon,
+  Vote,
 } from 'lucide-react'
 import { useRol }      from '@/context/rol-context'
 import { useEdificio }  from '@/context/edificio-context'
@@ -90,10 +99,31 @@ const NAV_ADMIN: NavGroup[] = [
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
       { href: '/visitas',        label: 'Visitas',          icon: ClipboardList },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
+      { href: '/mudanzas',       label: 'Mudanzas',         icon: Truck },
       { href: '/paquetes',       label: 'Paquetes',         icon: Package,       badge: 3 },
       { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
+      { href: '/bodegas',        label: 'Bodegas',          icon: Warehouse },
       { href: '/actas',          label: 'Actas',            icon: BookMarked },
       { href: '/novedades',      label: 'Novedades',        icon: NotebookPen },
+      { href: '/multas',         label: 'Multas',           icon: AlertTriangle },
+    ],
+  },
+  {
+    title: 'Comunidad',
+    items: [
+      { href: '/muro',           label: 'Muro',             icon: Megaphone },
+      { href: '/encuestas',      label: 'Encuestas',        icon: BarChart2 },
+      { href: '/votaciones',     label: 'Votaciones',       icon: Vote },
+      { href: '/marketplace',    label: 'Marketplace',      icon: ShoppingBag },
+      { href: '/directorio',     label: 'Directorio',       icon: BookUser },
+      { href: '/comite',         label: 'Comité',           icon: Crown },
+    ],
+  },
+  {
+    title: 'Finanzas+',
+    items: [
+      { href: '/calculadora',    label: 'Calculadora',      icon: Calculator },
+      { href: '/conciliacion',   label: 'Conciliación',     icon: BanknoteIcon },
     ],
   },
   {
@@ -119,9 +149,16 @@ const NAV_CONSERJE: NavGroup[] = [
       { href: '/paquetes',       label: 'Paquetes',         icon: Package,       badge: 3 },
       { href: '/amenidades',     label: 'Amenidades',       icon: Sparkles },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
+      { href: '/mudanzas',       label: 'Mudanzas',         icon: Truck },
       { href: '/comunicaciones', label: 'Comunicaciones',   icon: MessageSquare },
       { href: '/mantenciones',   label: 'Mantenciones',     icon: Wrench,        badge: 4 },
       { href: '/novedades',      label: 'Novedades',        icon: NotebookPen },
+    ],
+  },
+  {
+    title: 'Comunidad',
+    items: [
+      { href: '/muro',           label: 'Muro',             icon: Megaphone },
     ],
   },
 ]
@@ -139,12 +176,23 @@ const NAV_PROPIETARIO: NavGroup[] = [
       { href: '/mantenciones',   label: 'Mis Solicitudes',  icon: Wrench },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
       { href: '/paquetes',       label: 'Mis Paquetes',     icon: Package },
+      { href: '/mudanzas',       label: 'Mudanzas',         icon: Truck },
+      { href: '/marketplace',    label: 'Marketplace',      icon: ShoppingBag },
     ],
   },
   {
     title: 'Finanzas',
     items: [
       { href: '/gastos',         label: 'Gastos Comunes',   icon: Receipt },
+    ],
+  },
+  {
+    title: 'Comunidad',
+    items: [
+      { href: '/muro',           label: 'Muro',             icon: Megaphone },
+      { href: '/encuestas',      label: 'Encuestas',        icon: BarChart2 },
+      { href: '/votaciones',     label: 'Votaciones',       icon: Vote },
+      { href: '/directorio',     label: 'Directorio',       icon: BookUser },
     ],
   },
   {
@@ -169,6 +217,17 @@ const NAV_ARRENDATARIO: NavGroup[] = [
       { href: '/mantenciones',   label: 'Mis Solicitudes',  icon: Wrench },
       { href: '/reservas',       label: 'Reservas',         icon: Calendar },
       { href: '/paquetes',       label: 'Mis Paquetes',     icon: Package },
+      { href: '/mudanzas',       label: 'Mudanzas',         icon: Truck },
+      { href: '/marketplace',    label: 'Marketplace',      icon: ShoppingBag },
+    ],
+  },
+  {
+    title: 'Comunidad',
+    items: [
+      { href: '/muro',           label: 'Muro',             icon: Megaphone },
+      { href: '/encuestas',      label: 'Encuestas',        icon: BarChart2 },
+      { href: '/votaciones',     label: 'Votaciones',       icon: Vote },
+      { href: '/directorio',     label: 'Directorio',       icon: BookUser },
     ],
   },
   {

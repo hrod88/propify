@@ -509,6 +509,240 @@ export interface PersonalEdificio {
   creadoEn:        string
 }
 
+// ─── Bodegas ──────────────────────────────────────────────────
+export type EstadoBodega = 'disponible' | 'ocupado' | 'en_mantención'
+
+export interface Bodega {
+  id:             string
+  edificioId:     string
+  numero:         string
+  piso?:          number | null
+  superficieM2?:  number | null
+  estado:         EstadoBodega
+  propietarioId?: string | null
+  unidadId?:      string | null
+  precio?:        number | null
+  nota?:          string | null
+  creadoEn:       string
+}
+
+// ─── Comité ───────────────────────────────────────────────────
+export type CargoComite = 'presidente' | 'secretario' | 'tesorero' | 'vocal'
+export type TipoDocComite = 'acuerdo' | 'convocatoria' | 'reglamento' | 'acta' | 'otro'
+
+export interface ComiteMiembro {
+  id:             string
+  edificioId:     string
+  usuarioId?:     string | null
+  nombre:         string
+  cargo:          CargoComite
+  rut?:           string | null
+  email?:         string | null
+  telefono?:      string | null
+  activo:         boolean
+  periodoInicio?: string | null
+  periodoFin?:    string | null
+  creadoEn:       string
+}
+
+export interface ComiteDocumento {
+  id:            string
+  edificioId:    string
+  titulo:        string
+  tipo:          TipoDocComite
+  contenido?:    string | null
+  url?:          string | null
+  confidencial:  boolean
+  creadoEn:      string
+}
+
+// ─── Muro Comunitario ─────────────────────────────────────────
+export type TipoPost = 'general' | 'aviso' | 'evento' | 'urgente'
+
+export interface MuroPost {
+  id:           string
+  edificioId:   string
+  autorId?:     string | null
+  autorNombre:  string
+  autorRol:     string
+  contenido:    string
+  tipo:         TipoPost
+  imagen?:      string | null
+  likes:        number
+  fijado:       boolean
+  creadoEn:     string
+  comentarios?: MuroComentario[]
+}
+
+export interface MuroComentario {
+  id:          string
+  postId:      string
+  autorId?:    string | null
+  autorNombre: string
+  contenido:   string
+  creadoEn:    string
+}
+
+// ─── Encuestas ────────────────────────────────────────────────
+export type EstadoEncuesta = 'borrador' | 'activa' | 'cerrada'
+
+export interface Encuesta {
+  id:          string
+  edificioId:  string
+  pregunta:    string
+  descripcion?: string | null
+  estado:      EstadoEncuesta
+  multiple:    boolean
+  anonima:     boolean
+  cierreEn?:   string | null
+  creadoEn:    string
+  opciones?:   EncuestaOpcion[]
+}
+
+export interface EncuestaOpcion {
+  id:         string
+  encuestaId: string
+  texto:      string
+  votos:      number
+  orden:      number
+}
+
+// ─── Marketplace ──────────────────────────────────────────────
+export type TipoItem      = 'venta' | 'arriendo' | 'regalo' | 'busco'
+export type EstadoItem    = 'activo' | 'vendido' | 'pausado'
+
+export interface MarketplaceItem {
+  id:              string
+  edificioId:      string
+  vendedorId?:     string | null
+  vendedorNombre:  string
+  vendedorUnidad?: string | null
+  titulo:          string
+  descripcion?:    string | null
+  precio?:         number | null
+  tipo:            TipoItem
+  estado:          EstadoItem
+  imagen?:         string | null
+  contacto?:       string | null
+  creadoEn:        string
+}
+
+// ─── Reservas Mudanza ─────────────────────────────────────────
+export type TipoMudanza    = 'entrada' | 'salida'
+export type EstadoMudanza  = 'pendiente' | 'aprobado' | 'rechazado'
+
+export interface ReservaMudanza {
+  id:                  string
+  edificioId:          string
+  unidadId?:           string | null
+  solicitanteNombre:   string
+  solicitanteEmail?:   string | null
+  tipo:                TipoMudanza
+  fecha:               string
+  horaInicio:          string
+  horaFin:             string
+  ascensor:            boolean
+  nota?:               string | null
+  estado:              EstadoMudanza
+  aprobadoEn?:         string | null
+  creadoEn:            string
+}
+
+// ─── Multas ───────────────────────────────────────────────────
+export type EstadoMulta = 'pendiente' | 'pagada' | 'anulada' | 'apelando'
+
+export interface ReglaMulta {
+  id:          string
+  edificioId:  string
+  nombre:      string
+  descripcion?: string | null
+  monto:       number
+  activa:      boolean
+  creadoEn:    string
+}
+
+export interface Multa {
+  id:               string
+  edificioId:       string
+  unidadId?:        string | null
+  unidadNumero?:    string | null
+  reglaId?:         string | null
+  infractorNombre?: string | null
+  motivo:           string
+  monto:            number
+  estado:           EstadoMulta
+  fecha:            string
+  pagadoEn?:        string | null
+  nota?:            string | null
+  creadoEn:         string
+}
+
+// ─── Votaciones ───────────────────────────────────────────────
+export type TipoVotacion   = 'ordinaria' | 'extraordinaria' | 'urgente'
+export type EstadoVotacion = 'borrador' | 'abierta' | 'cerrada' | 'anulada'
+export type ResultadoVotacion = 'aprobado' | 'rechazado' | 'sin_quorum' | 'nulo'
+
+export interface Votacion {
+  id:               string
+  edificioId:       string
+  titulo:           string
+  descripcion?:     string | null
+  tipo:             TipoVotacion
+  estado:           EstadoVotacion
+  quorumRequerido:  number
+  fechaInicio:      string
+  fechaFin:         string
+  resultado?:       ResultadoVotacion | null
+  totalVotos:       number
+  votosAFavor:      number
+  votosEnContra:    number
+  votosAbstencion:  number
+  creadoEn:         string
+}
+
+export type DecisionVoto = 'a_favor' | 'en_contra' | 'abstencion'
+
+export interface Voto {
+  id:            string
+  votacionId:    string
+  votanteId?:    string | null
+  unidadId?:     string | null
+  unidadNumero?: string | null
+  decision:      DecisionVoto
+  prorrateo:     number
+  creadoEn:      string
+}
+
+// ─── Firma Digital Actas ──────────────────────────────────────
+export interface ActaFirma {
+  id:              string
+  actaId:          string
+  firmante:        string
+  firmanteCargo?:  string | null
+  firmaData:       string  // base64
+  firmadoEn:       string
+}
+
+// ─── Conciliación Bancaria ────────────────────────────────────
+export type EstadoConciliacion = 'sin_match' | 'matcheado' | 'ignorado'
+export type FuenteConciliacion = 'csv' | 'fintoc'
+
+export interface ConciliacionMovimiento {
+  id:           string
+  edificioId:   string
+  fecha:        string
+  descripcion?: string | null
+  monto:        number
+  tipo:         'abono' | 'cargo'
+  rutPagador?:  string | null
+  referencia?:  string | null
+  gastoId?:     string | null
+  unidadId?:    string | null
+  estado:       EstadoConciliacion
+  fuente:       FuenteConciliacion
+  importadoEn:  string
+}
+
 // ─── Actividad Reciente ───────────────────────────────────────
 export type TipoActividad =
   | 'pago'
