@@ -114,7 +114,7 @@ export default function Header() {
   async function handleLogout() {
     await supabaseBrowser.auth.signOut()
     localStorage.removeItem('propify_rol')
-    router.push('/login')
+    router.push('/')
   }
 
   // ── Cargar datos de búsqueda desde Supabase ──────────────────
