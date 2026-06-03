@@ -518,13 +518,11 @@ export default function LandingPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Exit intent (solo la primera vez por sesión)
+  // Exit intent — aparece cada vez que se carga la página
   useEffect(() => {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('propify_exit')) return
     const fn = (e: MouseEvent) => {
       if (e.clientY <= 0) {
         setShowPopup(true)
-        localStorage.setItem('propify_exit', '1')
       }
     }
     document.addEventListener('mouseleave', fn)
