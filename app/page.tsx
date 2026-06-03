@@ -469,6 +469,7 @@ export default function LandingPage() {
   const [scrolled,       setScrolled]       = useState(false)
   const [mobileMenu,     setMobileMenu]     = useState(false)
   const [showPopup,      setShowPopup]      = useState(false)
+  const exitTriggered = useRef(false)   // se resetea sola con cada F5/refresh
   const [scrollProgress, setScrollProgress] = useState(0)
   const [parallaxY,      setParallaxY]      = useState(0)
   const [morphIdx,       setMorphIdx]       = useState(0)
@@ -518,10 +519,11 @@ export default function LandingPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Exit intent — aparece cada vez que se carga la página
+  // Exit intent — una vez por carga de página; se resetea con F5/refresh
   useEffect(() => {
     const fn = (e: MouseEvent) => {
-      if (e.clientY <= 0) {
+      if (e.clientY <= 0 && !exitTriggered.current) {
+        exitTriggered.current = true
         setShowPopup(true)
       }
     }
