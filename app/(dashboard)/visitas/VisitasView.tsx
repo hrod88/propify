@@ -523,7 +523,7 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Destino · Motivo</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-40">Vehículo</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-36">Horario</th>
-                <th className="px-4 py-3 w-20"></th>
+                <th className="px-4 py-3 w-28"></th>
               </tr>
             </thead>
             <tbody>
