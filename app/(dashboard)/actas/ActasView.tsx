@@ -5,15 +5,15 @@
  * CRUD completo + cambio de estado + export PDF/print.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   Plus, Search, FileText, CheckCircle2, Clock,
   Globe, Printer, Download, Eye, Pencil, Trash2,
-  CalendarDays, Users, ChevronRight, BookOpen,
+  CalendarDays, Users, ChevronRight, BookOpen, PenLine,
 } from 'lucide-react'
 import Modal from '@/components/modal'
 import { supabase } from '@/lib/supabase'
-import type { Acta, TipoActa, EstadoActa, User } from '@/types'
+import type { Acta, TipoActa, EstadoActa, User, ActaFirma } from '@/types'
 
 // ─── Configs ──────────────────────────────────────────────────
 const tipoCfg: Record<TipoActa, { label: string; bg: string; color: string }> = {
@@ -64,6 +64,18 @@ export default function ActasView({ actas: initActas, usuarios, edificioNombre, 
   const [form,   setForm]   = useState(FORM_VACÍO)
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
+
+  // Firmas
+  const [modalCanvas,    setModalCanvas]    = useState(false)
+  const [firmasActual,   setFirmasActual]   = useState<ActaFirma[]>([])
+  const [cargandoFirmas, setCargandoFirmas] = useState(false)
+  const [formFirma,      setFormFirma]      = useState({ firmante: '', cargo: '' })
+  const [firmando,       setFirmando]       = useState(false)
+  const [errorFirma,     setErrorFirma]     = useState('')
+  // Canvas
+  const canvasRef    = useRef<HTMLCanvasElement>(null)
+  const dibujandoRef = useRef(false)
+  const ultimoPunto  = useRef<{ x: number; y: number } | null>(null)
 
   // ── Filtrado ──────────────────────────────────────────────
   const filtered = useMemo(() => actas.filter(a => {
@@ -143,6 +155,133 @@ export default function ActasView({ actas: initActas, usuarios, edificioNombre, 
     setActas(prev => prev.filter(a => a.id !== actaActual.id))
     setModalBorrar(false)
     setActaActual(null)
+  }
+
+  // ── Canvas init ───────────────────────────────────────────
+  useEffect(() => {
+    if (!modalCanvas) return
+    const t = setTimeout(() => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.strokeStyle = '#1e3a5f'
+      ctx.lineWidth = 2.5
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+    }, 30)
+    return () => clearTimeout(t)
+  }, [modalCanvas])
+
+  // ── Canvas drawing ─────────────────────────────────────────
+  function getCanvasPos(e: { clientX: number; clientY: number }, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: (e.clientX - rect.left) * (canvas.width / rect.width),
+      y: (e.clientY - rect.top)  * (canvas.height / rect.height),
+    }
+  }
+
+  function iniciarDibujo(e: React.MouseEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    dibujandoRef.current = true
+    ultimoPunto.current  = getCanvasPos(e, canvas)
+  }
+
+  function dibujar(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!dibujandoRef.current) return
+    const canvas = canvasRef.current
+    if (!canvas || !ultimoPunto.current) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const pos = getCanvasPos(e, canvas)
+    ctx.beginPath()
+    ctx.moveTo(ultimoPunto.current.x, ultimoPunto.current.y)
+    ctx.lineTo(pos.x, pos.y)
+    ctx.stroke()
+    ultimoPunto.current = pos
+  }
+
+  function iniciarDibujoTouch(e: React.TouchEvent<HTMLCanvasElement>) {
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas || !e.touches[0]) return
+    dibujandoRef.current = true
+    ultimoPunto.current  = getCanvasPos(e.touches[0], canvas)
+  }
+
+  function dibujarTouch(e: React.TouchEvent<HTMLCanvasElement>) {
+    e.preventDefault()
+    if (!dibujandoRef.current || !e.touches[0]) return
+    const canvas = canvasRef.current
+    if (!canvas || !ultimoPunto.current) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const pos = getCanvasPos(e.touches[0], canvas)
+    ctx.beginPath()
+    ctx.moveTo(ultimoPunto.current.x, ultimoPunto.current.y)
+    ctx.lineTo(pos.x, pos.y)
+    ctx.stroke()
+    ultimoPunto.current = pos
+  }
+
+  function finDibujo() {
+    dibujandoRef.current = false
+    ultimoPunto.current  = null
+  }
+
+  function limpiarCanvas() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  // ── Firmas CRUD ────────────────────────────────────────────
+  async function cargarFirmas(actaId: string) {
+    setCargandoFirmas(true)
+    const { data } = await supabase
+      .from('actas_firmas')
+      .select('*')
+      .eq('actaId', actaId)
+      .order('firmadoEn', { ascending: true })
+    setFirmasActual((data as ActaFirma[]) ?? [])
+    setCargandoFirmas(false)
+  }
+
+  async function guardarFirma() {
+    if (!actaActual || !formFirma.firmante.trim()) {
+      setErrorFirma('El nombre del firmante es requerido')
+      return
+    }
+    const canvas = canvasRef.current
+    if (!canvas) return
+    setFirmando(true)
+    setErrorFirma('')
+    const nuevaFirma = {
+      id:            crypto.randomUUID(),
+      actaId:        actaActual.id,
+      firmante:      formFirma.firmante.trim(),
+      firmanteCargo: formFirma.cargo.trim() || null,
+      firmaData:     canvas.toDataURL('image/png'),
+      firmadoEn:     new Date().toISOString(),
+    }
+    const { error: err } = await supabase.from('actas_firmas').insert([nuevaFirma])
+    if (err) { setErrorFirma(err.message); setFirmando(false); return }
+    setFirmasActual(prev => [...prev, nuevaFirma as ActaFirma])
+    setModalCanvas(false)
+    setFormFirma({ firmante: '', cargo: '' })
+    setFirmando(false)
+  }
+
+  async function eliminarFirma(id: string) {
+    await supabase.from('actas_firmas').delete().eq('id', id)
+    setFirmasActual(prev => prev.filter(f => f.id !== id))
   }
 
   // ── Imprimir PDF ──────────────────────────────────────────
@@ -328,7 +467,7 @@ export default function ActasView({ actas: initActas, usuarios, edificioNombre, 
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => { setActaActual(acta); setModalVer(true) }}
+                    <button onClick={() => { setActaActual(acta); setModalVer(true); cargarFirmas(acta.id) }}
                       className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Ver detalle">
                       <Eye className="w-4 h-4" />
                     </button>
@@ -384,6 +523,57 @@ export default function ActasView({ actas: initActas, usuarios, edificioNombre, 
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Firmas digitales */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                  <PenLine className="w-3.5 h-3.5" /> Firmas digitales
+                  {firmasActual.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold" style={{ background: '#dbeafe', color: '#2563ae' }}>
+                      {firmasActual.length}
+                    </span>
+                  )}
+                </p>
+                <button
+                  onClick={() => { setErrorFirma(''); setFormFirma({ firmante: '', cargo: '' }); setModalCanvas(true) }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: '#dbeafe', color: '#2563ae' }}
+                >
+                  + Agregar firma
+                </button>
+              </div>
+              {cargandoFirmas ? (
+                <p className="text-xs text-gray-400 text-center py-4">Cargando firmas…</p>
+              ) : firmasActual.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4 rounded-xl border border-dashed" style={{ borderColor: '#e2e8f0' }}>
+                  Sin firmas registradas
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {firmasActual.map(f => (
+                    <div key={f.id} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: '#e2e8f0' }}>
+                      <img src={f.firmaData} alt="firma" className="h-12 w-24 object-contain rounded border bg-white" style={{ borderColor: '#f1f5f9' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{f.firmante}</p>
+                        {f.firmanteCargo && <p className="text-xs text-gray-400">{f.firmanteCargo}</p>}
+                        <p className="text-xs text-gray-300 mt-0.5">
+                          {new Date(f.firmadoEn).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => eliminarFirma(f.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                        style={{ color: '#dc2626' }}
+                        title="Eliminar firma"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {actaActual.asistentes && (
@@ -509,6 +699,86 @@ export default function ActasView({ actas: initActas, usuarios, edificioNombre, 
             >
               <ChevronRight className="w-4 h-4" />
               {saving ? 'Guardando…' : modoEditar ? 'Guardar cambios' : 'Crear acta'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Modal: Canvas Firma ── */}
+      <Modal
+        abierto={modalCanvas}
+        onCerrar={() => { setModalCanvas(false); setErrorFirma('') }}
+        titulo="Agregar firma digital"
+        subtitulo={actaActual?.titulo ?? ''}
+        colorAccento="#2563ae"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nombre firmante *</label>
+              <input
+                type="text"
+                value={formFirma.firmante}
+                onChange={e => setFormFirma(f => ({ ...f, firmante: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+                style={{ borderColor: '#e2e8f0', color: '#0f172a' }}
+                placeholder="Nombre completo"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Cargo (opcional)</label>
+              <input
+                type="text"
+                value={formFirma.cargo}
+                onChange={e => setFormFirma(f => ({ ...f, cargo: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+                style={{ borderColor: '#e2e8f0', color: '#0f172a' }}
+                placeholder="Ej: Presidente"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-gray-600">Firma</label>
+              <button onClick={limpiarCanvas} type="button" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                Limpiar
+              </button>
+            </div>
+            <canvas
+              ref={canvasRef}
+              width={480}
+              height={180}
+              className="w-full rounded-xl border cursor-crosshair touch-none"
+              style={{ borderColor: '#e2e8f0', background: '#ffffff' }}
+              onMouseDown={iniciarDibujo}
+              onMouseMove={dibujar}
+              onMouseUp={finDibujo}
+              onMouseLeave={finDibujo}
+              onTouchStart={iniciarDibujoTouch}
+              onTouchMove={dibujarTouch}
+              onTouchEnd={finDibujo}
+            />
+            <p className="text-xs text-gray-400 mt-1.5 text-center">Dibuja tu firma en el área de arriba</p>
+          </div>
+
+          {errorFirma && <p className="text-xs font-medium" style={{ color: '#dc2626' }}>{errorFirma}</p>}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={() => { setModalCanvas(false); setErrorFirma('') }}
+              className="flex-1 py-2.5 rounded-xl border text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              style={{ borderColor: '#e2e8f0' }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={guardarFirma}
+              disabled={firmando}
+              className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
+              style={{ background: '#2563ae' }}
+            >
+              {firmando ? 'Guardando…' : 'Guardar firma'}
             </button>
           </div>
         </div>

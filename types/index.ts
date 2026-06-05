@@ -210,6 +210,9 @@ export interface Visita {
   registradoPorId: string
   metodoAcceso?: MetodoAcceso
   sentido?: SentidoVisita
+  qrToken?: string
+  qrExpira?: string
+  qrUsado?: boolean
 }
 
 // ─── Paquetes / Delivery ──────────────────────────────────────

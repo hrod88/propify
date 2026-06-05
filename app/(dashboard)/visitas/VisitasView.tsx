@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, LogIn, LogOut, Car, Clock, Users, Check, Pencil, Trash2, ParkingSquare, Timer } from 'lucide-react'
+import { Plus, LogIn, LogOut, Car, Users, Check, Pencil, Trash2, ParkingSquare, Timer, QrCode } from 'lucide-react'
+import QRCode from 'qrcode'
 import Modal from '@/components/modal'
 import { useNotificaciones } from '@/context/notificaciones-context'
 import { supabase } from '@/lib/supabase'
@@ -98,6 +99,8 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
   const [editando, setEditando]     = useState<Visita | null>(null)
   const [eliminarId, setEliminarId] = useState<string | null>(null)
   const [toast, setToast]           = useState<string | null>(null)
+  const [visitaQR, setVisitaQR]     = useState<Visita | null>(null)
+  const [qrDataUrl, setQrDataUrl]   = useState<string>('')
 
   const formVacio: FormState = {
     nombreVisitante:  '',
@@ -121,6 +124,19 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  async function abrirQR(v: Visita) {
+    setVisitaQR(v)
+    try {
+      const url = await QRCode.toDataURL(v.qrToken ?? v.id, {
+        width: 240, margin: 2,
+        color: { dark: '#1e3a5f', light: '#ffffff' },
+      })
+      setQrDataUrl(url)
+    } catch {
+      setQrDataUrl('')
+    }
   }
 
   // ─── Datos derivados ────────────────────────────────────────
@@ -175,7 +191,9 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
     setErrores(e)
     if (Object.keys(e).length > 0) return
 
-    const nueva = formAVisita(form, {})
+    const qrToken  = crypto.randomUUID()
+    const qrExpira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    const nueva: Visita = { ...formAVisita(form, {}), qrToken, qrExpira, qrUsado: false }
     setLista(prev => [nueva, ...prev])
     setModalCrear(false)
     setForm(formVacio)
@@ -632,6 +650,16 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
+                        {activo && (
+                          <button
+                            onClick={() => abrirQR(v)}
+                            className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                            style={{ background: '#dcfce7', color: '#16a34a' }}
+                            title="Ver QR de acceso"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -747,6 +775,47 @@ export default function VisitasView({ visitas, unidades, users }: Props) {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* ─── Modal: QR de Visita ─────────────────────────────── */}
+      <Modal
+        abierto={visitaQR !== null}
+        onCerrar={() => { setVisitaQR(null); setQrDataUrl('') }}
+        titulo="Código QR de acceso"
+        subtitulo={visitaQR?.nombreVisitante ?? ''}
+        colorAccento="#16a34a"
+      >
+        {visitaQR && (
+          <div className="flex flex-col items-center gap-4 py-2">
+            {qrDataUrl ? (
+              <div className="p-4 rounded-2xl border" style={{ borderColor: '#e2e8f0', background: '#f8fafc' }}>
+                <img src={qrDataUrl} alt="QR" className="w-48 h-48" />
+              </div>
+            ) : (
+              <div className="w-48 h-48 rounded-2xl border flex items-center justify-center" style={{ borderColor: '#e2e8f0', background: '#f8fafc' }}>
+                <QrCode className="w-16 h-16 text-gray-200" />
+              </div>
+            )}
+            <div className="text-center space-y-1 w-full">
+              <p className="font-semibold text-gray-900">{visitaQR.nombreVisitante}</p>
+              <p className="text-sm text-gray-500">
+                Unidad {getUnidad(visitaQR.unidadId)?.numero ?? visitaQR.unidadId} · {visitaQR.motivoVisita}
+              </p>
+              {visitaQR.qrExpira && (
+                <p className="text-xs text-gray-400">
+                  Válido hasta {new Date(visitaQR.qrExpira).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => { setVisitaQR(null); setQrDataUrl('') }}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors border"
+              style={{ borderColor: '#e2e8f0' }}
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
       </Modal>
 
     </div>
